@@ -12,3 +12,16 @@ export {
   type ErrorBoundaryProps,
   type ErrorBoundaryState,
 } from './ErrorBoundary.js';
+
+export {
+  BlockNode,
+  BulletHandle,
+  BlockEditor,
+  StaticBlockContent,
+  useBlock,
+  useBlockChildren,
+  type BlockNodeProps,
+  type BulletHandleProps,
+  type BlockEditorProps,
+  type StaticBlockContentProps,
+} from './BlockNode.js';
