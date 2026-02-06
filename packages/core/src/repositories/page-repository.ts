@@ -214,6 +214,57 @@ export class PageRepository {
   }
 
   /**
+   * Get a page by its exact title.
+   *
+   * @param title - The page title to look up
+   * @returns The page if found, null otherwise
+   */
+  async getByTitle(title: string): Promise<Page | null> {
+    const script = `
+?[page_id, title, created_at, updated_at, is_deleted, daily_note_date] :=
+    *pages{ page_id, title: $title, created_at, updated_at, is_deleted, daily_note_date },
+    is_deleted == false
+`.trim();
+
+    const result = await this.db.query(script, { title });
+
+    if (result.rows.length === 0) {
+      return null;
+    }
+
+    const row = result.rows[0] as PageRow;
+    return this.rowToPage(row);
+  }
+
+  /**
+   * Get a page by title, or create it if it doesn't exist.
+   *
+   * @param title - The page title to look up or create
+   * @returns The existing or newly created page
+   */
+  async getOrCreateByTitle(title: string): Promise<Page> {
+    // Check if page already exists
+    const existing = await this.getByTitle(title);
+    if (existing) {
+      return existing;
+    }
+
+    // Create new page with title
+    const pageId = await this.create({ title });
+
+    // Return the newly created page
+    const page = await this.getById(pageId);
+    if (!page) {
+      throw new DoubleBindError(
+        `Failed to retrieve created page: ${pageId}`,
+        ErrorCode.DB_QUERY_FAILED
+      );
+    }
+
+    return page;
+  }
+
+  /**
    * Get a page by its daily note date.
    *
    * @param date - The date in YYYY-MM-DD format
