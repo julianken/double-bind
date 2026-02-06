@@ -108,7 +108,7 @@ export {
 // PARSER
 // ============================================================================
 
-export { parseQuery } from './parser.js';
+export { parseQuery, ParseError } from './parser.js';
 
 // ============================================================================
 // TRANSPILER
