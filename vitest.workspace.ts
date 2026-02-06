@@ -18,4 +18,16 @@ export default defineWorkspace([
       passWithNoTests: true,
     },
   },
+
+  // Scripts test project - tests for build/utility scripts
+  {
+    test: {
+      name: 'scripts',
+      root: './scripts',
+      globals: true,
+      environment: 'node',
+      include: ['**/*.{test,spec}.ts'],
+      passWithNoTests: true,
+    },
+  },
 ]);
