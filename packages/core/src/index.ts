@@ -50,6 +50,8 @@ export {
   type LinkWithTargetTitle,
   type InLink,
   type BlockBacklink,
+  PropertyRepository,
+  type PropertyValueType,
 } from './repositories/index.js';
 
 // Parsers
