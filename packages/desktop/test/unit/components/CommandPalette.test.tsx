@@ -338,6 +338,10 @@ describe('CommandPalette', () => {
       const user = userEvent.setup();
       render(<CommandPalette isOpen={true} onClose={vi.fn()} commands={createMockCommands()} />);
 
+      // Focus the input first
+      const input = screen.getByTestId('command-palette-input');
+      input.focus();
+
       // Try to go up from first item
       await user.keyboard('{ArrowUp}');
 
@@ -349,6 +353,10 @@ describe('CommandPalette', () => {
       const user = userEvent.setup();
       const commands = createMockCommands();
       render(<CommandPalette isOpen={true} onClose={vi.fn()} commands={commands} />);
+
+      // Focus the input first
+      const input = screen.getByTestId('command-palette-input');
+      input.focus();
 
       // Navigate to last item and try to go further
       for (let i = 0; i < commands.length + 2; i++) {

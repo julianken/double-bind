@@ -1,0 +1,15 @@
+// packages/migrations/vitest.config.ts
+import { defineConfig } from "file:///Users/j/repos/double-bind/node_modules/.pnpm/vitest@2.1.9_jsdom@28.0.0/node_modules/vitest/dist/config.js";
+var vitest_config_default = defineConfig({
+  test: {
+    name: "migrations",
+    globals: true,
+    environment: "node",
+    include: ["test/**/*.{test,spec}.ts"],
+    passWithNoTests: true
+  }
+});
+export {
+  vitest_config_default as default
+};
+//# sourceMappingURL=data:application/json;base64,ewogICJ2ZXJzaW9uIjogMywKICAic291cmNlcyI6IFsicGFja2FnZXMvbWlncmF0aW9ucy92aXRlc3QuY29uZmlnLnRzIl0sCiAgInNvdXJjZXNDb250ZW50IjogWyJjb25zdCBfX3ZpdGVfaW5qZWN0ZWRfb3JpZ2luYWxfZGlybmFtZSA9IFwiL1VzZXJzL2ovcmVwb3MvZG91YmxlLWJpbmQvcGFja2FnZXMvbWlncmF0aW9uc1wiO2NvbnN0IF9fdml0ZV9pbmplY3RlZF9vcmlnaW5hbF9maWxlbmFtZSA9IFwiL1VzZXJzL2ovcmVwb3MvZG91YmxlLWJpbmQvcGFja2FnZXMvbWlncmF0aW9ucy92aXRlc3QuY29uZmlnLnRzXCI7Y29uc3QgX192aXRlX2luamVjdGVkX29yaWdpbmFsX2ltcG9ydF9tZXRhX3VybCA9IFwiZmlsZTovLy9Vc2Vycy9qL3JlcG9zL2RvdWJsZS1iaW5kL3BhY2thZ2VzL21pZ3JhdGlvbnMvdml0ZXN0LmNvbmZpZy50c1wiO2ltcG9ydCB7IGRlZmluZUNvbmZpZyB9IGZyb20gJ3ZpdGVzdC9jb25maWcnO1xuXG5leHBvcnQgZGVmYXVsdCBkZWZpbmVDb25maWcoe1xuICB0ZXN0OiB7XG4gICAgbmFtZTogJ21pZ3JhdGlvbnMnLFxuICAgIGdsb2JhbHM6IHRydWUsXG4gICAgZW52aXJvbm1lbnQ6ICdub2RlJyxcbiAgICBpbmNsdWRlOiBbJ3Rlc3QvKiovKi57dGVzdCxzcGVjfS50cyddLFxuICAgIHBhc3NXaXRoTm9UZXN0czogdHJ1ZSxcbiAgfSxcbn0pO1xuIl0sCiAgIm1hcHBpbmdzIjogIjtBQUFnVSxTQUFTLG9CQUFvQjtBQUU3VixJQUFPLHdCQUFRLGFBQWE7QUFBQSxFQUMxQixNQUFNO0FBQUEsSUFDSixNQUFNO0FBQUEsSUFDTixTQUFTO0FBQUEsSUFDVCxhQUFhO0FBQUEsSUFDYixTQUFTLENBQUMsMEJBQTBCO0FBQUEsSUFDcEMsaUJBQWlCO0FBQUEsRUFDbkI7QUFDRixDQUFDOyIsCiAgIm5hbWVzIjogW10KfQo=
