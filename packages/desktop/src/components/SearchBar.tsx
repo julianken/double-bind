@@ -6,7 +6,8 @@
  * Features:
  * - Search icon and placeholder text ("Search pages and blocks...")
  * - Keyboard shortcut to focus (Ctrl+K / Cmd+K on macOS)
- * - Debounced search calls (debouncing handled by useSearch hook)
+ * - Debounced search calls (300ms delay via useSearch hook)
+ * - Minimum query length hint (shows when query is 1 character)
  * - Inline loading indicator during search
  * - Clear button to reset the search input
  * - Escape key to blur and clear the input
@@ -25,6 +26,7 @@ import { useAppStore } from '../stores/ui-store.js';
 
 const SEARCH_PLACEHOLDER = 'Search pages and blocks...';
 const SEARCH_RESULTS_ROUTE = 'search';
+const MIN_LENGTH_HINT = 'Type at least 2 characters';
 
 // ============================================================================
 // Icons
@@ -167,7 +169,7 @@ export function SearchBar({
   const inputRef = useRef<HTMLInputElement>(null);
   const navigateToPage = useAppStore((state) => state.navigateToPage);
 
-  const { query, setQuery, isLoading, clearSearch } = useSearch({
+  const { query, setQuery, isLoading, clearSearch, showMinLengthHint } = useSearch({
     onResults: () => {
       // Navigate to search results view when results are available
       navigateToPage(SEARCH_RESULTS_ROUTE);
@@ -288,6 +290,23 @@ export function SearchBar({
         }}
       />
 
+      {/* Minimum length hint (shown when query is 1 character) */}
+      {showMinLengthHint && (
+        <span
+          className="search-bar-hint"
+          aria-live="polite"
+          data-testid="search-bar-min-length-hint"
+          style={{
+            fontSize: '11px',
+            color: '#9ca3af',
+            whiteSpace: 'nowrap',
+            flexShrink: 0,
+          }}
+        >
+          {MIN_LENGTH_HINT}
+        </span>
+      )}
+
       {/* Keyboard shortcut hint (shown when input is empty) */}
       {!query && (
         <span
@@ -304,7 +323,7 @@ export function SearchBar({
             flexShrink: 0,
           }}
         >
-          {navigator.platform.includes('Mac') ? '⌘K' : 'Ctrl+K'}
+          {navigator.platform.includes('Mac') ? '\u2318K' : 'Ctrl+K'}
         </span>
       )}
 
