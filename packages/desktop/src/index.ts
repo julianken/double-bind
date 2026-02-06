@@ -19,3 +19,11 @@ export type { AppStore, RightPanelContent } from './stores/index.js';
 // Components
 export { Router } from './components/index.js';
 export type { Route, RouteComponentProps, RouterProps } from './components/index.js';
+
+// Hooks
+export {
+  useCozoQuery,
+  invalidateQueries,
+  type UseCozoQueryOptions,
+  type UseCozoQueryResult,
+} from './hooks/index.js';
