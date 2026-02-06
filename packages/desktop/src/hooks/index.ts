@@ -9,3 +9,5 @@ export {
   type UseCozoQueryOptions,
   type UseCozoQueryResult,
 } from './useCozoQuery.js';
+
+export { useGlobalShortcuts } from './useGlobalShortcuts.js';

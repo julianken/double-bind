@@ -1,8 +1,204 @@
-export function App() {
+/**
+ * App - Root application component
+ *
+ * Sets up the application shell with:
+ * - Global keyboard shortcuts for navigation
+ * - Router for screen rendering based on navigation state
+ * - AppShell layout with sidebar and main content area
+ *
+ * The sidebar persists while content swaps based on navigation.
+ */
+
+import { useGlobalShortcuts } from './hooks/useGlobalShortcuts.js';
+import { Router, type Route } from './components/Router.js';
+import { useAppStore } from './stores/ui-store.js';
+
+// ============================================================================
+// Placeholder View Components
+// These will be replaced with actual implementations in future issues
+// ============================================================================
+
+function DailyNotesView() {
   return (
-    <div>
-      <h1>Double Bind</h1>
-      <p>Local-first note-taking with graph-native architecture</p>
+    <div className="view daily-notes-view" data-testid="daily-notes-view">
+      <h1>Daily Notes</h1>
+      <p>Today&apos;s notes will appear here.</p>
     </div>
+  );
+}
+
+function PageView({ params }: { params: Record<string, string> }) {
+  return (
+    <div className="view page-view" data-testid="page-view">
+      <h1>Page View</h1>
+      <p data-testid="page-id">Page ID: {params.id || 'unknown'}</p>
+    </div>
+  );
+}
+
+function GraphView() {
+  return (
+    <div className="view graph-view" data-testid="graph-view">
+      <h1>Graph View</h1>
+      <p>Knowledge graph visualization will appear here.</p>
+    </div>
+  );
+}
+
+function SearchView({ params }: { params: Record<string, string> }) {
+  return (
+    <div className="view search-view" data-testid="search-view">
+      <h1>Search Results</h1>
+      <p data-testid="search-query">Query: {params.query || 'none'}</p>
+    </div>
+  );
+}
+
+function QueryView() {
+  return (
+    <div className="view query-view" data-testid="query-view">
+      <h1>Datalog Query Editor</h1>
+      <p>Query editor will appear here.</p>
+    </div>
+  );
+}
+
+function CommandPalette() {
+  const toggleCommandPalette = useAppStore((s) => s.toggleCommandPalette);
+
+  return (
+    <div
+      className="command-palette"
+      data-testid="command-palette"
+      role="dialog"
+      aria-label="Command palette"
+    >
+      <div className="command-palette-backdrop" onClick={toggleCommandPalette} />
+      <div className="command-palette-content">
+        <input
+          type="text"
+          placeholder="Search or type a command..."
+          autoFocus
+          aria-label="Command input"
+        />
+        <p>Command palette will be implemented here.</p>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// Routes Configuration
+// ============================================================================
+
+const routes: Route[] = [
+  { id: 'page', path: '/page/:id', component: PageView },
+  { id: 'graph', path: '/graph', component: GraphView },
+  { id: 'search', path: '/search/:query', component: SearchView },
+  { id: 'query', path: '/query', component: QueryView },
+  { id: 'command-palette', path: '/command-palette', component: CommandPalette },
+];
+
+// ============================================================================
+// Sidebar Component
+// ============================================================================
+
+function Sidebar() {
+  const sidebarOpen = useAppStore((s) => s.sidebarOpen);
+  const sidebarWidth = useAppStore((s) => s.sidebarWidth);
+  const navigateToPage = useAppStore((s) => s.navigateToPage);
+
+  if (!sidebarOpen) {
+    return null;
+  }
+
+  return (
+    <aside
+      className="sidebar"
+      data-testid="sidebar"
+      style={{ width: sidebarWidth }}
+      role="navigation"
+      aria-label="Main navigation"
+    >
+      <div className="sidebar-header">
+        <h2>Double Bind</h2>
+      </div>
+      <nav className="sidebar-nav">
+        <button onClick={() => navigateToPage('')} aria-label="Daily Notes">
+          Daily Notes
+        </button>
+        <button onClick={() => navigateToPage('graph')} aria-label="Graph View">
+          Graph
+        </button>
+        <button onClick={() => navigateToPage('query')} aria-label="Query Editor">
+          Query
+        </button>
+      </nav>
+      <div className="sidebar-pages">
+        <h3>Pages</h3>
+        <p>Page list will appear here.</p>
+      </div>
+    </aside>
+  );
+}
+
+// ============================================================================
+// Navigation Bar Component
+// ============================================================================
+
+function NavigationBar() {
+  const goBack = useAppStore((s) => s.goBack);
+  const goForward = useAppStore((s) => s.goForward);
+  const historyIndex = useAppStore((s) => s.historyIndex);
+  const pageHistory = useAppStore((s) => s.pageHistory);
+
+  const canGoBack = historyIndex > 0;
+  const canGoForward = historyIndex < pageHistory.length - 1;
+
+  return (
+    <nav className="navigation-bar" data-testid="navigation-bar" aria-label="History navigation">
+      <button onClick={goBack} disabled={!canGoBack} aria-label="Go back" title="Go back (Ctrl+[)">
+        Back
+      </button>
+      <button
+        onClick={goForward}
+        disabled={!canGoForward}
+        aria-label="Go forward"
+        title="Go forward (Ctrl+])"
+      >
+        Forward
+      </button>
+    </nav>
+  );
+}
+
+// ============================================================================
+// AppShell Component
+// ============================================================================
+
+function AppShell({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="app-shell" data-testid="app-shell">
+      <Sidebar />
+      <main className="main-content" role="main">
+        <NavigationBar />
+        <div className="content-area">{children}</div>
+      </main>
+    </div>
+  );
+}
+
+// ============================================================================
+// App Component
+// ============================================================================
+
+export function App() {
+  // Register global keyboard shortcuts
+  useGlobalShortcuts();
+
+  return (
+    <AppShell>
+      <Router routes={routes} defaultComponent={DailyNotesView} />
+    </AppShell>
   );
 }
