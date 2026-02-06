@@ -39,6 +39,8 @@ export {
   // Repositories
   PageRepository,
   type GetAllOptions,
+  TagRepository,
+  type TagWithCount,
 } from './repositories/index.js';
 
 // Parsers
