@@ -1,0 +1,26 @@
+[package]
+name = "double-bind"
+version = "0.1.0"
+description = "Local-first note-taking app with graph-native architecture"
+authors = ["Double Bind Contributors"]
+license = "MIT"
+repository = "https://github.com/double-bind/double-bind"
+edition = "2021"
+rust-version = "1.70"
+
+[lib]
+name = "double_bind_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+cozo = { version = "0.7", features = ["storage-rocksdb"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]
