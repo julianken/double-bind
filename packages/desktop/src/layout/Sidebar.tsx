@@ -446,6 +446,7 @@ function SidebarContent({ onNewPage }: SidebarProps) {
     <aside
       ref={sidebarRef}
       className="sidebar"
+      data-testid="sidebar"
       role="complementary"
       aria-label="Application sidebar"
       style={{
@@ -466,6 +467,15 @@ function SidebarContent({ onNewPage }: SidebarProps) {
           aria-label="Create new page"
         >
           + New Page
+        </button>
+
+        <button
+          type="button"
+          className="sidebar-graph-view-button"
+          onClick={() => navigateToPage('graph')}
+          aria-label="Graph View"
+        >
+          Graph View
         </button>
 
         <PageList />

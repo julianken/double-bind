@@ -62,9 +62,11 @@ export class GraphService {
   async getFullGraph(): Promise<GraphResult> {
     try {
       // Query all non-deleted pages
+      // Note: We must bind is_deleted explicitly before filtering, otherwise it's unbound in head
       const pagesScript = `
 ?[page_id, title, created_at, updated_at, is_deleted, daily_note_date] :=
-    *pages{ page_id, title, created_at, updated_at, is_deleted: false, daily_note_date }
+    *pages{ page_id, title, created_at, updated_at, is_deleted, daily_note_date },
+    is_deleted = false
 `.trim();
 
       const pagesResult = await this.db.query(pagesScript);
@@ -123,9 +125,11 @@ export class GraphService {
       }
 
       // Verify the center page exists
+      // Note: We must bind is_deleted explicitly before filtering, otherwise it's unbound in head
       const centerPageScript = `
 ?[page_id, title, created_at, updated_at, is_deleted, daily_note_date] :=
-    *pages{ page_id: $center_id, title, created_at, updated_at, is_deleted: false, daily_note_date }
+    *pages{ page_id: $center_id, title, created_at, updated_at, is_deleted, daily_note_date },
+    is_deleted = false
 `.trim();
 
       const centerResult = await this.db.query(centerPageScript, { center_id: pageId });
@@ -155,9 +159,11 @@ export class GraphService {
       }
 
       // Fetch full page data for all neighbors
+      // Note: We must bind is_deleted explicitly before filtering, otherwise it's unbound in head
       const nodesScript = `
 ?[page_id, title, created_at, updated_at, is_deleted, daily_note_date] :=
-    *pages{ page_id, title, created_at, updated_at, is_deleted: false, daily_note_date },
+    *pages{ page_id, title, created_at, updated_at, is_deleted, daily_note_date },
+    is_deleted = false,
     page_id in $page_ids
 `.trim();
 

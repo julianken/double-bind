@@ -2,8 +2,13 @@
  * useGlobalShortcuts - Global keyboard shortcut handler
  *
  * Registers global keyboard shortcuts that work anywhere in the app.
- * These are app-level navigation shortcuts (Ctrl+[ for back, Ctrl+] for forward)
- * that should be active regardless of what component has focus.
+ * These are app-level navigation shortcuts that should be active
+ * regardless of what component has focus.
+ *
+ * Shortcuts:
+ * - Ctrl+[ (or Cmd+[ on Mac): Navigate back in history
+ * - Ctrl+] (or Cmd+] on Mac): Navigate forward in history
+ * - Ctrl+G (or Cmd+G on Mac): Open graph view
  *
  * See docs/frontend/keyboard-first.md for the full shortcut documentation.
  */
@@ -14,12 +19,12 @@ import { useAppStore } from '../stores/ui-store.js';
 /**
  * Checks if the event matches a keyboard shortcut with Ctrl (or Cmd on Mac).
  * @param event - The keyboard event
- * @param key - The key to match (e.g., '[', ']')
+ * @param key - The key to match (e.g., '[', ']', 'g')
  */
 function isCtrlKey(event: KeyboardEvent, key: string): boolean {
   // Check for Ctrl on Windows/Linux or Cmd on Mac
   const isModifierPressed = event.ctrlKey || event.metaKey;
-  return isModifierPressed && event.key === key;
+  return isModifierPressed && event.key.toLowerCase() === key.toLowerCase();
 }
 
 /**
@@ -28,6 +33,7 @@ function isCtrlKey(event: KeyboardEvent, key: string): boolean {
  * Shortcuts:
  * - Ctrl+[ (or Cmd+[ on Mac): Navigate back in history
  * - Ctrl+] (or Cmd+] on Mac): Navigate forward in history
+ * - Ctrl+G (or Cmd+G on Mac): Open graph view
  *
  * These shortcuts work anywhere in the app and are not blocked by
  * editor focus or other components.
@@ -59,6 +65,13 @@ export function useGlobalShortcuts(): void {
       if (isCtrlKey(event, ']')) {
         event.preventDefault();
         useAppStore.getState().goForward();
+        return;
+      }
+
+      // Ctrl+G - Open graph view
+      if (isCtrlKey(event, 'g')) {
+        event.preventDefault();
+        useAppStore.getState().navigateToPage('graph');
         return;
       }
     }
