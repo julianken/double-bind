@@ -66,3 +66,17 @@ export {
   type BlockSearchFn,
   type OnSelectBlockRef,
 } from './autocomplete.js';
+
+export {
+  createAutocompletePlugin as createPageAutocompletePlugin,
+  autocompletePluginKey as pageAutocompletePluginKey,
+  getAutocompleteState as getPageAutocompleteState,
+  isAutocompleteActive as isPageAutocompleteActive,
+  closeAutocomplete as closePageAutocomplete,
+  selectSuggestion as selectPageSuggestion,
+  type AutocompleteSuggestion as PageAutocompleteSuggestion,
+  type AutocompleteState as PageAutocompleteState,
+  type AutocompletePluginOptions as PageAutocompletePluginOptions,
+  type OnSelectSuggestion as OnSelectPageSuggestion,
+  type SearchPages,
+} from './page-autocomplete.js';
