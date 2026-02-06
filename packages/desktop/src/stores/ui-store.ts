@@ -62,7 +62,8 @@ export interface AppStore {
 
 const MAX_HISTORY_SIZE = 50;
 
-export const useAppStore = create<AppStore>()(
+// Zustand store creation
+const store = create<AppStore>()(
   persist(
     (set) => ({
       // === Sidebar ===
@@ -168,3 +169,11 @@ export const useAppStore = create<AppStore>()(
     }
   )
 );
+
+// Export the store for use in components
+export const useAppStore = store;
+
+// Expose store for E2E testing (only in development/test)
+if (typeof window !== 'undefined' && (import.meta.env.DEV || import.meta.env.MODE === 'test')) {
+  (window as unknown as { __APP_STORE__?: typeof store }).__APP_STORE__ = store;
+}

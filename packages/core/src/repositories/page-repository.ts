@@ -38,7 +38,8 @@ export class PageRepository {
   async getById(pageId: PageId): Promise<Page | null> {
     const script = `
 ?[page_id, title, created_at, updated_at, is_deleted, daily_note_date] :=
-    *pages{ page_id: $id, title, created_at, updated_at, is_deleted, daily_note_date },
+    *pages{ page_id, title, created_at, updated_at, is_deleted, daily_note_date },
+    page_id == $id,
     is_deleted == false
 `.trim();
 
@@ -222,7 +223,8 @@ export class PageRepository {
   async getByTitle(title: string): Promise<Page | null> {
     const script = `
 ?[page_id, title, created_at, updated_at, is_deleted, daily_note_date] :=
-    *pages{ page_id, title: $title, created_at, updated_at, is_deleted, daily_note_date },
+    *pages{ page_id, title, created_at, updated_at, is_deleted, daily_note_date },
+    title == $title,
     is_deleted == false
 `.trim();
 
@@ -274,7 +276,8 @@ export class PageRepository {
     // First query the daily_notes lookup relation
     const lookupScript = `
 ?[page_id] :=
-    *daily_notes{ date: $date, page_id }
+    *daily_notes{ date, page_id },
+    date == $date
 `.trim();
 
     const lookupResult = await this.db.query(lookupScript, { date });

@@ -70,7 +70,8 @@ export class LinkRepository {
   async getOutLinks(pageId: PageId): Promise<LinkWithTargetTitle[]> {
     const script = `
 ?[source_id, target_id, link_type, created_at, context_block_id, title] :=
-    *links{ source_id: $page_id, target_id, link_type, created_at, context_block_id },
+    *links{ source_id, target_id, link_type, created_at, context_block_id },
+    source_id == $page_id,
     *pages{ page_id: target_id, title, is_deleted: false }
 `.trim();
 
@@ -107,7 +108,8 @@ export class LinkRepository {
   async getInLinks(pageId: PageId): Promise<InLink[]> {
     const script = `
 ?[source_id, target_id, link_type, created_at, context_block_id, content] :=
-    *links{ target_id: $page_id, source_id, link_type, created_at, context_block_id },
+    *links{ source_id, target_id, link_type, created_at, context_block_id },
+    target_id == $page_id,
     *blocks{ block_id: context_block_id, content, is_deleted: false }
 `.trim();
 
@@ -144,7 +146,8 @@ export class LinkRepository {
   async getBlockBacklinks(blockId: BlockId): Promise<BlockBacklink[]> {
     const script = `
 ?[source_block_id, target_block_id, created_at, content, page_id] :=
-    *block_refs{ target_block_id: $target, source_block_id, created_at },
+    *block_refs{ source_block_id, target_block_id, created_at },
+    target_block_id == $target,
     *blocks{ block_id: source_block_id, content, page_id, is_deleted: false }
 `.trim();
 
@@ -233,14 +236,16 @@ export class LinkRepository {
     // Remove links where this block is the context
     const removeLinksScript = `
 ?[source_id, target_id, link_type] :=
-    *links{ source_id, target_id, link_type, context_block_id: $block_id }
+    *links{ source_id, target_id, link_type, context_block_id },
+    context_block_id == $block_id
 :rm links { source_id, target_id, link_type }
 `.trim();
 
     // Remove block refs where this block is the source
     const removeBlockRefsScript = `
 ?[source_block_id, target_block_id] :=
-    *block_refs{ source_block_id: $block_id, target_block_id }
+    *block_refs{ source_block_id, target_block_id },
+    source_block_id == $block_id
 :rm block_refs { source_block_id, target_block_id }
 `.trim();
 

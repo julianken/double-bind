@@ -43,6 +43,8 @@ export default tseslint.config(
             'packages/*/test/*/*/*.tsx',
             'packages/*/test/*/*/*/*.tsx',
           ],
+          // Allow more test files - E2E tests add many files
+          maximumDefaultProjectFileMatchCount_THIS_WILL_SLOW_DOWN_LINTING: 50,
         },
         tsconfigRootDir: import.meta.dirname,
       },

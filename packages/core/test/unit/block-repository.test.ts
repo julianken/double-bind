@@ -71,7 +71,7 @@ describe('BlockRepository', () => {
       await repo.getById(blockId);
 
       expect(db.lastQuery.script).toContain('*blocks{');
-      expect(db.lastQuery.script).toContain('block_id: $id');
+      expect(db.lastQuery.script).toContain('block_id == $id');
       expect(db.lastQuery.script).toContain('is_deleted == false');
       expect(db.lastQuery.params).toEqual({ id: blockId });
     });
@@ -144,7 +144,7 @@ describe('BlockRepository', () => {
       await repo.getByPage(pageId);
 
       expect(db.lastQuery.script).toContain('*blocks_by_page{');
-      expect(db.lastQuery.script).toContain('page_id: $page_id');
+      expect(db.lastQuery.script).toContain('page_id == $page_id');
       expect(db.lastQuery.script).toContain('*blocks{');
       expect(db.lastQuery.script).toContain('is_deleted == false');
       expect(db.lastQuery.script).toContain(':order order');
@@ -176,7 +176,7 @@ describe('BlockRepository', () => {
       await repo.getChildren(parentKey);
 
       expect(db.lastQuery.script).toContain('*blocks_by_parent{');
-      expect(db.lastQuery.script).toContain('parent_id: $parent_key');
+      expect(db.lastQuery.script).toContain('parent_id == $parent_key');
       expect(db.lastQuery.script).toContain('*blocks{');
       expect(db.lastQuery.script).toContain('is_deleted == false');
       expect(db.lastQuery.script).toContain(':order order');
@@ -550,7 +550,7 @@ describe('BlockRepository', () => {
       await repo.getHistory(blockId);
 
       expect(db.lastQuery.script).toContain('*block_history{');
-      expect(db.lastQuery.script).toContain('block_id: $id');
+      expect(db.lastQuery.script).toContain('block_id == $id');
       expect(db.lastQuery.script).toContain(':order -version');
       expect(db.lastQuery.script).toContain(':limit $limit');
       expect(db.lastQuery.params).toEqual({ id: blockId, limit: 100 });
@@ -601,7 +601,7 @@ describe('BlockRepository', () => {
         [123, 'page', null, 'content', 'text', 'a', false, false, 1700000000, 1700000000],
       ]);
 
-      // MockGraphDB filters by block_id: $id - numeric 123 won't match string 'block-1'
+      // MockGraphDB filters by block_id == $id - numeric 123 won't match string 'block-1'
       // Instead, test parseBlockRow directly via getById with valid ID but seed invalid row
       // This won't match because MockGraphDB compares strictly
       const result = await repo.getById('123');
@@ -980,7 +980,7 @@ describe('BlockRepository', () => {
       // Verify the fetch query structure
       const fetchQuery = db.queries[db.queries.length - 1];
       expect(fetchQuery?.script).toContain('*blocks_by_parent{');
-      expect(fetchQuery?.script).toContain('parent_id: $parent_key');
+      expect(fetchQuery?.script).toContain('parent_id == $parent_key');
       expect(fetchQuery?.script).toContain('*blocks{');
       expect(fetchQuery?.params.parent_key).toBe(parentKey);
     });

@@ -27,7 +27,7 @@ describe('PropertyRepository', () => {
       await repo.getByEntity(entityId);
 
       expect(db.lastQuery.script).toContain('*properties{');
-      expect(db.lastQuery.script).toContain('entity_id: $entity_id');
+      expect(db.lastQuery.script).toContain('entity_id == $entity_id');
       expect(db.lastQuery.params).toEqual({ entity_id: entityId });
     });
 

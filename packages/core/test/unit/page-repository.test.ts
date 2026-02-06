@@ -28,7 +28,7 @@ describe('PageRepository', () => {
       await repo.getById(pageId);
 
       expect(db.lastQuery.script).toContain('*pages{');
-      expect(db.lastQuery.script).toContain('page_id: $id');
+      expect(db.lastQuery.script).toContain('page_id == $id');
       expect(db.lastQuery.script).toContain('is_deleted == false');
       expect(db.lastQuery.params).toEqual({ id: pageId });
     });
@@ -267,7 +267,7 @@ describe('PageRepository', () => {
       await repo.getByDailyNoteDate('2025-01-15');
 
       expect(db.queries[0]?.script).toContain('*daily_notes{');
-      expect(db.queries[0]?.script).toContain('date: $date');
+      expect(db.queries[0]?.script).toContain('date == $date');
       expect(db.queries[0]?.params).toEqual({ date: '2025-01-15' });
     });
 
@@ -426,7 +426,7 @@ describe('PageRepository', () => {
 
       await repo.getByTitle('Test Title');
 
-      expect(db.lastQuery.script).toContain('title: $title');
+      expect(db.lastQuery.script).toContain('title == $title');
       expect(db.lastQuery.params).toEqual({ title: 'Test Title' });
     });
   });

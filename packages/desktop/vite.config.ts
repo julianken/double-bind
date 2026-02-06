@@ -1,5 +1,8 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { resolve } from 'path';
+
+const isE2E = process.env.E2E_TEST === 'true';
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -26,6 +29,15 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': '/src',
+      // In E2E mode, replace Tauri core with mock
+      ...(isE2E && {
+        '@tauri-apps/api/core': resolve(__dirname, 'test/e2e/setup/tauri-mock-module.ts'),
+      }),
     },
+  },
+
+  // Define for E2E testing
+  define: {
+    __E2E_TEST__: JSON.stringify(isE2E),
   },
 });
