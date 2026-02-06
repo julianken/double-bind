@@ -3,6 +3,9 @@ import { useAppStore } from '../../../src/stores/ui-store.js';
 
 describe('useAppStore', () => {
   beforeEach(() => {
+    // Clear localStorage to prevent persistence from affecting tests
+    localStorage.clear();
+
     // Reset store to initial state before each test
     useAppStore.setState({
       sidebarOpen: true,
@@ -354,6 +357,46 @@ describe('useAppStore', () => {
       expect(store.commandPaletteOpen).toBe(false);
       expect(store.currentPageId).toBe(null);
       expect(store.pageHistory).toEqual([]);
+    });
+  });
+
+  // ============================================================================
+  // Persistence
+  // ============================================================================
+
+  describe('Persistence', () => {
+    it('persists sidebarOpen to localStorage', () => {
+      const store = useAppStore.getState();
+      store.toggleSidebar();
+      expect(useAppStore.getState().sidebarOpen).toBe(false);
+
+      // Check localStorage was updated
+      const stored = JSON.parse(localStorage.getItem('double-bind-ui') || '{}');
+      expect(stored.state?.sidebarOpen).toBe(false);
+    });
+
+    it('persists sidebarWidth to localStorage', () => {
+      const store = useAppStore.getState();
+      store.setSidebarWidth(350);
+
+      // Check localStorage was updated
+      const stored = JSON.parse(localStorage.getItem('double-bind-ui') || '{}');
+      expect(stored.state?.sidebarWidth).toBe(350);
+    });
+
+    it('does not persist non-UI state to localStorage', () => {
+      const store = useAppStore.getState();
+      store.navigateToPage('page-1');
+      store.setFocusedBlock('block-1');
+      store.openRightPanel('backlinks');
+
+      // Check localStorage only contains partialize'd fields
+      const stored = JSON.parse(localStorage.getItem('double-bind-ui') || '{}');
+      expect(stored.state).toHaveProperty('sidebarOpen');
+      expect(stored.state).toHaveProperty('sidebarWidth');
+      expect(stored.state).not.toHaveProperty('currentPageId');
+      expect(stored.state).not.toHaveProperty('focusedBlockId');
+      expect(stored.state).not.toHaveProperty('rightPanelOpen');
     });
   });
 
