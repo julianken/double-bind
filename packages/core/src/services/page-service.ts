@@ -318,4 +318,48 @@ export class PageService {
       );
     }
   }
+
+  /**
+   * Get a page by its title.
+   *
+   * @param title - The page title to look up
+   * @returns The page if found, null otherwise
+   * @throws DoubleBindError with context on repository failure
+   */
+  async getByTitle(title: string): Promise<Page | null> {
+    try {
+      return await this.pageRepo.getByTitle(title);
+    } catch (error) {
+      if (error instanceof DoubleBindError) {
+        throw error;
+      }
+      throw new DoubleBindError(
+        `Failed to get page by title "${title}": ${error instanceof Error ? error.message : String(error)}`,
+        ErrorCode.DB_QUERY_FAILED,
+        error instanceof Error ? error : undefined
+      );
+    }
+  }
+
+  /**
+   * Get a page by title, creating it if it doesn't exist.
+   *
+   * @param title - The page title
+   * @returns The existing or newly created page
+   * @throws DoubleBindError with context on repository failure
+   */
+  async getOrCreateByTitle(title: string): Promise<Page> {
+    try {
+      return await this.pageRepo.getOrCreateByTitle(title);
+    } catch (error) {
+      if (error instanceof DoubleBindError) {
+        throw error;
+      }
+      throw new DoubleBindError(
+        `Failed to get or create page by title "${title}": ${error instanceof Error ? error.message : String(error)}`,
+        ErrorCode.DB_MUTATION_FAILED,
+        error instanceof Error ? error : undefined
+      );
+    }
+  }
 }

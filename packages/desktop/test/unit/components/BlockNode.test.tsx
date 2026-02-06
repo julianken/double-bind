@@ -303,23 +303,29 @@ describe('StaticBlockContent', () => {
     it('renders page link with [[]]', () => {
       render(<StaticBlockContent content="Link to [[My Page]]" />);
 
-      const linkElement = screen.getByText('[[My Page]]');
-      expect(linkElement.className).toContain(STATIC_BLOCK_CONTENT_CSS_CLASSES.pageLink);
-      expect(linkElement.getAttribute('data-link-title')).toBe('My Page');
+      // Page links are now rendered as InlinePageLink components
+      const linkElement = screen.getByTestId('inline-page-link');
+      expect(linkElement).toBeDefined();
+      // The title is shown in a nested span
+      expect(screen.getByTestId('inline-page-link-title').textContent).toBe('My Page');
     });
 
     it('renders multiple page links', () => {
       render(<StaticBlockContent content="[[Page A]] and [[Page B]]" />);
 
-      expect(screen.getByText('[[Page A]]')).toBeDefined();
-      expect(screen.getByText('[[Page B]]')).toBeDefined();
+      const links = screen.getAllByTestId('inline-page-link');
+      expect(links).toHaveLength(2);
+      const titles = screen.getAllByTestId('inline-page-link-title');
+      expect(titles[0]!.textContent).toBe('Page A');
+      expect(titles[1]!.textContent).toBe('Page B');
     });
 
     it('handles page links with special characters', () => {
       render(<StaticBlockContent content="See [[2024-01-15 Notes]]" />);
 
-      const linkElement = screen.getByText('[[2024-01-15 Notes]]');
-      expect(linkElement.getAttribute('data-link-title')).toBe('2024-01-15 Notes');
+      // Verify the inline page link is rendered with correct title
+      expect(screen.getByTestId('inline-page-link')).toBeDefined();
+      expect(screen.getByTestId('inline-page-link-title').textContent).toBe('2024-01-15 Notes');
     });
   });
 
@@ -327,8 +333,9 @@ describe('StaticBlockContent', () => {
     it('renders block reference with (())', () => {
       render(<StaticBlockContent content="See ((01HXQ4E2JKGN3STP6VWDHM2QYZ))" />);
 
-      const refElement = screen.getByText('((01HXQ4E2JKGN3STP6VWDHM2QYZ))');
-      expect(refElement.className).toContain(STATIC_BLOCK_CONTENT_CSS_CLASSES.blockRef);
+      // Block refs are now rendered as InlineBlockRef components
+      const refElement = screen.getByTestId('inline-block-ref');
+      expect(refElement).toBeDefined();
       expect(refElement.getAttribute('data-block-id')).toBe('01HXQ4E2JKGN3STP6VWDHM2QYZ');
     });
 
@@ -337,8 +344,10 @@ describe('StaticBlockContent', () => {
         <StaticBlockContent content="((01HXQ4E2JKGN3STP6VWDHM2QYA)) and ((01HXQ4E2JKGN3STP6VWDHM2QYB))" />
       );
 
-      expect(screen.getByText('((01HXQ4E2JKGN3STP6VWDHM2QYA))')).toBeDefined();
-      expect(screen.getByText('((01HXQ4E2JKGN3STP6VWDHM2QYB))')).toBeDefined();
+      const refs = screen.getAllByTestId('inline-block-ref');
+      expect(refs).toHaveLength(2);
+      expect(refs[0]!.getAttribute('data-block-id')).toBe('01HXQ4E2JKGN3STP6VWDHM2QYA');
+      expect(refs[1]!.getAttribute('data-block-id')).toBe('01HXQ4E2JKGN3STP6VWDHM2QYB');
     });
   });
 
@@ -434,9 +443,10 @@ describe('StaticBlockContent', () => {
       render(<StaticBlockContent content="**Bold** text with [[Page Link]]" />);
 
       expect(screen.getByText('Bold').tagName).toBe('STRONG');
-      expect(screen.getByText('[[Page Link]]').className).toContain(
-        STATIC_BLOCK_CONTENT_CSS_CLASSES.pageLink
-      );
+      // Page links are now rendered as InlinePageLink components
+      const pageLink = screen.getByTestId('inline-page-link');
+      expect(pageLink).toBeDefined();
+      expect(screen.getByTestId('inline-page-link-title').textContent).toBe('Page Link');
     });
 
     it('handles tags with formatting', () => {
@@ -454,14 +464,16 @@ describe('StaticBlockContent', () => {
       );
 
       expect(screen.getByText('Bold').tagName).toBe('STRONG');
-      expect(screen.getByText('[[Link]]').className).toContain(
-        STATIC_BLOCK_CONTENT_CSS_CLASSES.pageLink
-      );
+      // Page links use InlinePageLink component
+      const pageLink = screen.getByTestId('inline-page-link');
+      expect(pageLink).toBeDefined();
+      expect(screen.getByTestId('inline-page-link-title').textContent).toBe('Link');
       expect(screen.getByText('#tag').className).toContain(STATIC_BLOCK_CONTENT_CSS_CLASSES.tag);
       expect(screen.getByText('code').tagName).toBe('CODE');
-      expect(screen.getByText('((01HXQ4E2JKGN3STP6VWDHM2QYZ))').className).toContain(
-        STATIC_BLOCK_CONTENT_CSS_CLASSES.blockRef
-      );
+      // Block refs use InlineBlockRef component
+      const blockRef = screen.getByTestId('inline-block-ref');
+      expect(blockRef).toBeDefined();
+      expect(blockRef.getAttribute('data-block-id')).toBe('01HXQ4E2JKGN3STP6VWDHM2QYZ');
     });
   });
 
