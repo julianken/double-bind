@@ -6,3 +6,4 @@
  */
 
 export { PageService, type PageWithBlocks } from './page-service.js';
+export { BlockService, type BlockBacklinkResult } from './block-service.js';
