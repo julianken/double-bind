@@ -15,7 +15,8 @@
   "dependencies": {
     "@double-bind/types": "workspace:*",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "react-force-graph-2d": "^1.26.5"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.9.1",
