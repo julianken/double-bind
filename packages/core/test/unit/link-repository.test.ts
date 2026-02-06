@@ -30,7 +30,7 @@ describe('LinkRepository', () => {
       await repo.getOutLinks(pageId);
 
       expect(db.lastQuery.script).toContain('*links{');
-      expect(db.lastQuery.script).toContain('source_id: $page_id');
+      expect(db.lastQuery.script).toContain('source_id == $page_id');
       expect(db.lastQuery.script).toContain('*pages{');
       expect(db.lastQuery.script).toContain('page_id: target_id');
       expect(db.lastQuery.script).toContain('is_deleted: false');
@@ -106,7 +106,7 @@ describe('LinkRepository', () => {
       await repo.getInLinks(pageId);
 
       expect(db.lastQuery.script).toContain('*links{');
-      expect(db.lastQuery.script).toContain('target_id: $page_id');
+      expect(db.lastQuery.script).toContain('target_id == $page_id');
       expect(db.lastQuery.script).toContain('*blocks{');
       expect(db.lastQuery.script).toContain('block_id: context_block_id');
       expect(db.lastQuery.script).toContain('is_deleted: false');
@@ -134,7 +134,7 @@ describe('LinkRepository', () => {
       await repo.getBlockBacklinks(blockId);
 
       expect(db.lastQuery.script).toContain('*block_refs{');
-      expect(db.lastQuery.script).toContain('target_block_id: $target');
+      expect(db.lastQuery.script).toContain('target_block_id == $target');
       expect(db.lastQuery.script).toContain('*blocks{');
       expect(db.lastQuery.script).toContain('block_id: source_block_id');
       expect(db.lastQuery.script).toContain('is_deleted: false');
@@ -242,7 +242,7 @@ describe('LinkRepository', () => {
 
       const linksRemoval = db.mutations[0]!;
       expect(linksRemoval.script).toContain('*links{');
-      expect(linksRemoval.script).toContain('context_block_id: $block_id');
+      expect(linksRemoval.script).toContain('context_block_id == $block_id');
       expect(linksRemoval.script).toContain(':rm links { source_id, target_id, link_type }');
       expect(linksRemoval.params).toEqual({ block_id: blockId });
     });
@@ -254,7 +254,7 @@ describe('LinkRepository', () => {
 
       const blockRefsRemoval = db.mutations[1]!;
       expect(blockRefsRemoval.script).toContain('*block_refs{');
-      expect(blockRefsRemoval.script).toContain('source_block_id: $block_id');
+      expect(blockRefsRemoval.script).toContain('source_block_id == $block_id');
       expect(blockRefsRemoval.script).toContain(
         ':rm block_refs { source_block_id, target_block_id }'
       );
@@ -454,7 +454,7 @@ describe('LinkRepository', () => {
 
       await repo.getInLinks('target-page');
 
-      expect(db.lastQuery.script).toContain('target_id: $page_id');
+      expect(db.lastQuery.script).toContain('target_id == $page_id');
       expect(db.lastQuery.params.page_id).toBe('target-page');
     });
 
@@ -481,7 +481,7 @@ describe('LinkRepository', () => {
 
       await repo.getBlockBacklinks('target-block');
 
-      expect(db.lastQuery.script).toContain('target_block_id: $target');
+      expect(db.lastQuery.script).toContain('target_block_id == $target');
       expect(db.lastQuery.params.target).toBe('target-block');
     });
 

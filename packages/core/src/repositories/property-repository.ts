@@ -33,7 +33,8 @@ export class PropertyRepository {
   async getByEntity(entityId: string): Promise<Property[]> {
     const script = `
 ?[entity_id, key, value, value_type, updated_at] :=
-    *properties{ entity_id: $entity_id, key, value, value_type, updated_at }
+    *properties{ entity_id, key, value, value_type, updated_at },
+    entity_id == $entity_id
 `.trim();
 
     const result = await this.db.query(script, { entity_id: entityId });

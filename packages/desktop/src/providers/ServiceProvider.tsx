@@ -70,3 +70,13 @@ export function useServices(): Services {
   }
   return context;
 }
+
+/**
+ * Hook to check if services are available without throwing.
+ * Useful for components that can render in both unit test and full app contexts.
+ *
+ * @returns Services object if available, null otherwise
+ */
+export function useServicesOptional(): Services | null {
+  return useContext(ServiceContext);
+}

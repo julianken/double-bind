@@ -65,7 +65,8 @@ export class BlockRepository {
   async getById(blockId: BlockId): Promise<Block | null> {
     const script = `
 ?[block_id, page_id, parent_id, content, content_type, order, is_collapsed, is_deleted, created_at, updated_at] :=
-    *blocks{ block_id: $id, page_id, parent_id, content, content_type, order, is_collapsed, is_deleted, created_at, updated_at },
+    *blocks{ block_id, page_id, parent_id, content, content_type, order, is_collapsed, is_deleted, created_at, updated_at },
+    block_id == $id,
     is_deleted == false
 `.trim();
 
@@ -88,7 +89,8 @@ export class BlockRepository {
   async getByPage(pageId: PageId): Promise<Block[]> {
     const script = `
 ?[block_id, page_id, parent_id, content, content_type, order, is_collapsed, is_deleted, created_at, updated_at] :=
-    *blocks_by_page{ page_id: $page_id, block_id },
+    *blocks_by_page{ page_id, block_id },
+    page_id == $page_id,
     *blocks{ block_id, page_id, parent_id, content, content_type, order, is_collapsed, is_deleted, created_at, updated_at },
     is_deleted == false
 :order order
@@ -109,7 +111,8 @@ export class BlockRepository {
   async getChildren(parentKey: string): Promise<Block[]> {
     const script = `
 ?[block_id, page_id, parent_id, content, content_type, order, is_collapsed, is_deleted, created_at, updated_at] :=
-    *blocks_by_parent{ parent_id: $parent_key, block_id },
+    *blocks_by_parent{ parent_id, block_id },
+    parent_id == $parent_key,
     *blocks{ block_id, page_id, parent_id, content, content_type, order, is_collapsed, is_deleted, created_at, updated_at },
     is_deleted == false
 :order order
@@ -336,7 +339,8 @@ export class BlockRepository {
   async getHistory(blockId: BlockId, limit = 100): Promise<BlockVersion[]> {
     const script = `
 ?[block_id, version, content, parent_id, order, is_collapsed, is_deleted, operation, timestamp] :=
-    *block_history{ block_id: $id, version, content, parent_id, order, is_collapsed, is_deleted, operation, timestamp }
+    *block_history{ block_id, version, content, parent_id, order, is_collapsed, is_deleted, operation, timestamp },
+    block_id == $id
 :order -version
 :limit $limit
 `.trim();
@@ -367,7 +371,8 @@ export class BlockRepository {
     // First, fetch all blocks we need to update
     const fetchScript = `
 ?[block_id, page_id, parent_id, content, content_type, order, is_collapsed, is_deleted, created_at, updated_at] :=
-    *blocks_by_parent{ parent_id: $parent_key, block_id },
+    *blocks_by_parent{ parent_id, block_id },
+    parent_id == $parent_key,
     *blocks{ block_id, page_id, parent_id, content, content_type, order, is_collapsed, is_deleted, created_at, updated_at },
     is_deleted == false
 `.trim();

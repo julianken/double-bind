@@ -27,7 +27,7 @@ describe('TagRepository', () => {
       await repo.getByEntity(entityId);
 
       expect(db.lastQuery.script).toContain('*tags{');
-      expect(db.lastQuery.script).toContain('entity_id: $entity_id');
+      expect(db.lastQuery.script).toContain('entity_id == $entity_id');
       expect(db.lastQuery.params).toEqual({ entity_id: entityId });
     });
 
@@ -71,7 +71,7 @@ describe('TagRepository', () => {
       await repo.getByTag(tag);
 
       expect(db.lastQuery.script).toContain('*tags{');
-      expect(db.lastQuery.script).toContain('tag: $tag');
+      expect(db.lastQuery.script).toContain('tag == $tag');
       expect(db.lastQuery.params).toEqual({ tag });
     });
 

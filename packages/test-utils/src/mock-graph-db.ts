@@ -1,8 +1,4 @@
-import type {
-  GraphDB,
-  QueryResult,
-  MutationResult,
-} from '@double-bind/types';
+import type { GraphDB, QueryResult, MutationResult } from '@double-bind/types';
 
 /**
  * Recorded query or mutation call for test inspection.
@@ -80,7 +76,7 @@ export class MockGraphDB implements GraphDB {
    */
   async query<T = unknown>(
     script: string,
-    params: Record<string, unknown> = {},
+    params: Record<string, unknown> = {}
   ): Promise<QueryResult<T>> {
     this._queries.push({ script, params });
 
@@ -98,36 +94,39 @@ export class MockGraphDB implements GraphDB {
 
     // Extract requested columns from ?[col1, col2, ...] pattern
     const columnsMatch = script.match(/\?\s*\[\s*([^\]]+)\s*\]/);
-    const requestedColumns = columnsMatch
-      ? columnsMatch[1]!.split(',').map((c) => c.trim())
-      : [];
+    const requestedColumns = columnsMatch ? columnsMatch[1]!.split(',').map((c) => c.trim()) : [];
 
     // Extract column bindings from the relation body
     // e.g., *pages{ page_id, title, created_at } or *pages{ page_id: $id }
     const bodyMatch = script.match(/\*\w+\s*\{\s*([^}]+)\s*\}/);
-    const relationColumns = bodyMatch
-      ? this.parseRelationColumns(bodyMatch[1]!)
-      : [];
+    const relationColumns = bodyMatch ? this.parseRelationColumns(bodyMatch[1]!) : [];
 
     // Store headers for this relation if we have column info
     if (relationColumns.length > 0 && !this._headers.has(relationName)) {
       this._headers.set(
         relationName,
-        relationColumns.map((c) => c.name),
+        relationColumns.map((c) => c.name)
       );
     }
 
-    // Filter rows based on parameter bindings
+    // Filter rows based on parameter bindings in the relation body
     let filteredRows = [...seededRows];
     for (const col of relationColumns) {
       if (col.param && col.param in params) {
         const paramValue = params[col.param];
         const colIndex = relationColumns.findIndex((c) => c.name === col.name);
         if (colIndex !== -1) {
-          filteredRows = filteredRows.filter(
-            (row) => row[colIndex] === paramValue,
-          );
+          filteredRows = filteredRows.filter((row) => row[colIndex] === paramValue);
         }
+      }
+    }
+
+    // Also filter based on equality conditions in the where clause: column_name == $param
+    const equalityConditions = this.parseEqualityConditions(script, params);
+    for (const cond of equalityConditions) {
+      const colIndex = relationColumns.findIndex((c) => c.name === cond.column);
+      if (colIndex !== -1) {
+        filteredRows = filteredRows.filter((row) => row[colIndex] === cond.value);
       }
     }
 
@@ -135,11 +134,11 @@ export class MockGraphDB implements GraphDB {
     let resultRows: unknown[][] = filteredRows;
     if (requestedColumns.length > 0 && relationColumns.length > 0) {
       const columnIndices = requestedColumns.map((reqCol) =>
-        relationColumns.findIndex((c) => c.name === reqCol),
+        relationColumns.findIndex((c) => c.name === reqCol)
       );
 
       resultRows = filteredRows.map((row) =>
-        columnIndices.map((idx) => (idx !== -1 ? row[idx] : undefined)),
+        columnIndices.map((idx) => (idx !== -1 ? row[idx] : undefined))
       );
     }
 
@@ -159,10 +158,7 @@ export class MockGraphDB implements GraphDB {
    * @param params - Optional named parameters
    * @returns Mutation result (empty for mocks)
    */
-  async mutate(
-    script: string,
-    params: Record<string, unknown> = {},
-  ): Promise<MutationResult> {
+  async mutate(script: string, params: Record<string, unknown> = {}): Promise<MutationResult> {
     this._mutations.push({ script, params });
     return { headers: [], rows: [] };
   }
@@ -184,9 +180,7 @@ export class MockGraphDB implements GraphDB {
    * @param relations - Names of relations to export
    * @returns Map of relation names to row arrays
    */
-  async exportRelations(
-    relations: string[],
-  ): Promise<Record<string, unknown[][]>> {
+  async exportRelations(relations: string[]): Promise<Record<string, unknown[][]>> {
     const result: Record<string, unknown[][]> = {};
     for (const relation of relations) {
       const rows = this._relations.get(relation);
@@ -265,9 +259,7 @@ export class MockGraphDB implements GraphDB {
    * @param body - The content inside `*relation{ ... }`
    * @returns Array of column definitions
    */
-  private parseRelationColumns(
-    body: string,
-  ): Array<{ name: string; param?: string }> {
+  private parseRelationColumns(body: string): Array<{ name: string; param?: string }> {
     const columns: Array<{ name: string; param?: string }> = [];
     const parts = body.split(',').map((p) => p.trim());
 
@@ -286,5 +278,41 @@ export class MockGraphDB implements GraphDB {
     }
 
     return columns;
+  }
+
+  /**
+   * Parse equality conditions from the where clause.
+   *
+   * Handles formats like:
+   * - `column_name == $param`
+   * - `entity_id == $entity_id`
+   *
+   * @param script - The full Datalog query script
+   * @param params - Query parameters
+   * @returns Array of column and value pairs
+   */
+  private parseEqualityConditions(
+    script: string,
+    params: Record<string, unknown>
+  ): Array<{ column: string; value: unknown }> {
+    const conditions: Array<{ column: string; value: unknown }> = [];
+
+    // Match patterns like: column_name == $param
+    const pattern = /(\w+)\s*==\s*\$(\w+)/g;
+    let match = pattern.exec(script);
+
+    while (match !== null) {
+      const columnName = match[1]!;
+      const paramName = match[2]!;
+      if (paramName in params) {
+        conditions.push({
+          column: columnName,
+          value: params[paramName],
+        });
+      }
+      match = pattern.exec(script);
+    }
+
+    return conditions;
   }
 }
