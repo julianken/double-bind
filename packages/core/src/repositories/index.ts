@@ -50,3 +50,11 @@ export {
 // Repositories - Datalog query construction for domain entities
 export { PageRepository, type GetAllOptions } from './page-repository.js';
 export { TagRepository, type TagWithCount } from './tag-repository.js';
+export {
+  LinkRepository,
+  type CreateLinkInput,
+  type CreateBlockRefInput,
+  type LinkWithTargetTitle,
+  type InLink,
+  type BlockBacklink,
+} from './link-repository.js';
