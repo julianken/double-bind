@@ -6,6 +6,7 @@ export default defineWorkspace([
   'packages/test-utils',
   'packages/migrations',
   'packages/core',
+  'packages/ui-primitives',
   'packages/desktop',
 
   // Integration test project - runs core integration tests with real CozoDB
