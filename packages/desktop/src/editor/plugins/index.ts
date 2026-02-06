@@ -38,3 +38,17 @@ export {
   codeBlockRule,
   type InputRulesConfig,
 } from './input-rules.js';
+
+export {
+  createTagAutocompletePlugin,
+  tagAutocompletePluginKey,
+  getTagAutocompleteState,
+  isTagAutocompleteActive,
+  deactivateTagAutocomplete,
+  filterSuggestions,
+  isValidTagChar,
+  type TagSuggestion,
+  type TagProvider,
+  type TagAutocompleteState,
+  type TagAutocompletePluginOptions,
+} from './tag-autocomplete.js';
