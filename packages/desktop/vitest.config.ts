@@ -7,6 +7,6 @@ export default defineConfig({
     name: 'desktop',
     globals: true,
     environment: 'jsdom',
-    passWithNoTests: true,
+    include: ['test/**/*.{test,spec}.{ts,tsx}'],
   },
 });
