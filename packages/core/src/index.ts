@@ -66,5 +66,21 @@ export {
 // Client implementations
 export { tauriGraphDB } from './client/index.js';
 
+// Utils - ordering and other utilities
+export {
+  keyBetween,
+  keysBetween,
+  needsRebalance,
+  rebalanceKeys,
+  keyForInsertAfter,
+  MAX_KEY_LENGTH,
+  DEFAULT_ORDER,
+} from './utils/index.js';
+
 // Services - orchestrate repositories with cross-cutting concerns
-export { PageService, type PageWithBlocks } from './services/index.js';
+export {
+  PageService,
+  type PageWithBlocks,
+  BlockService,
+  type BlockBacklinkResult,
+} from './services/index.js';

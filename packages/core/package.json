@@ -13,9 +13,10 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@double-bind/types": "workspace:*",
     "@double-bind/migrations": "workspace:*",
+    "@double-bind/types": "workspace:*",
     "@tauri-apps/api": "^2.0.0",
+    "fractional-indexing": "^3.2.0",
     "ulid": "^2.3.0",
     "zod": "^3.24.0"
   },
