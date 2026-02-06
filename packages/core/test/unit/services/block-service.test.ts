@@ -14,16 +14,18 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { BlockService } from '../../../src/services/block-service.js';
 import { BlockRepository } from '../../../src/repositories/block-repository.js';
 import { LinkRepository } from '../../../src/repositories/link-repository.js';
+import { PageRepository } from '../../../src/repositories/page-repository.js';
 import { TagRepository } from '../../../src/repositories/tag-repository.js';
 import { PropertyRepository } from '../../../src/repositories/property-repository.js';
 import { MockGraphDB } from '@double-bind/test-utils';
 import { DoubleBindError, ErrorCode } from '@double-bind/types';
-import type { Block } from '@double-bind/types';
+import type { Block, Page } from '@double-bind/types';
 
 describe('BlockService', () => {
   let mockDb: MockGraphDB;
   let blockRepo: BlockRepository;
   let linkRepo: LinkRepository;
+  let pageRepo: PageRepository;
   let tagRepo: TagRepository;
   let propertyRepo: PropertyRepository;
   let blockService: BlockService;
@@ -45,13 +47,23 @@ describe('BlockService', () => {
     updatedAt: now,
   };
 
+  const testTargetPage: Page = {
+    pageId: '01HXQ5NF6Z8V4JQXRK4KTARGET',
+    title: 'New Page',
+    createdAt: now,
+    updatedAt: now,
+    isDeleted: false,
+    dailyNoteDate: null,
+  };
+
   beforeEach(() => {
     mockDb = new MockGraphDB();
     blockRepo = new BlockRepository(mockDb);
     linkRepo = new LinkRepository(mockDb);
+    pageRepo = new PageRepository(mockDb);
     tagRepo = new TagRepository(mockDb);
     propertyRepo = new PropertyRepository(mockDb);
-    blockService = new BlockService(blockRepo, linkRepo, tagRepo, propertyRepo);
+    blockService = new BlockService(blockRepo, linkRepo, pageRepo, tagRepo, propertyRepo);
   });
 
   describe('updateContent', () => {
@@ -178,6 +190,86 @@ describe('BlockService', () => {
       expect(createBlockRefSpy).toHaveBeenCalledWith({
         sourceBlockId: testBlockId,
         targetBlockId: targetBlockId,
+      });
+    });
+
+    it('should create page links when content contains [[Page Name]]', async () => {
+      const getByIdSpy = vi.spyOn(blockRepo, 'getById');
+      const updateSpy = vi.spyOn(blockRepo, 'update');
+      const removeLinksFromBlockSpy = vi.spyOn(linkRepo, 'removeLinksFromBlock');
+      const getOrCreateByTitleSpy = vi.spyOn(pageRepo, 'getOrCreateByTitle');
+      const createLinkSpy = vi.spyOn(linkRepo, 'createLink');
+      const getTagsByEntitySpy = vi.spyOn(tagRepo, 'getByEntity');
+      const getPropsByEntitySpy = vi.spyOn(propertyRepo, 'getByEntity');
+
+      getByIdSpy.mockResolvedValueOnce(testBlock);
+      updateSpy.mockResolvedValueOnce(undefined);
+      removeLinksFromBlockSpy.mockResolvedValueOnce(undefined);
+      getOrCreateByTitleSpy.mockResolvedValueOnce(testTargetPage);
+      createLinkSpy.mockResolvedValueOnce(undefined);
+      getTagsByEntitySpy.mockResolvedValueOnce([]);
+      getPropsByEntitySpy.mockResolvedValueOnce([]);
+
+      await blockService.updateContent(testBlockId, 'Link to [[New Page]]');
+
+      // Verify page was looked up or created
+      expect(getOrCreateByTitleSpy).toHaveBeenCalledWith('New Page');
+
+      // Verify link was created
+      expect(createLinkSpy).toHaveBeenCalledWith({
+        sourceId: testPageId,
+        targetId: testTargetPage.pageId,
+        linkType: 'reference',
+        contextBlockId: testBlockId,
+      });
+    });
+
+    it('should create multiple page links for multiple [[Page Name]] references', async () => {
+      const secondTargetPage: Page = {
+        pageId: '01HXQ5NF6Z8V4JQXRK4KTARGT2',
+        title: 'Another Page',
+        createdAt: now,
+        updatedAt: now,
+        isDeleted: false,
+        dailyNoteDate: null,
+      };
+
+      const getByIdSpy = vi.spyOn(blockRepo, 'getById');
+      const updateSpy = vi.spyOn(blockRepo, 'update');
+      const removeLinksFromBlockSpy = vi.spyOn(linkRepo, 'removeLinksFromBlock');
+      const getOrCreateByTitleSpy = vi.spyOn(pageRepo, 'getOrCreateByTitle');
+      const createLinkSpy = vi.spyOn(linkRepo, 'createLink');
+      const getTagsByEntitySpy = vi.spyOn(tagRepo, 'getByEntity');
+      const getPropsByEntitySpy = vi.spyOn(propertyRepo, 'getByEntity');
+
+      getByIdSpy.mockResolvedValueOnce(testBlock);
+      updateSpy.mockResolvedValueOnce(undefined);
+      removeLinksFromBlockSpy.mockResolvedValueOnce(undefined);
+      getOrCreateByTitleSpy.mockResolvedValueOnce(testTargetPage);
+      getOrCreateByTitleSpy.mockResolvedValueOnce(secondTargetPage);
+      createLinkSpy.mockResolvedValue(undefined);
+      getTagsByEntitySpy.mockResolvedValueOnce([]);
+      getPropsByEntitySpy.mockResolvedValueOnce([]);
+
+      await blockService.updateContent(testBlockId, 'Link to [[New Page]] and [[Another Page]]');
+
+      // Verify both pages were looked up or created
+      expect(getOrCreateByTitleSpy).toHaveBeenCalledWith('New Page');
+      expect(getOrCreateByTitleSpy).toHaveBeenCalledWith('Another Page');
+
+      // Verify both links were created
+      expect(createLinkSpy).toHaveBeenCalledTimes(2);
+      expect(createLinkSpy).toHaveBeenCalledWith({
+        sourceId: testPageId,
+        targetId: testTargetPage.pageId,
+        linkType: 'reference',
+        contextBlockId: testBlockId,
+      });
+      expect(createLinkSpy).toHaveBeenCalledWith({
+        sourceId: testPageId,
+        targetId: secondTargetPage.pageId,
+        linkType: 'reference',
+        contextBlockId: testBlockId,
       });
     });
   });

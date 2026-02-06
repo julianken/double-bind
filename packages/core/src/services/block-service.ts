@@ -16,6 +16,7 @@ import { DoubleBindError, ErrorCode } from '@double-bind/types';
 import type { BlockRepository } from '../repositories/block-repository.js';
 import { computeParentKey } from '../repositories/block-repository.js';
 import type { LinkRepository } from '../repositories/link-repository.js';
+import type { PageRepository } from '../repositories/page-repository.js';
 import type { TagRepository } from '../repositories/tag-repository.js';
 import type { PropertyRepository } from '../repositories/property-repository.js';
 import { parseContent, type ParsedContent } from '../parsers/content-parser.js';
@@ -39,6 +40,7 @@ export class BlockService {
   constructor(
     private readonly blockRepo: BlockRepository,
     private readonly linkRepo: LinkRepository,
+    private readonly pageRepo: PageRepository,
     private readonly tagRepo: TagRepository,
     private readonly propertyRepo: PropertyRepository
   ) {}
@@ -478,25 +480,25 @@ export class BlockService {
    */
   private async syncParsedContent(
     blockId: BlockId,
-    _pageId: PageId, // Reserved for future page link resolution
+    pageId: PageId,
     parsed: ParsedContent
   ): Promise<void> {
     // Remove existing links and block refs from this block
     await this.linkRepo.removeLinksFromBlock(blockId);
 
-    // Note: Page links reference pages by title. In a full implementation,
-    // we would resolve page titles to page IDs here. For now, we create
-    // links with the page title as the target ID (placeholder behavior).
-    // The UI layer should handle page resolution when displaying.
-
-    // Create page links (using title as target placeholder)
-    // In production, this should resolve titles to page IDs via PageRepository
+    // Create page links for [[Page Name]] references
+    // This resolves page titles to IDs, creating pages if they don't exist
     for (const pageLink of parsed.pageLinks) {
-      // For now, we skip creating links since we don't have page resolution
-      // The link creation requires resolving the page title to a page ID
-      // This is typically done at a higher level (ImportExportService)
-      // or requires access to PageRepository
-      void pageLink; // Acknowledge the variable to avoid lint errors
+      // Get or create the target page by title
+      const targetPage = await this.pageRepo.getOrCreateByTitle(pageLink.title);
+
+      // Create the link record
+      await this.linkRepo.createLink({
+        sourceId: pageId,
+        targetId: targetPage.pageId,
+        linkType: 'reference',
+        contextBlockId: blockId,
+      });
     }
 
     // Create block refs for ((blockId)) references
