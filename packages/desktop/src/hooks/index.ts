@@ -33,3 +33,10 @@ export { useResizable, type UseResizableOptions, type UseResizableResult } from 
 export { useBacklinks, type UseBacklinksResult } from './useBacklinks.js';
 
 export { useNeighborhood, type UseNeighborhoodResult } from './useNeighborhood.js';
+
+export {
+  useSearch,
+  type SearchResult,
+  type UseSearchOptions,
+  type UseSearchResult,
+} from './useSearch.js';
