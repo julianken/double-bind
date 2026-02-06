@@ -15,8 +15,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@double-bind/types": "workspace:*",
     "@double-bind/core": "workspace:*",
+    "@double-bind/types": "workspace:*",
     "@tauri-apps/api": "^2.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
@@ -25,9 +25,12 @@
   "devDependencies": {
     "@double-bind/test-utils": "workspace:*",
     "@tauri-apps/cli": "^2.0.0",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^4.3.0",
+    "jsdom": "^28.0.0",
     "typescript": "^5.7.0",
     "vite": "^6.0.0",
     "vitest": "^2.0.0"
