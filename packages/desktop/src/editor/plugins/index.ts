@@ -52,3 +52,17 @@ export {
   type TagAutocompleteState,
   type TagAutocompletePluginOptions,
 } from './tag-autocomplete.js';
+
+export {
+  createBlockRefAutocompletePlugin,
+  autocompletePluginKey,
+  getAutocompleteState,
+  closeAutocompleteFromView,
+  selectResultByIndex,
+  truncatePreview,
+  type AutocompletePluginOptions,
+  type AutocompleteState,
+  type BlockRefResult,
+  type BlockSearchFn,
+  type OnSelectBlockRef,
+} from './autocomplete.js';
