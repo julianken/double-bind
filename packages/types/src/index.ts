@@ -3,3 +3,4 @@
 
 export { DoubleBindError, ErrorCode } from './errors';
 export type { CreatePageInput, CreateBlockInput, UpdateBlockInput } from './inputs';
+export type { GraphDB, QueryResult, MutationResult } from './graph-db.js';
