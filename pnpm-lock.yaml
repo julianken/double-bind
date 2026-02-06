@@ -169,6 +169,9 @@ importers:
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
+      ulid:
+        specifier: ^3.0.2
+        version: 3.0.2
       vite:
         specifier: ^6.0.0
         version: 6.4.1(@types/node@25.2.1)(tsx@4.21.0)(yaml@2.8.2)

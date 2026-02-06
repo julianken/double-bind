@@ -1,8 +1,8 @@
 # Project Progress Tracker
 
-**Last Updated:** 2026-02-06T09:45:00Z
-**Main Branch Tests:** 2019 passing
-**Current Status:** All 3 Phases COMPLETE
+**Last Updated:** 2026-02-06T11:30:00Z
+**Main Branch Tests:** 2158 passing
+**Current Status:** Phase 3 enhancements in progress
 
 ---
 
@@ -100,6 +100,22 @@
 | DBB-323 | Inline refs rendering      | #66 | Merged |
 | DBB-324 | Sidebar MiniGraph          | #67 | Merged |
 
+### Batch 4 (PRs #69-71) - MERGED ✅
+
+| Issue   | Title                     | PR  | Status |
+| ------- | ------------------------- | --- | ------ |
+| DBB-197 | [[ page autocomplete      | #71 | Merged |
+| DBB-198 | (( block ref autocomplete | #70 | Merged |
+| DBB-199 | # tag autocomplete        | #69 | Merged |
+
+### Batch 5 (PRs #72-74) - MERGED ✅
+
+| Issue   | Title                | PR  | Status |
+| ------- | -------------------- | --- | ------ |
+| DBB-210 | E2E test: [[link]]   | #72 | Merged |
+| DBB-211 | E2E test: backlinks  | #74 | Merged |
+| DBB-212 | E2E test: graph view | #73 | Merged |
+
 ### Key Deliverables
 
 - GraphService with CozoDB Datalog queries:
@@ -119,6 +135,16 @@
   - BacklinksPanel in PageView (Ctrl+B)
   - Inline refs rendering in BlockNode
   - Neighborhood graph in Sidebar
+- Autocomplete plugins:
+  - [[ page link autocomplete (page-autocomplete.ts)
+  - (( block ref autocomplete (autocomplete.ts)
+  - # tag autocomplete (tag-autocomplete.ts)
+  - AutocompleteDropdown and BlockRefAutocomplete components
+- E2E testing infrastructure:
+  - Playwright config with HTTP bridge server
+  - Mock Tauri IPC for browser tests
+  - Test data seeding utilities
+  - E2E tests for [[link]], backlinks panel, and graph view
 
 ---
 
@@ -131,8 +157,8 @@
 | migrations    | 67    |
 | core          | 869   |
 | ui-primitives | 173   |
-| desktop       | 687   |
-| **Total**     | 2019  |
+| desktop       | 826   |
+| **Total**     | 2158  |
 
 ---
 
