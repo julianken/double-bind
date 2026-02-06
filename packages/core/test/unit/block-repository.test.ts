@@ -655,4 +655,290 @@ describe('BlockRepository', () => {
       await expect(repo.getById(blockId)).rejects.toThrow(DoubleBindError);
     });
   });
+
+  describe('create with different content types', () => {
+    it('should handle heading content type', async () => {
+      const pageId = '01ARZ3NDEKTSV4RRFFQ69G5PAG';
+
+      await repo.create({ pageId, content: '# Heading', contentType: 'heading' });
+
+      expect(db.lastMutation.params.content_type).toBe('heading');
+    });
+
+    it('should handle code content type', async () => {
+      const pageId = '01ARZ3NDEKTSV4RRFFQ69G5PAG';
+
+      await repo.create({ pageId, content: 'console.log()', contentType: 'code' });
+
+      expect(db.lastMutation.params.content_type).toBe('code');
+    });
+
+    it('should default to text content type', async () => {
+      const pageId = '01ARZ3NDEKTSV4RRFFQ69G5PAG';
+
+      await repo.create({ pageId, content: 'Plain text' });
+
+      expect(db.lastMutation.params.content_type).toBe('text');
+    });
+  });
+
+  describe('create with empty content', () => {
+    it('should allow empty string content', async () => {
+      const pageId = '01ARZ3NDEKTSV4RRFFQ69G5PAG';
+
+      await repo.create({ pageId, content: '' });
+
+      expect(db.lastMutation.params.content).toBe('');
+    });
+
+    it('should handle whitespace-only content', async () => {
+      const pageId = '01ARZ3NDEKTSV4RRFFQ69G5PAG';
+
+      await repo.create({ pageId, content: '   \n   ' });
+
+      expect(db.lastMutation.params.content).toBe('   \n   ');
+    });
+  });
+
+  describe('update with special content', () => {
+    it('should handle multiline content', async () => {
+      const blockId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
+      db.seed('blocks', [createBlockRow({ block_id: blockId })]);
+
+      const multilineContent = 'Line 1\nLine 2\nLine 3';
+      await repo.update(blockId, { content: multilineContent });
+
+      expect(db.lastMutation.params.content).toBe(multilineContent);
+    });
+
+    it('should handle content with special characters', async () => {
+      const blockId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
+      db.seed('blocks', [createBlockRow({ block_id: blockId })]);
+
+      const content = 'Content with "quotes" and \'apostrophes\' and {{brackets}}';
+      await repo.update(blockId, { content });
+
+      expect(db.lastMutation.params.content).toBe(content);
+    });
+
+    it('should handle very long content', async () => {
+      const blockId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
+      db.seed('blocks', [createBlockRow({ block_id: blockId })]);
+
+      const longContent = 'a'.repeat(100000);
+      await repo.update(blockId, { content: longContent });
+
+      expect(db.lastMutation.params.content).toBe(longContent);
+    });
+
+    it('should handle unicode content', async () => {
+      const blockId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
+      db.seed('blocks', [createBlockRow({ block_id: blockId })]);
+
+      const content = '你好世界 🌍 Привет мир';
+      await repo.update(blockId, { content });
+
+      expect(db.lastMutation.params.content).toBe(content);
+    });
+  });
+
+  describe('order string edge cases', () => {
+    it('should handle single character order', async () => {
+      const pageId = '01ARZ3NDEKTSV4RRFFQ69G5PAG';
+
+      await repo.create({ pageId, content: 'Block', order: 'z' });
+
+      expect(db.lastMutation.params.order).toBe('z');
+    });
+
+    it('should handle multi-character order strings', async () => {
+      const pageId = '01ARZ3NDEKTSV4RRFFQ69G5PAG';
+
+      await repo.create({ pageId, content: 'Block', order: 'abc123xyz' });
+
+      expect(db.lastMutation.params.order).toBe('abc123xyz');
+    });
+
+    it('should handle fractional order strings', async () => {
+      const pageId = '01ARZ3NDEKTSV4RRFFQ69G5PAG';
+
+      await repo.create({ pageId, content: 'Block', order: 'a0.5' });
+
+      expect(db.lastMutation.params.order).toBe('a0.5');
+    });
+  });
+
+  describe('move to same parent', () => {
+    it('should allow moving block to same parent with different order', async () => {
+      const blockId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
+      const pageId = '01ARZ3NDEKTSV4RRFFQ69G5PAG';
+      const parentId = '01ARZ3NDEKTSV4RRFFQ69G5PAR';
+
+      db.seed('blocks', [
+        createBlockRow({ block_id: blockId, page_id: pageId, parent_id: parentId, order: 'a' }),
+      ]);
+
+      await repo.move(blockId, parentId, 'z');
+
+      expect(db.lastMutation.params.new_parent_id).toBe(parentId);
+      expect(db.lastMutation.params.old_parent_key).toBe(parentId);
+      expect(db.lastMutation.params.new_parent_key).toBe(parentId);
+      expect(db.lastMutation.params.new_order).toBe('z');
+    });
+  });
+
+  describe('search with special queries', () => {
+    it('should handle empty search query', async () => {
+      db.seed('blocks', []);
+
+      await repo.search('');
+
+      expect(db.lastQuery.params.query).toBe('');
+    });
+
+    it('should handle search query with special FTS syntax', async () => {
+      db.seed('blocks', []);
+
+      const query = 'word AND another OR "exact phrase"';
+      await repo.search(query);
+
+      expect(db.lastQuery.params.query).toBe(query);
+    });
+
+    it('should filter deleted blocks from search results', async () => {
+      db.seed('blocks', []);
+
+      await repo.search('test');
+
+      expect(db.lastQuery.script).toContain('is_deleted == false');
+    });
+  });
+
+  describe('getHistory edge cases', () => {
+    it('should return empty array when no history exists', async () => {
+      const blockId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
+      db.seed('block_history', []);
+
+      const result = await repo.getHistory(blockId);
+
+      expect(result).toEqual([]);
+    });
+
+    it('should handle history with different operations', async () => {
+      const blockId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
+      const timestamp = Date.now();
+      db.seed('block_history', [
+        [blockId, 3, 'Content 3', null, 'c', false, true, 'delete', timestamp],
+        [blockId, 2, 'Content 2', null, 'b', false, false, 'update', timestamp - 1000],
+        [blockId, 1, 'Content 1', null, 'a', false, false, 'create', timestamp - 2000],
+      ]);
+
+      const result = await repo.getHistory(blockId);
+
+      expect(result).toHaveLength(3);
+      expect(result[0]?.operation).toBe('delete');
+      expect(result[1]?.operation).toBe('update');
+      expect(result[2]?.operation).toBe('create');
+    });
+
+    it('should respect custom limit', async () => {
+      const blockId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
+      db.seed('block_history', []);
+
+      await repo.getHistory(blockId, 5);
+
+      expect(db.lastQuery.params.limit).toBe(5);
+    });
+  });
+
+  describe('parent-child relationships', () => {
+    it('should create root block with null parentId', async () => {
+      const pageId = '01ARZ3NDEKTSV4RRFFQ69G5PAG';
+
+      await repo.create({ pageId, content: 'Root block', parentId: null });
+
+      expect(db.lastMutation.params.parent_id).toBeNull();
+      expect(db.lastMutation.params.parent_key).toBe(`__page:${pageId}`);
+    });
+
+    it('should create child block with parentId', async () => {
+      const pageId = '01ARZ3NDEKTSV4RRFFQ69G5PAG';
+      const parentId = '01ARZ3NDEKTSV4RRFFQ69G5PAR';
+
+      await repo.create({ pageId, content: 'Child block', parentId });
+
+      expect(db.lastMutation.params.parent_id).toBe(parentId);
+      expect(db.lastMutation.params.parent_key).toBe(parentId);
+    });
+
+    it('should maintain all indexes on create', async () => {
+      const pageId = '01ARZ3NDEKTSV4RRFFQ69G5PAG';
+
+      await repo.create({ pageId, content: 'Block' });
+
+      const script = db.lastMutation.script;
+      expect(script).toContain(':put blocks {');
+      expect(script).toContain(':put blocks_by_page {');
+      expect(script).toContain(':put blocks_by_parent {');
+    });
+  });
+
+  describe('update preserving unmodified fields', () => {
+    it('should preserve contentType when updating other fields', async () => {
+      const blockId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
+      db.seed('blocks', [createBlockRow({ block_id: blockId, content_type: 'code' })]);
+
+      await repo.update(blockId, { content: 'New content' });
+
+      expect(db.lastMutation.params.content_type).toBe('code');
+    });
+
+    it('should preserve pageId when updating', async () => {
+      const blockId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
+      const pageId = '01ARZ3NDEKTSV4RRFFQ69G5PAG';
+      db.seed('blocks', [createBlockRow({ block_id: blockId, page_id: pageId })]);
+
+      await repo.update(blockId, { content: 'New content' });
+
+      expect(db.lastMutation.params.page_id).toBe(pageId);
+    });
+
+    it('should preserve isDeleted when updating', async () => {
+      const blockId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
+      db.seed('blocks', [createBlockRow({ block_id: blockId, is_deleted: false })]);
+
+      await repo.update(blockId, { content: 'New content' });
+
+      expect(db.lastMutation.params.is_deleted).toBe(false);
+    });
+  });
+
+  describe('softDelete preserving fields', () => {
+    it('should preserve all block data except is_deleted', async () => {
+      const blockId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
+      const pageId = '01ARZ3NDEKTSV4RRFFQ69G5PAG';
+      const parentId = '01ARZ3NDEKTSV4RRFFQ69G5PAR';
+
+      db.seed('blocks', [
+        createBlockRow({
+          block_id: blockId,
+          page_id: pageId,
+          parent_id: parentId,
+          content: 'Test content',
+          content_type: 'code',
+          order: 'xyz',
+          is_collapsed: true,
+        }),
+      ]);
+
+      await repo.softDelete(blockId);
+
+      expect(db.lastMutation.params.page_id).toBe(pageId);
+      expect(db.lastMutation.params.parent_id).toBe(parentId);
+      expect(db.lastMutation.params.content).toBe('Test content');
+      expect(db.lastMutation.params.content_type).toBe('code');
+      expect(db.lastMutation.params.order).toBe('xyz');
+      expect(db.lastMutation.params.is_collapsed).toBe(true);
+    });
+  });
 });

@@ -299,4 +299,214 @@ describe('PropertyRepository', () => {
       expect(secondTimestamp).toBeLessThanOrEqual(after);
     });
   });
+
+  describe('property key edge cases', () => {
+    it('should handle keys with special characters', async () => {
+      const key = 'key-with-special_chars#123';
+      await repo.set('entity-1', key, 'value');
+
+      expect(db.lastMutation.params.key).toBe(key);
+    });
+
+    it('should handle keys with spaces', async () => {
+      const key = 'key with spaces';
+      await repo.set('entity-1', key, 'value');
+
+      expect(db.lastMutation.params.key).toBe(key);
+    });
+
+    it('should handle empty string key', async () => {
+      await repo.set('entity-1', '', 'value');
+
+      expect(db.lastMutation.params.key).toBe('');
+    });
+
+    it('should handle unicode keys', async () => {
+      const key = '属性-свойство-🔑';
+      await repo.set('entity-1', key, 'value');
+
+      expect(db.lastMutation.params.key).toBe(key);
+    });
+
+    it('should handle very long keys', async () => {
+      const longKey = 'k'.repeat(1000);
+      await repo.set('entity-1', longKey, 'value');
+
+      expect(db.lastMutation.params.key).toBe(longKey);
+    });
+  });
+
+  describe('property value serialization', () => {
+    it('should store number values as strings', async () => {
+      await repo.set('entity-1', 'count', '42', 'number');
+
+      expect(db.lastMutation.params.value).toBe('42');
+      expect(typeof db.lastMutation.params.value).toBe('string');
+    });
+
+    it('should store boolean values as strings', async () => {
+      await repo.set('entity-1', 'active', 'true', 'boolean');
+
+      expect(db.lastMutation.params.value).toBe('true');
+      expect(typeof db.lastMutation.params.value).toBe('string');
+    });
+
+    it('should store date values as strings', async () => {
+      await repo.set('entity-1', 'due_date', '2024-12-31', 'date');
+
+      expect(db.lastMutation.params.value).toBe('2024-12-31');
+      expect(db.lastMutation.params.value_type).toBe('date');
+    });
+
+    it('should handle null-like string values', async () => {
+      await repo.set('entity-1', 'nullable', 'null', 'string');
+
+      expect(db.lastMutation.params.value).toBe('null');
+    });
+
+    it('should handle undefined-like string values', async () => {
+      await repo.set('entity-1', 'undef', 'undefined', 'string');
+
+      expect(db.lastMutation.params.value).toBe('undefined');
+    });
+
+    it('should handle JSON-like string values', async () => {
+      const jsonValue = '{"key": "value", "nested": {"data": 123}}';
+      await repo.set('entity-1', 'json_data', jsonValue, 'string');
+
+      expect(db.lastMutation.params.value).toBe(jsonValue);
+    });
+  });
+
+  describe('getByEntity with mixed property types', () => {
+    it('should return properties with different value types', async () => {
+      const entityId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
+      const now = Date.now();
+      db.seed('properties', [
+        [entityId, 'name', 'John', 'string', now],
+        [entityId, 'age', '30', 'number', now],
+        [entityId, 'active', 'true', 'boolean', now],
+        [entityId, 'birthday', '1994-01-15', 'date', now],
+      ]);
+
+      const result = await repo.getByEntity(entityId);
+
+      expect(result).toHaveLength(4);
+
+      const byKey = (key: string) => result.find((p) => p.key === key);
+      expect(byKey('name')?.valueType).toBe('string');
+      expect(byKey('age')?.valueType).toBe('number');
+      expect(byKey('active')?.valueType).toBe('boolean');
+      expect(byKey('birthday')?.valueType).toBe('date');
+    });
+
+    it('should preserve value as string regardless of type', async () => {
+      const entityId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
+      const now = Date.now();
+      db.seed('properties', [[entityId, 'count', '42', 'number', now]]);
+
+      const result = await repo.getByEntity(entityId);
+
+      expect(result[0]?.value).toBe('42');
+      expect(typeof result[0]?.value).toBe('string');
+    });
+  });
+
+  describe('remove property edge cases', () => {
+    it('should not throw when removing non-existent property', async () => {
+      await expect(repo.remove('entity-1', 'nonexistent')).resolves.not.toThrow();
+    });
+
+    it('should construct correct removal with empty key', async () => {
+      await repo.remove('entity-1', '');
+
+      expect(db.lastMutation.params.key).toBe('');
+    });
+
+    it('should use correct composite key for removal', async () => {
+      await repo.remove('entity-1', 'status');
+
+      expect(db.lastMutation.script).toContain(':rm properties { entity_id, key }');
+      expect(db.lastMutation.params.entity_id).toBe('entity-1');
+      expect(db.lastMutation.params.key).toBe('status');
+    });
+  });
+
+  describe('multiple property operations', () => {
+    it('should handle setting multiple properties sequentially', async () => {
+      await repo.set('entity-1', 'prop1', 'value1');
+      await repo.set('entity-1', 'prop2', 'value2');
+      await repo.set('entity-1', 'prop3', 'value3');
+
+      expect(db.mutations).toHaveLength(3);
+      expect(db.mutations[0]?.params.key).toBe('prop1');
+      expect(db.mutations[1]?.params.key).toBe('prop2');
+      expect(db.mutations[2]?.params.key).toBe('prop3');
+    });
+
+    it('should allow overwriting same property key', async () => {
+      await repo.set('entity-1', 'status', 'draft');
+      await repo.set('entity-1', 'status', 'published');
+
+      expect(db.mutations).toHaveLength(2);
+      expect(db.mutations[1]?.params.value).toBe('published');
+    });
+
+    it('should allow changing property value type on overwrite', async () => {
+      await repo.set('entity-1', 'field', '42', 'number');
+      await repo.set('entity-1', 'field', 'text', 'string');
+
+      expect(db.mutations[0]?.params.value_type).toBe('number');
+      expect(db.mutations[1]?.params.value_type).toBe('string');
+    });
+  });
+
+  describe('property timestamps', () => {
+    it('should update timestamp when property value changes', async () => {
+      const before1 = Date.now();
+      await repo.set('entity-1', 'status', 'draft');
+      const timestamp1 = db.lastMutation.params.now as number;
+
+      await new Promise((resolve) => setTimeout(resolve, 5));
+
+      const before2 = Date.now();
+      await repo.set('entity-1', 'status', 'published');
+      const timestamp2 = db.lastMutation.params.now as number;
+
+      expect(timestamp1).toBeGreaterThanOrEqual(before1);
+      expect(timestamp2).toBeGreaterThanOrEqual(before2);
+      expect(timestamp2).toBeGreaterThan(timestamp1);
+    });
+
+    it('should use millisecond precision for timestamps', async () => {
+      await repo.set('entity-1', 'key', 'value');
+
+      const timestamp = db.lastMutation.params.now as number;
+      expect(timestamp).toBeGreaterThan(1700000000000); // After 2023
+      expect(Number.isInteger(timestamp)).toBe(true);
+    });
+  });
+
+  describe('query parameterization security', () => {
+    it('should never include raw entity_id in query string', async () => {
+      await repo.set('entity-with-special-chars-\'";--', 'key', 'value');
+
+      expect(db.lastMutation.script).toContain('$entity_id');
+      expect(db.lastMutation.script).not.toContain('entity-with-special-chars');
+    });
+
+    it('should never include raw key in query string', async () => {
+      await repo.set('entity-1', 'key-with-special-\'"--', 'value');
+
+      expect(db.lastMutation.script).toContain('$key');
+      expect(db.lastMutation.script).not.toContain('key-with-special');
+    });
+
+    it('should never include raw value in query string', async () => {
+      await repo.set('entity-1', 'key', 'value-with-special-\'"--');
+
+      expect(db.lastMutation.script).toContain('$value');
+      expect(db.lastMutation.script).not.toContain('value-with-special');
+    });
+  });
 });
