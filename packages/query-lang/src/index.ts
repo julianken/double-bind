@@ -126,4 +126,26 @@ export { validateCozoScript } from './validator.js';
 // TEMPLATES
 // ============================================================================
 
-export { getTemplates, getTemplate, applyTemplate, registerTemplate } from './templates/index.js';
+export {
+  getTemplates,
+  getTemplate,
+  applyTemplate,
+  registerTemplate,
+  unregisterTemplate,
+  getTemplatesByCategory,
+  searchTemplates,
+  validateTemplateParams,
+  getTemplateCount,
+  resetTemplates,
+  ALL_TEMPLATES,
+  pagesModifiedInLastNDays,
+  pagesLinkingTo,
+  orphanPages,
+  blocksWithTag,
+  pagesWithTag,
+  recentPages,
+  pagesLinkedFrom,
+  searchPagesByTitle,
+  blocksContainingText,
+  dailyNotesInRange,
+} from './templates/index.js';
