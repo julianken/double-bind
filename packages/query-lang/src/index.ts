@@ -114,7 +114,16 @@ export { parseQuery, ParseError } from './parser.js';
 // TRANSPILER
 // ============================================================================
 
-export { transpileToCozo, compileQuery } from './transpiler.js';
+export {
+  transpileToCozo,
+  compileQuery,
+  transpilePageRank,
+  transpileCommunities,
+  transpileShortestPath,
+  transpileAggregation,
+} from './transpiler.js';
+
+export type { GraphAlgorithmOptions, AggregationOptions } from './transpiler.js';
 
 // ============================================================================
 // VALIDATOR
