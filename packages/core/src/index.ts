@@ -1,4 +1,39 @@
 // @double-bind/core - Business logic (repos, services, client)
 // Dependencies: @double-bind/types, @double-bind/migrations
 
-export {};
+// Repository schemas and parsers
+export {
+  // Page
+  PageRowSchema,
+  PageSchema,
+  parsePageRow,
+  type PageRow,
+  // Block
+  BlockRowSchema,
+  BlockSchema,
+  BlockVersionRowSchema,
+  BlockVersionSchema,
+  parseBlockRow,
+  parseBlockVersionRow,
+  type BlockRow,
+  type BlockVersionRow,
+  // Link
+  LinkRowSchema,
+  LinkSchema,
+  BlockRefRowSchema,
+  BlockRefSchema,
+  parseLinkRow,
+  parseBlockRefRow,
+  type LinkRow,
+  type BlockRefRow,
+  // Tag
+  TagRowSchema,
+  TagSchema,
+  parseTagRow,
+  type TagRow,
+  // Property
+  PropertyRowSchema,
+  PropertySchema,
+  parsePropertyRow,
+  type PropertyRow,
+} from './repositories/index.js';
