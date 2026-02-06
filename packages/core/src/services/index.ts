@@ -9,6 +9,7 @@ import type { GraphDB } from '@double-bind/types';
 import { PageService } from './page-service.js';
 import { BlockService } from './block-service.js';
 import { GraphService } from './graph-service.js';
+import { SearchService } from './search-service.js';
 import {
   PageRepository,
   BlockRepository,
@@ -20,6 +21,7 @@ import {
 export { PageService, type PageWithBlocks, type PageBacklink } from './page-service.js';
 export { BlockService, type BlockBacklinkResult, type RebalanceCallback } from './block-service.js';
 export { GraphService, type GraphResult, type SuggestedLink } from './graph-service.js';
+export { SearchService } from './search-service.js';
 
 /**
  * All services bundled for dependency injection.
@@ -32,6 +34,7 @@ export interface Services {
   pageService: PageService;
   blockService: BlockService;
   graphService: GraphService;
+  searchService: SearchService;
 }
 
 /**
@@ -76,10 +79,12 @@ export function createServices(db: GraphDB): Services {
   const pageService = new PageService(pageRepo, blockRepo, linkRepo);
   const blockService = new BlockService(blockRepo, linkRepo, pageRepo, tagRepo, propertyRepo);
   const graphService = new GraphService(db);
+  const searchService = new SearchService(db);
 
   return {
     pageService,
     blockService,
     graphService,
+    searchService,
   };
 }

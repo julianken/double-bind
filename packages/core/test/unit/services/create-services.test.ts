@@ -14,6 +14,7 @@ import { createServices, type Services } from '../../../src/services/index.js';
 import { PageService } from '../../../src/services/page-service.js';
 import { BlockService } from '../../../src/services/block-service.js';
 import { GraphService } from '../../../src/services/graph-service.js';
+import { SearchService } from '../../../src/services/search-service.js';
 
 describe('createServices', () => {
   let db: MockGraphDB;
@@ -30,6 +31,7 @@ describe('createServices', () => {
       expect(services).toHaveProperty('pageService');
       expect(services).toHaveProperty('blockService');
       expect(services).toHaveProperty('graphService');
+      expect(services).toHaveProperty('searchService');
     });
 
     it('should create PageService instance', () => {
@@ -42,6 +44,10 @@ describe('createServices', () => {
 
     it('should create GraphService instance', () => {
       expect(services.graphService).toBeInstanceOf(GraphService);
+    });
+
+    it('should create SearchService instance', () => {
+      expect(services.searchService).toBeInstanceOf(SearchService);
     });
 
     it('should create services that share the same GraphDB instance', async () => {
@@ -160,6 +166,7 @@ describe('createServices', () => {
       expect(services1.pageService).not.toBe(services2.pageService);
       expect(services1.blockService).not.toBe(services2.blockService);
       expect(services1.graphService).not.toBe(services2.graphService);
+      expect(services1.searchService).not.toBe(services2.searchService);
     });
 
     it('should share the GraphDB instance across all created repositories', async () => {
@@ -259,10 +266,12 @@ describe('createServices', () => {
       const _pageService: PageService = result.pageService;
       const _blockService: BlockService = result.blockService;
       const _graphService: GraphService = result.graphService;
+      const _searchService: SearchService = result.searchService;
 
       expect(_pageService).toBeDefined();
       expect(_blockService).toBeDefined();
       expect(_graphService).toBeDefined();
+      expect(_searchService).toBeDefined();
     });
 
     it('should accept any GraphDB implementation', () => {
@@ -273,6 +282,25 @@ describe('createServices', () => {
       const result = createServices(mockDb);
 
       expect(result).toBeDefined();
+    });
+  });
+
+  describe('Search operations', () => {
+    it('should wire SearchService with GraphDB for FTS queries', () => {
+      // SearchService needs direct access to GraphDB for FTS queries
+      expect(services.searchService).toBeInstanceOf(SearchService);
+
+      // Verify the service has the expected methods
+      expect(typeof services.searchService.search).toBe('function');
+    });
+
+    it('should create functional SearchService that can execute operations', () => {
+      // Verify SearchService has all required methods for search operations
+      expect(services.searchService).toBeDefined();
+      expect(typeof services.searchService.search).toBe('function');
+
+      // The service is properly initialized with GraphDB
+      // Integration tests verify actual execution
     });
   });
 
