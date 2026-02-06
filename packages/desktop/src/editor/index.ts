@@ -13,3 +13,5 @@ export {
   type NodeTypeName,
   type MarkTypeName,
 } from './schema';
+
+export * from './plugins/index.js';

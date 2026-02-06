@@ -18,6 +18,8 @@
     "@double-bind/core": "workspace:*",
     "@double-bind/types": "workspace:*",
     "@tauri-apps/api": "^2.0.0",
+    "prosemirror-commands": "^1.7.1",
+    "prosemirror-keymap": "^1.2.3",
     "prosemirror-model": "^1.25.4",
     "prosemirror-state": "^1.4.4",
     "prosemirror-view": "^1.41.5",
