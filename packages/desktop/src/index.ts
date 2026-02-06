@@ -54,6 +54,17 @@ export {
   type OutlinerContext,
 } from './editor/index.js';
 
+// Editor plugins - input rules
+export {
+  createInputRulesPlugin,
+  headingRule,
+  bulletRule,
+  todoUncheckedRule,
+  todoCheckedRule,
+  codeBlockRule,
+  type InputRulesConfig,
+} from './editor/index.js';
+
 // Layout
 export { AppShell, type AppShellProps } from './layout/index.js';
 export {
