@@ -512,4 +512,415 @@ describe('GraphService', () => {
       expect(error.code).toBe(ErrorCode.DB_QUERY_FAILED);
     });
   });
+
+  describe('getPageRank', () => {
+    it('should return PageRank scores for all non-deleted pages', async () => {
+      const querySpy = vi.spyOn(db, 'query');
+
+      // PageRank query result
+      querySpy.mockResolvedValueOnce({
+        headers: ['page_id', 'score'],
+        rows: [
+          ['page-1', 0.35],
+          ['page-2', 0.25],
+          ['page-3', 0.4],
+        ],
+      });
+
+      const result = await service.getPageRank();
+
+      expect(result).toBeInstanceOf(Map);
+      expect(result.size).toBe(3);
+      expect(result.get('page-1')).toBe(0.35);
+      expect(result.get('page-2')).toBe(0.25);
+      expect(result.get('page-3')).toBe(0.4);
+    });
+
+    it('should return empty map when no pages exist', async () => {
+      const querySpy = vi.spyOn(db, 'query');
+
+      querySpy.mockResolvedValueOnce({
+        headers: ['page_id', 'score'],
+        rows: [],
+      });
+
+      const result = await service.getPageRank();
+
+      expect(result).toBeInstanceOf(Map);
+      expect(result.size).toBe(0);
+    });
+
+    it('should throw on invalid page_id type in result', async () => {
+      const querySpy = vi.spyOn(db, 'query');
+
+      querySpy.mockResolvedValueOnce({
+        headers: ['page_id', 'score'],
+        rows: [[123, 0.5]], // Invalid: page_id should be string
+      });
+
+      const error = await service.getPageRank().catch((e) => e);
+
+      expect(error).toBeInstanceOf(DoubleBindError);
+      expect(error.code).toBe(ErrorCode.DB_QUERY_FAILED);
+      expect(error.message).toContain('Invalid page_id type');
+    });
+
+    it('should throw on invalid score type in result', async () => {
+      const querySpy = vi.spyOn(db, 'query');
+
+      querySpy.mockResolvedValueOnce({
+        headers: ['page_id', 'score'],
+        rows: [['page-1', 'not-a-number']], // Invalid: score should be number
+      });
+
+      const error = await service.getPageRank().catch((e) => e);
+
+      expect(error).toBeInstanceOf(DoubleBindError);
+      expect(error.code).toBe(ErrorCode.DB_QUERY_FAILED);
+      expect(error.message).toContain('Invalid score type');
+    });
+
+    it('should wrap repository errors with context', async () => {
+      const querySpy = vi.spyOn(db, 'query');
+      const originalError = new Error('Database connection lost');
+      querySpy.mockRejectedValueOnce(originalError);
+
+      const error = await service.getPageRank().catch((e) => e);
+
+      expect(error).toBeInstanceOf(DoubleBindError);
+      expect(error.code).toBe(ErrorCode.DB_QUERY_FAILED);
+      expect(error.message).toContain('Failed to compute PageRank');
+      expect(error.cause).toBe(originalError);
+    });
+
+    it('should re-throw DoubleBindError without wrapping', async () => {
+      const querySpy = vi.spyOn(db, 'query');
+      const originalError = new DoubleBindError('Custom error', ErrorCode.BLOCKED_OPERATION);
+      querySpy.mockRejectedValueOnce(originalError);
+
+      const error = await service.getPageRank().catch((e) => e);
+
+      expect(error).toBe(originalError);
+      expect(error.code).toBe(ErrorCode.BLOCKED_OPERATION);
+    });
+
+    it('should call query with correct PageRank script', async () => {
+      const querySpy = vi.spyOn(db, 'query');
+
+      querySpy.mockResolvedValueOnce({
+        headers: ['page_id', 'score'],
+        rows: [],
+      });
+
+      await service.getPageRank();
+
+      expect(querySpy).toHaveBeenCalledTimes(1);
+      const script = querySpy.mock.calls[0]![0] as string;
+      expect(script).toContain('PageRank');
+      expect(script).toContain('*links');
+      expect(script).toContain('is_deleted: false');
+    });
+  });
+
+  describe('getCommunities', () => {
+    it('should return community IDs for all non-deleted pages', async () => {
+      const querySpy = vi.spyOn(db, 'query');
+
+      querySpy.mockResolvedValueOnce({
+        headers: ['page_id', 'group'],
+        rows: [
+          ['page-1', 0],
+          ['page-2', 0],
+          ['page-3', 1],
+          ['page-4', 1],
+        ],
+      });
+
+      const result = await service.getCommunities();
+
+      expect(result).toBeInstanceOf(Map);
+      expect(result.size).toBe(4);
+      expect(result.get('page-1')).toBe(0);
+      expect(result.get('page-2')).toBe(0);
+      expect(result.get('page-3')).toBe(1);
+      expect(result.get('page-4')).toBe(1);
+    });
+
+    it('should return empty map when no pages exist', async () => {
+      const querySpy = vi.spyOn(db, 'query');
+
+      querySpy.mockResolvedValueOnce({
+        headers: ['page_id', 'group'],
+        rows: [],
+      });
+
+      const result = await service.getCommunities();
+
+      expect(result).toBeInstanceOf(Map);
+      expect(result.size).toBe(0);
+    });
+
+    it('should throw on invalid page_id type in result', async () => {
+      const querySpy = vi.spyOn(db, 'query');
+
+      querySpy.mockResolvedValueOnce({
+        headers: ['page_id', 'group'],
+        rows: [[123, 0]], // Invalid: page_id should be string
+      });
+
+      const error = await service.getCommunities().catch((e) => e);
+
+      expect(error).toBeInstanceOf(DoubleBindError);
+      expect(error.code).toBe(ErrorCode.DB_QUERY_FAILED);
+      expect(error.message).toContain('Invalid page_id type');
+    });
+
+    it('should throw on invalid group type in result', async () => {
+      const querySpy = vi.spyOn(db, 'query');
+
+      querySpy.mockResolvedValueOnce({
+        headers: ['page_id', 'group'],
+        rows: [['page-1', 'not-a-number']], // Invalid: group should be number
+      });
+
+      const error = await service.getCommunities().catch((e) => e);
+
+      expect(error).toBeInstanceOf(DoubleBindError);
+      expect(error.code).toBe(ErrorCode.DB_QUERY_FAILED);
+      expect(error.message).toContain('Invalid group type');
+    });
+
+    it('should wrap repository errors with context', async () => {
+      const querySpy = vi.spyOn(db, 'query');
+      const originalError = new Error('Database timeout');
+      querySpy.mockRejectedValueOnce(originalError);
+
+      const error = await service.getCommunities().catch((e) => e);
+
+      expect(error).toBeInstanceOf(DoubleBindError);
+      expect(error.code).toBe(ErrorCode.DB_QUERY_FAILED);
+      expect(error.message).toContain('Failed to detect communities');
+      expect(error.cause).toBe(originalError);
+    });
+
+    it('should re-throw DoubleBindError without wrapping', async () => {
+      const querySpy = vi.spyOn(db, 'query');
+      const originalError = new DoubleBindError('Custom error', ErrorCode.BLOCKED_OPERATION);
+      querySpy.mockRejectedValueOnce(originalError);
+
+      const error = await service.getCommunities().catch((e) => e);
+
+      expect(error).toBe(originalError);
+      expect(error.code).toBe(ErrorCode.BLOCKED_OPERATION);
+    });
+
+    it('should call query with correct Louvain script', async () => {
+      const querySpy = vi.spyOn(db, 'query');
+
+      querySpy.mockResolvedValueOnce({
+        headers: ['page_id', 'group'],
+        rows: [],
+      });
+
+      await service.getCommunities();
+
+      expect(querySpy).toHaveBeenCalledTimes(1);
+      const script = querySpy.mock.calls[0]![0] as string;
+      expect(script).toContain('CommunityDetectionLouvain');
+      expect(script).toContain('*links');
+      expect(script).toContain('is_deleted: false');
+    });
+  });
+
+  describe('getSuggestedLinks', () => {
+    it('should return suggested pages with scores', async () => {
+      const querySpy = vi.spyOn(db, 'query');
+
+      // First call: verify page exists
+      querySpy.mockResolvedValueOnce({
+        headers: ['page_id'],
+        rows: [['page-1']],
+      });
+
+      // Second call: get suggestions
+      querySpy.mockResolvedValueOnce({
+        headers: [
+          'page_id',
+          'title',
+          'created_at',
+          'updated_at',
+          'is_deleted',
+          'daily_note_date',
+          'score',
+        ],
+        rows: [
+          ['page-3', 'Page Three', now, now, false, null, 5],
+          ['page-4', 'Page Four', now, now, false, null, 3],
+        ],
+      });
+
+      const result = await service.getSuggestedLinks('page-1');
+
+      expect(result).toHaveLength(2);
+      expect(result[0]?.target.pageId).toBe('page-3');
+      expect(result[0]?.target.title).toBe('Page Three');
+      expect(result[0]?.score).toBe(5);
+      expect(result[1]?.target.pageId).toBe('page-4');
+      expect(result[1]?.score).toBe(3);
+    });
+
+    it('should return empty array when no suggestions', async () => {
+      const querySpy = vi.spyOn(db, 'query');
+
+      // Verify page exists
+      querySpy.mockResolvedValueOnce({
+        headers: ['page_id'],
+        rows: [['page-1']],
+      });
+
+      // No suggestions
+      querySpy.mockResolvedValueOnce({
+        headers: [],
+        rows: [],
+      });
+
+      const result = await service.getSuggestedLinks('page-1');
+
+      expect(result).toHaveLength(0);
+    });
+
+    it('should throw PAGE_NOT_FOUND when page does not exist', async () => {
+      const querySpy = vi.spyOn(db, 'query');
+
+      querySpy.mockResolvedValueOnce({
+        headers: [],
+        rows: [],
+      });
+
+      await expect(service.getSuggestedLinks('nonexistent')).rejects.toThrow(DoubleBindError);
+      await expect(service.getSuggestedLinks('nonexistent')).rejects.toMatchObject({
+        code: ErrorCode.PAGE_NOT_FOUND,
+      });
+    });
+
+    it('should include error message with pageId', async () => {
+      const querySpy = vi.spyOn(db, 'query');
+
+      querySpy.mockResolvedValueOnce({
+        headers: [],
+        rows: [],
+      });
+
+      const error = await service.getSuggestedLinks('my-page-id').catch((e) => e);
+
+      expect(error.message).toContain('my-page-id');
+    });
+
+    it('should throw on invalid score type in result', async () => {
+      const querySpy = vi.spyOn(db, 'query');
+
+      // Verify page exists
+      querySpy.mockResolvedValueOnce({
+        headers: ['page_id'],
+        rows: [['page-1']],
+      });
+
+      // Invalid score type
+      querySpy.mockResolvedValueOnce({
+        headers: [
+          'page_id',
+          'title',
+          'created_at',
+          'updated_at',
+          'is_deleted',
+          'daily_note_date',
+          'score',
+        ],
+        rows: [['page-2', 'Page Two', now, now, false, null, 'not-a-number']],
+      });
+
+      const error = await service.getSuggestedLinks('page-1').catch((e) => e);
+
+      expect(error).toBeInstanceOf(DoubleBindError);
+      expect(error.code).toBe(ErrorCode.DB_QUERY_FAILED);
+      expect(error.message).toContain('Invalid score type');
+    });
+
+    it('should wrap repository errors with context', async () => {
+      const querySpy = vi.spyOn(db, 'query');
+      const originalError = new Error('Query timeout');
+      querySpy.mockRejectedValueOnce(originalError);
+
+      const error = await service.getSuggestedLinks('page-1').catch((e) => e);
+
+      expect(error).toBeInstanceOf(DoubleBindError);
+      expect(error.code).toBe(ErrorCode.DB_QUERY_FAILED);
+      expect(error.message).toContain('Failed to get suggested links');
+      expect(error.message).toContain('page-1');
+      expect(error.cause).toBe(originalError);
+    });
+
+    it('should re-throw DoubleBindError without wrapping', async () => {
+      const querySpy = vi.spyOn(db, 'query');
+      const originalError = new DoubleBindError('Custom error', ErrorCode.BLOCKED_OPERATION);
+      querySpy.mockRejectedValueOnce(originalError);
+
+      const error = await service.getSuggestedLinks('page-1').catch((e) => e);
+
+      expect(error).toBe(originalError);
+      expect(error.code).toBe(ErrorCode.BLOCKED_OPERATION);
+    });
+
+    it('should pass correct pageId parameter to query', async () => {
+      const querySpy = vi.spyOn(db, 'query');
+
+      // Verify page exists
+      querySpy.mockResolvedValueOnce({
+        headers: ['page_id'],
+        rows: [['test-page-123']],
+      });
+
+      // Suggestions query
+      querySpy.mockResolvedValueOnce({
+        headers: [],
+        rows: [],
+      });
+
+      await service.getSuggestedLinks('test-page-123');
+
+      // Verify both queries received the correct page_id parameter
+      expect(querySpy).toHaveBeenCalledTimes(2);
+      expect(querySpy.mock.calls[0]![1]).toEqual({ page_id: 'test-page-123' });
+      expect(querySpy.mock.calls[1]![1]).toEqual({ page_id: 'test-page-123' });
+    });
+
+    it('should handle pages with daily note dates in suggestions', async () => {
+      const querySpy = vi.spyOn(db, 'query');
+
+      // Verify page exists
+      querySpy.mockResolvedValueOnce({
+        headers: ['page_id'],
+        rows: [['page-1']],
+      });
+
+      // Suggestion includes a daily note page
+      querySpy.mockResolvedValueOnce({
+        headers: [
+          'page_id',
+          'title',
+          'created_at',
+          'updated_at',
+          'is_deleted',
+          'daily_note_date',
+          'score',
+        ],
+        rows: [['page-daily', '2024-01-15', now, now, false, '2024-01-15', 4]],
+      });
+
+      const result = await service.getSuggestedLinks('page-1');
+
+      expect(result).toHaveLength(1);
+      expect(result[0]?.target.dailyNoteDate).toBe('2024-01-15');
+    });
+  });
 });
