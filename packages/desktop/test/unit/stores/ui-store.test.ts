@@ -14,6 +14,7 @@ describe('useAppStore', () => {
       commandPaletteOpen: false,
       currentPageId: null,
       pageHistory: [],
+      historyIndex: -1,
     });
   });
 
