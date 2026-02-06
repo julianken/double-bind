@@ -1,347 +1,301 @@
 /**
- * ProseMirror schema for the Double Bind outliner block editor.
+ * ProseMirror schema definition for Double Bind editor.
  *
- * This schema defines the document structure for individual blocks.
- * Each block is a single ProseMirror instance containing one of the
- * defined node types with optional marks for inline formatting.
+ * This schema defines the structure of documents in the block editor,
+ * including node types (block, pageLink, blockRef, codeBlock) and
+ * marks (bold, italic, code, highlight).
  *
- * Node types:
- * - paragraph: Standard text block
- * - heading: Heading with level 1-3
- * - code_block: Monospace code block
- * - todo_item: Checkbox item with checked state
- * - query_embed: Embedded Datalog query result
+ * Security: All attributes use validators to prevent type confusion attacks
+ * (CVE-2024-40626). The schema structurally rejects dangerous elements.
  *
- * Marks:
- * - bold, italic, code, highlight, strikethrough
+ * @see docs/frontend/prosemirror.md for full specification
  */
 
-import { Schema } from 'prosemirror-model';
-import type { NodeSpec, MarkSpec, DOMOutputSpec } from 'prosemirror-model';
-
-// ============================================================================
-// Node Specifications
-// ============================================================================
+import { Schema, type NodeSpec, type MarkSpec } from 'prosemirror-model';
 
 /**
- * Document node - the root container for block content.
- * Contains exactly one block-level node.
+ * Node specifications for the Double Bind schema.
  */
-const doc: NodeSpec = {
-  content: 'block',
-};
-
-/**
- * Text node - inline text content.
- * Supports all defined marks.
- */
-const text: NodeSpec = {
-  group: 'inline',
-};
-
-/**
- * Paragraph node - standard text block.
- * The default block type for regular content.
- */
-const paragraph: NodeSpec = {
-  content: 'inline*',
-  group: 'block',
-  parseDOM: [{ tag: 'p' }],
-  toDOM(): DOMOutputSpec {
-    return ['p', 0];
+const nodes: Record<string, NodeSpec> = {
+  /**
+   * Document root - contains one or more blocks.
+   */
+  doc: {
+    content: 'block+',
   },
-};
 
-/**
- * Heading node - header text with configurable level.
- * Supports levels 1-3 (h1, h2, h3).
- */
-const heading: NodeSpec = {
-  attrs: {
-    level: { default: 1, validate: 'number' },
-  },
-  content: 'inline*',
-  group: 'block',
-  defining: true,
-  parseDOM: [
-    {
-      tag: 'h1',
-      getAttrs(): { level: number } {
-        return { level: 1 };
+  /**
+   * Block node - the primary content container.
+   * Corresponds to a single block in the database.
+   */
+  block: {
+    content: 'inline*',
+    group: 'block',
+    attrs: {
+      blockId: {
+        default: null,
+        validate: (value: unknown) => {
+          if (value !== null && typeof value !== 'string') {
+            throw new RangeError('blockId must be a string or null');
+          }
+        },
+      },
+      indentLevel: {
+        default: 0,
+        validate: (value: unknown) => {
+          if (typeof value !== 'number' || value < 0) {
+            throw new RangeError('indentLevel must be a non-negative number');
+          }
+        },
       },
     },
-    {
-      tag: 'h2',
-      getAttrs(): { level: number } {
-        return { level: 2 };
-      },
+    parseDOM: [{ tag: 'div[data-block]' }],
+    toDOM(node) {
+      return [
+        'div',
+        {
+          'data-block': '',
+          'data-block-id': node.attrs.blockId,
+          'data-indent-level': String(node.attrs.indentLevel),
+        },
+        0,
+      ];
     },
-    {
-      tag: 'h3',
-      getAttrs(): { level: number } {
-        return { level: 3 };
-      },
-    },
-  ],
-  toDOM(node): DOMOutputSpec {
-    const level = node.attrs.level as number;
-    // Clamp level to valid range 1-3
-    const validLevel = Math.max(1, Math.min(3, level));
-    return [`h${validLevel}`, 0];
   },
-};
 
-/**
- * Code block node - monospace preformatted text.
- * Does not support inline marks (code is literal).
- */
-const code_block: NodeSpec = {
-  content: 'text*',
-  group: 'block',
-  code: true,
-  defining: true,
-  marks: '',
-  parseDOM: [{ tag: 'pre', preserveWhitespace: 'full' }],
-  toDOM(): DOMOutputSpec {
-    return ['pre', ['code', 0]];
+  /**
+   * Text node - inline text content.
+   */
+  text: {
+    group: 'inline',
   },
-};
 
-/**
- * Todo item node - checkbox with checked state.
- * Used for task lists and action items.
- */
-const todo_item: NodeSpec = {
-  attrs: {
-    checked: { default: false, validate: 'boolean' },
-  },
-  content: 'inline*',
-  group: 'block',
-  defining: true,
-  parseDOM: [
-    {
-      tag: 'div[data-type="todo"]',
-      getAttrs(dom): { checked: boolean } | false {
-        if (!(dom instanceof HTMLElement)) return false;
-        return { checked: dom.dataset.checked === 'true' };
+  /**
+   * Page link node - a link to another page.
+   * Rendered from [[Page Title]] syntax.
+   */
+  pageLink: {
+    group: 'inline',
+    inline: true,
+    atom: true,
+    attrs: {
+      pageId: {
+        validate: (v: unknown) => {
+          if (typeof v !== 'string') {
+            throw new RangeError('pageId must be a string');
+          }
+        },
+      },
+      title: {
+        validate: (v: unknown) => {
+          if (typeof v !== 'string') {
+            throw new RangeError('title must be a string');
+          }
+        },
       },
     },
-  ],
-  toDOM(node): DOMOutputSpec {
-    const checked = node.attrs.checked as boolean;
-    return [
-      'div',
+    parseDOM: [
       {
-        'data-type': 'todo',
-        'data-checked': String(checked),
-        class: checked ? 'todo-item checked' : 'todo-item',
+        tag: 'a[data-page-link]',
+        getAttrs(dom) {
+          const element = dom as HTMLElement;
+          return {
+            pageId: element.getAttribute('data-page-id'),
+            title: element.textContent || '',
+          };
+        },
       },
-      ['input', { type: 'checkbox', checked: checked ? 'checked' : null }],
-      ['span', { class: 'todo-content' }, 0],
-    ];
+    ],
+    toDOM(node) {
+      return [
+        'a',
+        {
+          'data-page-link': '',
+          'data-page-id': node.attrs.pageId,
+          class: 'page-link',
+        },
+        node.attrs.title,
+      ];
+    },
   },
-};
 
-/**
- * Query embed node - embedded Datalog query result.
- * Stores the query string and displays results inline.
- */
-const query_embed: NodeSpec = {
-  attrs: {
-    query: { default: '', validate: 'string' },
-  },
-  group: 'block',
-  atom: true, // Treated as a single unit, not editable inline
-  selectable: true,
-  draggable: true,
-  parseDOM: [
-    {
-      tag: 'div[data-type="query"]',
-      getAttrs(dom): { query: string } | false {
-        if (!(dom instanceof HTMLElement)) return false;
-        return { query: dom.dataset.query || '' };
+  /**
+   * Block reference node - a reference to another block.
+   * Rendered from ((block-id)) syntax.
+   */
+  blockRef: {
+    group: 'inline',
+    inline: true,
+    atom: true,
+    attrs: {
+      blockId: {
+        validate: (v: unknown) => {
+          if (typeof v !== 'string') {
+            throw new RangeError('blockId must be a string');
+          }
+        },
+      },
+      preview: {
+        default: '',
+        validate: (v: unknown) => {
+          if (typeof v !== 'string') {
+            throw new RangeError('preview must be a string');
+          }
+        },
       },
     },
-  ],
-  toDOM(node): DOMOutputSpec {
-    const query = node.attrs.query as string;
-    return [
-      'div',
+    parseDOM: [
       {
-        'data-type': 'query',
-        'data-query': query,
-        class: 'query-embed',
+        tag: 'span[data-block-ref]',
+        getAttrs(dom) {
+          const element = dom as HTMLElement;
+          return {
+            blockId: element.getAttribute('data-ref-block-id'),
+            preview: element.textContent || '',
+          };
+        },
       },
-      ['code', { class: 'query-source' }, query],
-    ];
+    ],
+    toDOM(node) {
+      return [
+        'span',
+        {
+          'data-block-ref': '',
+          'data-ref-block-id': node.attrs.blockId,
+          class: 'block-ref',
+        },
+        node.attrs.preview,
+      ];
+    },
   },
-};
 
-// ============================================================================
-// Mark Specifications
-// ============================================================================
-
-/**
- * Bold mark - strong emphasis.
- * Keyboard shortcut: Ctrl+B / Cmd+B
- */
-const bold: MarkSpec = {
-  parseDOM: [
-    { tag: 'strong' },
-    { tag: 'b' },
-    {
-      style: 'font-weight',
-      getAttrs(value): false | null {
-        // Match font-weight values that indicate bold
-        if (typeof value !== 'string') return false;
-        return /^(bold(er)?|[5-9]\d{2})$/.test(value) ? null : false;
+  /**
+   * Code block node - multi-line code with optional language.
+   */
+  codeBlock: {
+    content: 'text*',
+    group: 'block',
+    marks: '',
+    code: true,
+    defining: true,
+    attrs: {
+      language: {
+        default: '',
+        validate: (v: unknown) => {
+          if (typeof v !== 'string') {
+            throw new RangeError('language must be a string');
+          }
+        },
       },
     },
-  ],
-  toDOM(): DOMOutputSpec {
-    return ['strong', 0];
-  },
-};
-
-/**
- * Italic mark - emphasis.
- * Keyboard shortcut: Ctrl+I / Cmd+I
- */
-const italic: MarkSpec = {
-  parseDOM: [
-    { tag: 'i' },
-    { tag: 'em' },
-    {
-      style: 'font-style',
-      getAttrs(value): false | null {
-        return value === 'italic' ? null : false;
+    parseDOM: [
+      {
+        tag: 'pre',
+        preserveWhitespace: 'full' as const,
+        getAttrs(dom) {
+          const element = dom as HTMLElement;
+          const code = element.querySelector('code');
+          const language = code?.getAttribute('data-language') || '';
+          return { language };
+        },
       },
+    ],
+    toDOM(node) {
+      return ['pre', {}, ['code', { 'data-language': node.attrs.language }, 0]];
     },
-  ],
-  toDOM(): DOMOutputSpec {
-    return ['em', 0];
+  },
+
+  /**
+   * Hard break node - line break within a block (Shift+Enter).
+   */
+  hardBreak: {
+    group: 'inline',
+    inline: true,
+    selectable: false,
+    parseDOM: [{ tag: 'br' }],
+    toDOM() {
+      return ['br'];
+    },
   },
 };
 
 /**
- * Code mark - inline monospace text.
- * Keyboard shortcut: Ctrl+E / Cmd+E
+ * Mark specifications for the Double Bind schema.
  */
-const code: MarkSpec = {
-  parseDOM: [{ tag: 'code' }],
-  toDOM(): DOMOutputSpec {
-    return ['code', 0];
-  },
-};
-
-/**
- * Highlight mark - background highlight.
- * Keyboard shortcut: Ctrl+H / Cmd+H
- */
-const highlight: MarkSpec = {
-  parseDOM: [
-    { tag: 'mark' },
-    {
-      style: 'background-color',
-      getAttrs(value): false | null {
-        // Accept any non-transparent background as highlight
-        if (typeof value !== 'string') return false;
-        return value && value !== 'transparent' && value !== 'none' ? null : false;
+const marks: Record<string, MarkSpec> = {
+  /**
+   * Bold mark - rendered from **text** syntax.
+   */
+  bold: {
+    parseDOM: [
+      { tag: 'strong' },
+      { tag: 'b' },
+      {
+        style: 'font-weight',
+        getAttrs: (value) => /^(bold(er)?|[5-9]\d{2,})$/.test(value as string) && null,
       },
+    ],
+    toDOM() {
+      return ['strong', 0];
     },
-  ],
-  toDOM(): DOMOutputSpec {
-    return ['mark', 0];
+  },
+
+  /**
+   * Italic mark - rendered from *text* or _text_ syntax.
+   */
+  italic: {
+    parseDOM: [{ tag: 'em' }, { tag: 'i' }, { style: 'font-style=italic' }],
+    toDOM() {
+      return ['em', 0];
+    },
+  },
+
+  /**
+   * Inline code mark - rendered from `code` syntax.
+   */
+  code: {
+    parseDOM: [{ tag: 'code' }],
+    toDOM() {
+      return ['code', 0];
+    },
+  },
+
+  /**
+   * Highlight mark - rendered from ==text== syntax.
+   */
+  highlight: {
+    parseDOM: [{ tag: 'mark' }],
+    toDOM() {
+      return ['mark', 0];
+    },
+  },
+
+  /**
+   * Strikethrough mark - rendered from ~~text~~ syntax.
+   */
+  strikethrough: {
+    parseDOM: [
+      { tag: 's' },
+      { tag: 'strike' },
+      { tag: 'del' },
+      { style: 'text-decoration=line-through' },
+    ],
+    toDOM() {
+      return ['s', 0];
+    },
   },
 };
 
 /**
- * Strikethrough mark - deleted/crossed out text.
- * Keyboard shortcut: Ctrl+Shift+K / Cmd+Shift+K
- */
-const strikethrough: MarkSpec = {
-  parseDOM: [
-    { tag: 's' },
-    { tag: 'strike' },
-    { tag: 'del' },
-    {
-      style: 'text-decoration',
-      getAttrs(value): false | null {
-        if (typeof value !== 'string') return false;
-        return value.includes('line-through') ? null : false;
-      },
-    },
-  ],
-  toDOM(): DOMOutputSpec {
-    return ['s', 0];
-  },
-};
-
-// ============================================================================
-// Schema Definition
-// ============================================================================
-
-/**
- * Node specifications for the outliner schema.
- */
-export const nodes = {
-  doc,
-  text,
-  paragraph,
-  heading,
-  code_block,
-  todo_item,
-  query_embed,
-};
-
-/**
- * Mark specifications for the outliner schema.
- */
-export const marks = {
-  bold,
-  italic,
-  code,
-  highlight,
-  strikethrough,
-};
-
-/**
- * The complete ProseMirror schema for the Double Bind outliner.
- * Use this schema when creating EditorState instances.
+ * The Double Bind ProseMirror schema.
  *
- * @example
- * ```typescript
- * import { EditorState } from 'prosemirror-state';
- * import { EditorView } from 'prosemirror-view';
- * import { schema } from './schema';
- *
- * const state = EditorState.create({
- *   schema,
- *   doc: schema.nodes.doc.create(null, [
- *     schema.nodes.paragraph.create()
- *   ])
- * });
- *
- * const view = new EditorView(container, { state });
- * ```
+ * Use this schema for all editor instances to ensure consistent
+ * document structure and security validation.
  */
 export const schema = new Schema({ nodes, marks });
 
-// ============================================================================
-// Type Exports
-// ============================================================================
-
 /**
- * Type representing valid heading levels.
+ * Export individual node and mark types for type-safe access.
  */
-export type HeadingLevel = 1 | 2 | 3;
-
-/**
- * Type representing node type names in the schema.
- */
-export type NodeTypeName = keyof typeof nodes;
-
-/**
- * Type representing mark type names in the schema.
- */
-export type MarkTypeName = keyof typeof marks;
+export const nodeTypes = schema.nodes;
+export const markTypes = schema.marks;
