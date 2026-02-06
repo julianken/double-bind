@@ -9,7 +9,7 @@
     "extract-migrations": "tsx scripts/extract-migrations.ts",
     "dev": "pnpm --filter=@double-bind/desktop dev",
     "dev:desktop": "pnpm --filter=@double-bind/desktop tauri:dev",
-    "test": "vitest run --project types --project test-utils --project migrations --project core --project ui-primitives --project desktop --project scripts",
+    "test": "vitest run --project types --project test-utils --project migrations --project query-lang --project core --project ui-primitives --project desktop --project scripts",
     "test:watch": "vitest",
     "test:unit": "pnpm -r test:unit",
     "test:integration": "vitest run --project core-integration",
