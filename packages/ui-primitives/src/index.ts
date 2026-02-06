@@ -6,3 +6,6 @@ export { BulletHandle, type BulletHandleProps } from './blocks';
 
 // Graph components
 export { MiniGraph, type MiniGraphProps, type MiniGraphNode, type MiniGraphEdge } from './graph';
+
+// Data display components
+export { BacklinksPanel, type BacklinksPanelProps, type LinkedRef, type UnlinkedRef } from './data';
