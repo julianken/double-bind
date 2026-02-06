@@ -27,7 +27,42 @@ SQLite is the obvious choice for local-first. We chose CozoDB because:
 
 ## Why Not Rust for Business Logic?
 
-CozoDB's engine is Rust regardless of what language calls it. The hot paths (graph traversal, text indexing, recursive queries) execute in Rust inside CozoDB. TypeScript orchestrates queries and handles UI — operations where the speed difference is imperceptible (microseconds vs milliseconds when the DB call takes 1-5ms).
+This decision was formally evaluated by 5 independent analysis agents (DX, Performance, Code Sharing, Testing, Ecosystem). **All recommended keeping TypeScript.** See [ADR-002](../decisions/002-language-typescript.md) for full analysis.
+
+### The Core Insight
+
+CozoDB's engine is Rust regardless of what language calls it. The hot paths (graph traversal, text indexing, recursive queries) execute in Rust inside CozoDB. TypeScript orchestrates queries and handles UI.
+
+**Measured time breakdown for "user types in block":**
+
+| Layer | Time | Impact of Rust? |
+|-------|------|-----------------|
+| TypeScript orchestration | ~0.2ms | Saves ~0.1ms (imperceptible) |
+| IPC serialization | ~0.5ms | Eliminates ~0.3ms |
+| CozoDB query (Rust) | **1-5ms** | Already Rust |
+| React rendering | **5-15ms** | Rust can't help |
+
+**Total improvement from Rust business logic: <1ms** — imperceptible to users.
+
+### What Rust Would Cost
+
+| Factor | Impact |
+|--------|--------|
+| Learning curve | 3-6 months to productivity |
+| TDD cycle time | 10-20x slower (15-60s vs 2-5s) |
+| Code sharing | TUI needs ratatui rewrite, CLI needs NAPI bindings |
+| Plugin accessibility | Community contributors must know Rust |
+| Documentation | ~25 files need rewriting (~65% of docs) |
+| MockGraphDB | Complete rewrite as Rust traits |
+
+### When Rust Would Make Sense
+
+Consider Rust/WASM for specific modules if profiling reveals:
+- Graph algorithms slow on >10K nodes in JavaScript
+- Content parsing slow on >100KB markdown blocks
+- Memory pressure from large datasets
+
+The hybrid approach (TypeScript + selective WASM) is documented as a future option.
 
 ## Dependency Budget
 
