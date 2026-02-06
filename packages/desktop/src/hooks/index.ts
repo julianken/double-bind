@@ -18,3 +18,12 @@ export {
   type KeyboardShortcut,
   type UseKeyboardShortcutsOptions,
 } from './useKeyboardShortcuts.js';
+
+export { useCreatePage, type UseCreatePageResult, type CreatePageResult } from './useCreatePage.js';
+
+export {
+  useGlobalKeyboardShortcuts,
+  useNewPageShortcut,
+  type KeyboardShortcutActions,
+  type UseGlobalKeyboardShortcutsOptions,
+} from './useGlobalKeyboardShortcuts.js';

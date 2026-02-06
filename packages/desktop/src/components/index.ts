@@ -30,3 +30,5 @@ export { PageList, PageListItem } from './PageList.js';
 export type { PageListProps, PageListItemProps } from './PageList.js';
 
 export { PageTitle, type PageTitleProps } from './PageTitle.js';
+
+export { NewPageButton, type NewPageButtonProps } from './NewPageButton.js';
