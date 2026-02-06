@@ -1,10 +1,13 @@
 #!/usr/bin/env sh
 # Pre-commit hook for double-bind monorepo
-# Runs Claude Code hooks + lint-staged
+# Runs: Claude Code hooks -> lint-staged -> typecheck
 
 # Run Claude Code hooks first (fast checks)
 .claude/hooks/block-debug-artifacts.sh
 .claude/hooks/block-console-log.sh
 
-# Run lint-staged (lint, format staged files)
+# Run lint-staged (lint, format, run related tests)
 pnpm exec lint-staged
+
+# Run typecheck on affected packages
+.claude/hooks/typecheck-affected.sh

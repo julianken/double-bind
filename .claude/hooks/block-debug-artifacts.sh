@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
-# Hook: Block commits when debug artifacts exist in the working tree
-# Checks for debug-*.spec.ts and .bak files that should not be committed.
+# Hook: Block commits containing debug artifacts
+# Blocks staging of debug-*.spec.ts and *.bak files.
 
 set -euo pipefail
 
-debug_files=$(git status --short | grep -E '(debug-.*\.spec\.ts|\.bak$)' || true)
+# Check for debug artifacts in staged files (files being committed)
+staged_debug_files=$(git diff --cached --name-only --diff-filter=ACM | grep -E '(debug-.*\.spec\.ts|\.bak$)' || true)
 
-if [ -n "$debug_files" ]; then
-  echo "BLOCKED: Debug artifacts detected in working tree. Remove before committing:"
-  echo "$debug_files"
+if [ -n "$staged_debug_files" ]; then
+  echo "BLOCKED: Debug artifacts staged for commit. Unstage or remove before committing:"
+  echo "$staged_debug_files"
   exit 1
 fi
