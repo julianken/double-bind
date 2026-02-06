@@ -3,3 +3,6 @@
 
 // Block components
 export { BulletHandle, type BulletHandleProps } from './blocks';
+
+// Graph components
+export { MiniGraph, type MiniGraphProps, type MiniGraphNode, type MiniGraphEdge } from './graph';
