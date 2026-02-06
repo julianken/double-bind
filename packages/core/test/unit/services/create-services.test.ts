@@ -13,6 +13,7 @@ import { MockGraphDB } from '@double-bind/test-utils';
 import { createServices, type Services } from '../../../src/services/index.js';
 import { PageService } from '../../../src/services/page-service.js';
 import { BlockService } from '../../../src/services/block-service.js';
+import { GraphService } from '../../../src/services/graph-service.js';
 
 describe('createServices', () => {
   let db: MockGraphDB;
@@ -28,6 +29,7 @@ describe('createServices', () => {
       expect(services).toBeDefined();
       expect(services).toHaveProperty('pageService');
       expect(services).toHaveProperty('blockService');
+      expect(services).toHaveProperty('graphService');
     });
 
     it('should create PageService instance', () => {
@@ -36,6 +38,10 @@ describe('createServices', () => {
 
     it('should create BlockService instance', () => {
       expect(services.blockService).toBeInstanceOf(BlockService);
+    });
+
+    it('should create GraphService instance', () => {
+      expect(services.graphService).toBeInstanceOf(GraphService);
     });
 
     it('should create services that share the same GraphDB instance', async () => {
@@ -119,6 +125,16 @@ describe('createServices', () => {
       // Integration tests verify actual execution
     });
 
+    it('should create functional GraphService that can execute operations', () => {
+      // Verify GraphService has all required methods for graph operations
+      expect(services.graphService).toBeDefined();
+      expect(typeof services.graphService.getFullGraph).toBe('function');
+      expect(typeof services.graphService.getNeighborhood).toBe('function');
+
+      // The service is properly initialized with GraphDB
+      // Integration tests verify actual execution
+    });
+
     it('should wire services to support cascading operations', () => {
       // PageService.deletePage needs BlockRepository to cascade deletes
       // Verify the PageService has the deletePage method
@@ -143,6 +159,7 @@ describe('createServices', () => {
       expect(services1).not.toBe(services2);
       expect(services1.pageService).not.toBe(services2.pageService);
       expect(services1.blockService).not.toBe(services2.blockService);
+      expect(services1.graphService).not.toBe(services2.graphService);
     });
 
     it('should share the GraphDB instance across all created repositories', async () => {
@@ -241,9 +258,11 @@ describe('createServices', () => {
       // TypeScript should infer the correct types
       const _pageService: PageService = result.pageService;
       const _blockService: BlockService = result.blockService;
+      const _graphService: GraphService = result.graphService;
 
       expect(_pageService).toBeDefined();
       expect(_blockService).toBeDefined();
+      expect(_graphService).toBeDefined();
     });
 
     it('should accept any GraphDB implementation', () => {
@@ -254,6 +273,33 @@ describe('createServices', () => {
       const result = createServices(mockDb);
 
       expect(result).toBeDefined();
+    });
+  });
+
+  describe('Graph operations', () => {
+    it('should wire GraphService with GraphDB for graph traversal', () => {
+      // GraphService needs direct access to GraphDB for graph-level queries
+      expect(services.graphService).toBeInstanceOf(GraphService);
+
+      // Verify the service has the expected methods
+      expect(typeof services.graphService.getFullGraph).toBe('function');
+      expect(typeof services.graphService.getNeighborhood).toBe('function');
+    });
+
+    it('should support full graph queries through GraphService', () => {
+      // GraphService should be able to query the entire graph
+      expect(typeof services.graphService.getFullGraph).toBe('function');
+
+      // The factory properly wires GraphDB which handles graph queries
+      expect(services.graphService).toBeInstanceOf(GraphService);
+    });
+
+    it('should support neighborhood queries through GraphService', () => {
+      // GraphService should be able to query neighborhoods
+      expect(typeof services.graphService.getNeighborhood).toBe('function');
+
+      // The factory properly wires GraphDB which handles neighborhood traversal
+      expect(services.graphService).toBeInstanceOf(GraphService);
     });
   });
 });
