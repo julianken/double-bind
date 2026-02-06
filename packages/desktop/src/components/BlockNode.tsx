@@ -14,11 +14,13 @@
  * @see docs/frontend/react-architecture.md for component hierarchy
  */
 
-import { memo, useCallback } from 'react';
-import type { Block, BlockId } from '@double-bind/types';
+import { memo, useCallback, useMemo, useState, useEffect } from 'react';
+import type { Block, BlockId, PageId } from '@double-bind/types';
 import { parseContent } from '@double-bind/core';
+import { InlineBlockRef, InlinePageLink } from '@double-bind/ui-primitives';
 import { useCozoQuery } from '../hooks/useCozoQuery.js';
 import { useAppStore } from '../stores/ui-store.js';
+import { useServices } from '../providers/ServiceProvider.js';
 
 // ============================================================================
 // Types
@@ -82,6 +84,26 @@ export interface StaticBlockContentProps {
    * Callback when the content area is clicked (to activate editing)
    */
   onClick?: () => void;
+
+  /**
+   * Callback when a page link is clicked
+   */
+  onPageLinkClick?: (pageId: PageId) => void;
+
+  /**
+   * Callback when a block reference is clicked
+   */
+  onBlockRefClick?: (blockId: BlockId) => void;
+
+  /**
+   * Callback when hovering over a page link
+   */
+  onPageLinkHover?: (pageId: PageId | null) => void;
+
+  /**
+   * Callback when hovering over a block reference
+   */
+  onBlockRefHover?: (blockId: BlockId | null) => void;
 }
 
 /**
@@ -477,9 +499,247 @@ function removeTodoSyntax(content: string): string {
 }
 
 /**
- * Render a single content segment with appropriate styling.
+ * Props for inline reference segment rendering
  */
-function renderSegment(segment: ContentSegment, index: number): React.ReactNode {
+interface InlineSegmentRenderProps {
+  segment: ContentSegment;
+  index: number;
+  onPageLinkClick?: (pageId: PageId) => void;
+  onBlockRefClick?: (blockId: BlockId) => void;
+  onPageLinkHover?: (pageId: PageId | null) => void;
+  onBlockRefHover?: (blockId: BlockId | null) => void;
+}
+
+/**
+ * Resolved page link data for rendering
+ */
+interface ResolvedPageLink {
+  title: string;
+  pageId: PageId | null;
+  exists: boolean;
+}
+
+/**
+ * Resolved block ref data for rendering
+ */
+interface ResolvedBlockRef {
+  blockId: BlockId;
+  content: string | null;
+  exists: boolean;
+}
+
+/**
+ * Hook to safely access services (returns null if not in provider)
+ */
+function useSafeServices() {
+  try {
+    return useServices();
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Hook to resolve page title to pageId
+ */
+function useResolvedPageLink(title: string): ResolvedPageLink {
+  const services = useSafeServices();
+  const [resolved, setResolved] = useState<ResolvedPageLink>({
+    title,
+    pageId: null,
+    exists: false,
+  });
+
+  useEffect(() => {
+    if (!services?.pageService) {
+      // No service available - leave as unresolved
+      return;
+    }
+
+    let cancelled = false;
+
+    async function resolve() {
+      try {
+        const page = await services!.pageService.getByTitle(title);
+        if (!cancelled) {
+          setResolved({
+            title,
+            pageId: page?.pageId ?? null,
+            exists: !!page,
+          });
+        }
+      } catch {
+        if (!cancelled) {
+          setResolved({ title, pageId: null, exists: false });
+        }
+      }
+    }
+
+    resolve();
+    return () => {
+      cancelled = true;
+    };
+  }, [title, services]);
+
+  return resolved;
+}
+
+/**
+ * Hook to resolve block ref to its content
+ */
+function useResolvedBlockRef(blockId: BlockId): ResolvedBlockRef {
+  const services = useSafeServices();
+  const [resolved, setResolved] = useState<ResolvedBlockRef>({
+    blockId,
+    content: null,
+    exists: false,
+  });
+
+  useEffect(() => {
+    if (!services?.blockService) {
+      // No service available - leave as unresolved
+      return;
+    }
+
+    let cancelled = false;
+
+    async function resolve() {
+      try {
+        const block = await services!.blockService.getById(blockId);
+        if (!cancelled) {
+          setResolved({
+            blockId,
+            content: block?.content ?? null,
+            exists: !!block && !block.isDeleted,
+          });
+        }
+      } catch {
+        if (!cancelled) {
+          setResolved({ blockId, content: null, exists: false });
+        }
+      }
+    }
+
+    resolve();
+    return () => {
+      cancelled = true;
+    };
+  }, [blockId, services]);
+
+  return resolved;
+}
+
+/**
+ * Component for rendering a page link segment with resolved data
+ */
+const PageLinkSegment = memo(function PageLinkSegment({
+  title,
+  onClick,
+  onHover,
+}: {
+  title: string;
+  onClick?: (pageId: PageId) => void;
+  onHover?: (pageId: PageId | null) => void;
+}) {
+  const resolved = useResolvedPageLink(title);
+
+  const handleClick = useCallback(
+    (pageId: PageId) => {
+      onClick?.(pageId);
+    },
+    [onClick]
+  );
+
+  const handleHover = useCallback(
+    (pageId: PageId | null) => {
+      onHover?.(pageId);
+    },
+    [onHover]
+  );
+
+  // If page exists and we have a pageId, render the interactive component
+  if (resolved.pageId) {
+    return (
+      <InlinePageLink
+        pageId={resolved.pageId}
+        title={title}
+        exists={resolved.exists}
+        onClick={handleClick}
+        onHover={onHover ? handleHover : undefined}
+      />
+    );
+  }
+
+  // Fallback for unresolved page (show as non-interactive for now)
+  return (
+    <InlinePageLink
+      pageId={title as PageId} // Use title as fallback ID
+      title={title}
+      exists={false}
+      onClick={handleClick}
+      onHover={onHover ? handleHover : undefined}
+    />
+  );
+});
+
+/**
+ * Component for rendering a block ref segment with resolved data
+ */
+const BlockRefSegment = memo(function BlockRefSegment({
+  blockId,
+  onClick,
+  onHover,
+}: {
+  blockId: BlockId;
+  onClick?: (blockId: BlockId) => void;
+  onHover?: (blockId: BlockId | null) => void;
+}) {
+  const resolved = useResolvedBlockRef(blockId);
+
+  const handleClick = useCallback(
+    (id: BlockId) => {
+      onClick?.(id);
+    },
+    [onClick]
+  );
+
+  const handleHover = useCallback(
+    (id: BlockId | null) => {
+      onHover?.(id);
+    },
+    [onHover]
+  );
+
+  // Truncate long content for display
+  const displayContent = resolved.content
+    ? resolved.content.length > 100
+      ? `${resolved.content.slice(0, 100)}...`
+      : resolved.content
+    : undefined;
+
+  return (
+    <InlineBlockRef
+      blockId={blockId}
+      content={displayContent}
+      exists={resolved.exists}
+      onClick={handleClick}
+      onHover={onHover ? handleHover : undefined}
+    />
+  );
+});
+
+/**
+ * Render a single content segment with appropriate styling.
+ * For page-link and block-ref types, uses interactive components.
+ */
+function RenderSegment({
+  segment,
+  index,
+  onPageLinkClick,
+  onBlockRefClick,
+  onPageLinkHover,
+  onBlockRefHover,
+}: InlineSegmentRenderProps): React.ReactNode {
   const key = `${segment.type}-${segment.start}-${index}`;
   const CSS = STATIC_BLOCK_CONTENT_CSS_CLASSES;
 
@@ -524,16 +784,22 @@ function renderSegment(segment: ContentSegment, index: number): React.ReactNode 
 
     case 'page-link':
       return (
-        <span key={key} className={CSS.pageLink} data-link-title={segment.content}>
-          [[{segment.content}]]
-        </span>
+        <PageLinkSegment
+          key={key}
+          title={segment.content}
+          onClick={onPageLinkClick}
+          onHover={onPageLinkHover}
+        />
       );
 
     case 'block-ref':
       return (
-        <span key={key} className={CSS.blockRef} data-block-id={segment.content}>
-          (({segment.content}))
-        </span>
+        <BlockRefSegment
+          key={key}
+          blockId={segment.content as BlockId}
+          onClick={onBlockRefClick}
+          onHover={onBlockRefHover}
+        />
       );
 
     case 'tag':
@@ -561,9 +827,11 @@ function renderSegment(segment: ContentSegment, index: number): React.ReactNode 
  *
  * Features:
  * - Inline formatting: **bold**, *italic*, `code`, ^^highlight^^, ~~strikethrough~~
- * - Visual highlighting for [[page links]], ((block refs)), and #tags
+ * - Interactive [[page links]] that navigate to linked pages
+ * - Interactive ((block refs)) that navigate to referenced blocks
  * - Checkbox visual for todo blocks
  * - Accessible click and keyboard handling
+ * - Graceful handling of missing/deleted targets
  *
  * @see docs/frontend/react-architecture.md for component hierarchy
  */
@@ -571,6 +839,10 @@ export const StaticBlockContent = memo(function StaticBlockContent({
   content,
   contentType = 'text',
   onClick,
+  onPageLinkClick,
+  onBlockRefClick,
+  onPageLinkHover,
+  onBlockRefHover,
 }: StaticBlockContentProps) {
   const handleClick = useCallback(() => {
     onClick?.();
@@ -589,7 +861,7 @@ export const StaticBlockContent = memo(function StaticBlockContent({
   const isTodo = contentType === 'todo';
   const isChecked = isTodo && isTodoChecked(content);
   const displayContent = isTodo ? removeTodoSyntax(content) : content;
-  const segments = parseContentToSegments(displayContent);
+  const segments = useMemo(() => parseContentToSegments(displayContent), [displayContent]);
 
   const CSS = STATIC_BLOCK_CONTENT_CSS_CLASSES;
   const containerClasses = [CSS.container, isTodo && CSS.todo].filter(Boolean).join(' ');
@@ -612,7 +884,19 @@ export const StaticBlockContent = memo(function StaticBlockContent({
           {isChecked ? '\u2611' : '\u2610'}
         </span>
       )}
-      <span className={CSS.text}>{segments.map((segment, index) => renderSegment(segment, index))}</span>
+      <span className={CSS.text}>
+        {segments.map((segment, index) => (
+          <RenderSegment
+            key={`${segment.type}-${segment.start}-${index}`}
+            segment={segment}
+            index={index}
+            onPageLinkClick={onPageLinkClick}
+            onBlockRefClick={onBlockRefClick}
+            onPageLinkHover={onPageLinkHover}
+            onBlockRefHover={onBlockRefHover}
+          />
+        ))}
+      </span>
     </div>
   );
 });
@@ -643,9 +927,10 @@ function BlockNodeComponent({ blockId, depth = 0 }: BlockNodeProps) {
   const { data: block, isLoading: blockLoading, error: blockError } = useBlock(blockId);
   const { data: children, isLoading: childrenLoading } = useBlockChildren(blockId);
 
-  // Get focused block from UI store
+  // Get focused block and navigation from UI store
   const focusedBlockId = useAppStore((s) => s.focusedBlockId);
   const setFocusedBlock = useAppStore((s) => s.setFocusedBlock);
+  const navigateToPage = useAppStore((s) => s.navigateToPage);
 
   const isEditing = focusedBlockId === blockId;
   const hasChildren = (children?.length ?? 0) > 0;
@@ -660,6 +945,27 @@ function BlockNodeComponent({ blockId, depth = 0 }: BlockNodeProps) {
     // TODO: Implement collapse toggle mutation
     // For now, this is a placeholder
   }, []);
+
+  // Handle page link click - navigate to the linked page
+  const handlePageLinkClick = useCallback(
+    (pageId: PageId) => {
+      navigateToPage(pageId);
+    },
+    [navigateToPage]
+  );
+
+  // Handle block ref click - navigate to the page containing the block
+  // and potentially focus on the specific block
+  const handleBlockRefClick = useCallback(
+    (refBlockId: BlockId) => {
+      // For now, we'll need to resolve the block's page first
+      // This is handled by focusing on the block which will trigger
+      // navigation if needed. For a full implementation, we'd need
+      // to fetch the block's pageId and navigate there.
+      setFocusedBlock(refBlockId);
+    },
+    [setFocusedBlock]
+  );
 
   // Loading state
   if (blockLoading || childrenLoading) {
@@ -711,7 +1017,13 @@ function BlockNodeComponent({ blockId, depth = 0 }: BlockNodeProps) {
           {isEditing ? (
             <BlockEditor blockId={blockId} initialContent={block.content} />
           ) : (
-            <StaticBlockContent content={block.content} contentType={block.contentType} onClick={handleActivate} />
+            <StaticBlockContent
+              content={block.content}
+              contentType={block.contentType}
+              onClick={handleActivate}
+              onPageLinkClick={handlePageLinkClick}
+              onBlockRefClick={handleBlockRefClick}
+            />
           )}
         </div>
       </div>
