@@ -5,15 +5,24 @@
  * It fetches page metadata and blocks, organizes blocks into a tree
  * structure, and renders them recursively.
  *
+ * Features:
+ * - Page title display
+ * - Recursive block tree rendering
+ * - Collapsible BacklinksPanel (toggle with Ctrl+B / Cmd+B)
+ * - Loading, error, and empty states
+ *
  * @see docs/frontend/react-architecture.md for component hierarchy
  * @see docs/packages/desktop.md for screen routing
  */
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState, useEffect } from 'react';
 import type { Block, BlockId, PageId } from '@double-bind/types';
 import type { PageWithBlocks } from '@double-bind/core';
+import { BacklinksPanel } from '@double-bind/ui-primitives';
 import { useCozoQuery } from '../hooks/useCozoQuery.js';
+import { useBacklinks } from '../hooks/useBacklinks.js';
 import { useServices } from '../providers/ServiceProvider.js';
+import { useAppStore } from '../stores/ui-store.js';
 
 // ============================================================================
 // Types
@@ -86,6 +95,13 @@ function buildBlockTree(blocks: Block[]): BlockTreeNode[] {
   sortByOrder(rootNodes);
 
   return rootNodes;
+}
+
+/**
+ * Check if the current platform uses Cmd key (macOS) or Ctrl key (Windows/Linux)
+ */
+function isMacOS(): boolean {
+  return typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform);
 }
 
 // ============================================================================
@@ -193,6 +209,98 @@ function EmptyState() {
   );
 }
 
+/**
+ * BacklinksSectionHeader - Collapsible header for the backlinks section.
+ */
+interface BacklinksSectionHeaderProps {
+  isExpanded: boolean;
+  onToggle: () => void;
+  isLoading: boolean;
+  count: number;
+}
+
+function BacklinksSectionHeader({
+  isExpanded,
+  onToggle,
+  isLoading,
+  count,
+}: BacklinksSectionHeaderProps) {
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      onToggle();
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      className="backlinks-section-header"
+      onClick={onToggle}
+      onKeyDown={handleKeyDown}
+      aria-expanded={isExpanded}
+      data-testid="backlinks-section-header"
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        padding: '12px 16px',
+        width: '100%',
+        border: 'none',
+        borderTop: '1px solid rgba(0, 0, 0, 0.1)',
+        backgroundColor: 'rgba(0, 0, 0, 0.02)',
+        cursor: 'pointer',
+        fontFamily: 'inherit',
+        fontSize: '14px',
+        fontWeight: 600,
+        color: 'inherit',
+        textAlign: 'left',
+      }}
+    >
+      <span
+        style={{
+          width: 0,
+          height: 0,
+          borderStyle: 'solid',
+          borderWidth: '5px 0 5px 7px',
+          borderColor: 'transparent transparent transparent currentColor',
+          opacity: 0.6,
+          transition: 'transform 0.15s ease',
+          transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
+        }}
+        aria-hidden="true"
+      />
+      <span>Backlinks</span>
+      {isLoading ? (
+        <span
+          style={{
+            marginLeft: 'auto',
+            fontSize: '12px',
+            opacity: 0.6,
+          }}
+        >
+          Loading...
+        </span>
+      ) : (
+        <span
+          style={{
+            marginLeft: 'auto',
+            padding: '2px 8px',
+            backgroundColor: 'rgba(0, 0, 0, 0.08)',
+            borderRadius: '10px',
+            fontSize: '12px',
+            fontWeight: 500,
+            opacity: 0.7,
+          }}
+          data-testid="backlinks-count"
+        >
+          {count}
+        </span>
+      )}
+    </button>
+  );
+}
+
 // ============================================================================
 // Main Component
 // ============================================================================
@@ -205,7 +313,11 @@ function EmptyState() {
  * 2. Fetches page metadata and blocks using useCozoQuery hooks
  * 3. Organizes blocks into a tree structure by parent_id
  * 4. Renders PageTitle and BlockNode components
- * 5. Handles loading and error states
+ * 5. Displays a collapsible BacklinksPanel at the bottom
+ * 6. Handles loading and error states
+ *
+ * Keyboard shortcuts:
+ * - Ctrl+B / Cmd+B: Toggle backlinks panel visibility
  *
  * Error handling:
  * - Query errors are displayed inline via ErrorState
@@ -219,6 +331,10 @@ function EmptyState() {
  */
 export function PageView({ pageId }: PageViewProps) {
   const { pageService } = useServices();
+  const navigateToPage = useAppStore((state) => state.navigateToPage);
+
+  // Backlinks panel expanded state (persisted in component state)
+  const [backlinksExpanded, setBacklinksExpanded] = useState(true);
 
   // Query function - must be stable (wrapped in useCallback)
   const queryFn = useCallback(() => pageService.getPageWithBlocks(pageId), [pageService, pageId]);
@@ -230,11 +346,55 @@ export function PageView({ pageId }: PageViewProps) {
     { enabled: !!pageId }
   );
 
+  // Fetch backlinks for the page
+  const { linkedRefs, unlinkedRefs, isLoading: backlinksLoading } = useBacklinks(pageId);
+
   // Build block tree from flat array
   const blockTree = useMemo(() => {
     if (!data?.blocks) return [];
     return buildBlockTree(data.blocks);
   }, [data?.blocks]);
+
+  // Toggle backlinks panel
+  const toggleBacklinks = useCallback(() => {
+    setBacklinksExpanded((prev) => !prev);
+  }, []);
+
+  // Navigate to a page (and optionally scroll to a block)
+  const handleNavigate = useCallback(
+    (targetPageId: PageId, _targetBlockId?: BlockId) => {
+      navigateToPage(targetPageId);
+      // Note: Block scrolling would be handled by the target PageView
+      // once we implement block-level navigation/focus
+      // TODO: Implement block-level focus (DBB-XXX)
+    },
+    [navigateToPage]
+  );
+
+  // Keyboard shortcut: Ctrl+B / Cmd+B to toggle backlinks
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Check for Ctrl+B (Windows/Linux) or Cmd+B (macOS)
+      const isModifierPressed = isMacOS() ? event.metaKey : event.ctrlKey;
+
+      if (isModifierPressed && event.key.toLowerCase() === 'b') {
+        // Don't trigger if user is typing in an input
+        const target = event.target as HTMLElement;
+        const isContentEditable =
+          target.isContentEditable === true || target.getAttribute?.('contenteditable') === 'true';
+        const isInputElement =
+          target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || isContentEditable;
+
+        if (!isInputElement) {
+          event.preventDefault();
+          toggleBacklinks();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [toggleBacklinks]);
 
   // Loading state
   if (isLoading) {
@@ -254,18 +414,75 @@ export function PageView({ pageId }: PageViewProps) {
   const { page, blocks } = data;
 
   return (
-    <div className="page-view" data-testid="page-view" data-page-id={pageId}>
-      <PageTitle title={page.title} />
+    <div
+      className="page-view"
+      data-testid="page-view"
+      data-page-id={pageId}
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+      }}
+    >
+      {/* Page content area */}
+      <div
+        className="page-view-content"
+        style={{
+          flex: 1,
+          overflow: 'auto',
+          padding: '16px',
+        }}
+      >
+        <PageTitle title={page.title} />
 
-      {blocks.length === 0 ? (
-        <EmptyState />
-      ) : (
-        <ul role="tree" className="block-tree" data-testid="block-tree">
-          {blockTree.map((node) => (
-            <BlockNode key={node.block.blockId} node={node} />
-          ))}
-        </ul>
-      )}
+        {blocks.length === 0 ? (
+          <EmptyState />
+        ) : (
+          <ul role="tree" className="block-tree" data-testid="block-tree">
+            {blockTree.map((node) => (
+              <BlockNode key={node.block.blockId} node={node} />
+            ))}
+          </ul>
+        )}
+      </div>
+
+      {/* Backlinks section - collapsible bottom panel */}
+      <div
+        className="backlinks-section"
+        data-testid="backlinks-section"
+        style={{
+          flexShrink: 0,
+          borderTop: '1px solid rgba(0, 0, 0, 0.1)',
+        }}
+      >
+        <BacklinksSectionHeader
+          isExpanded={backlinksExpanded}
+          onToggle={toggleBacklinks}
+          isLoading={backlinksLoading}
+          count={linkedRefs.length}
+        />
+
+        {backlinksExpanded && (
+          <div
+            className="backlinks-content"
+            data-testid="backlinks-content"
+            style={{
+              maxHeight: '300px',
+              overflow: 'auto',
+              padding: '0 16px 16px',
+            }}
+          >
+            <BacklinksPanel
+              pageId={pageId}
+              linkedRefs={linkedRefs}
+              unlinkedRefs={unlinkedRefs}
+              onNavigate={handleNavigate}
+              defaultLinkedExpanded={true}
+              defaultUnlinkedExpanded={false}
+            />
+          </div>
+        )}
+      </div>
     </div>
   );
 }

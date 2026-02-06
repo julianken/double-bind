@@ -81,6 +81,7 @@ export {
 export {
   PageService,
   type PageWithBlocks,
+  type PageBacklink,
   BlockService,
   type BlockBacklinkResult,
   type RebalanceCallback,

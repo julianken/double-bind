@@ -93,6 +93,9 @@ importers:
       '@double-bind/types':
         specifier: workspace:*
         version: link:../types
+      '@double-bind/ui-primitives':
+        specifier: workspace:*
+        version: link:../ui-primitives
       '@tauri-apps/api':
         specifier: ^2.0.0
         version: 2.10.1
@@ -217,7 +220,7 @@ importers:
         specifier: ^19.0.0
         version: 19.2.4(react@19.2.4)
       react-force-graph-2d:
-        specifier: ^1.25.0
+        specifier: ^1.26.5
         version: 1.29.1(react@19.2.4)
     devDependencies:
       '@testing-library/jest-dom':

@@ -214,18 +214,20 @@ function createCallbackOutlinerPlugin(options: {
  * Creates a simple persistence plugin that uses callbacks instead of BlockService.
  * This is used when blockService is not provided (e.g., in tests).
  */
-function createCallbackPersistencePlugin(options: {
-  onSave?: (content: string) => void;
-  debounceMs?: number;
-}) {
-  const { onSave, debounceMs = 300 } = options;
-  let debounceTimer: ReturnType<typeof setTimeout> | null = null;
-  let lastContent: string | null = null;
-
-  return keymap({
-    // This is a no-op keymap, but we use the view lifecycle for persistence
-  });
-}
+// TODO: Implement callback-based persistence (DBB-XXX)
+// This function is commented out until needed to satisfy noUnusedLocals
+// function createCallbackPersistencePlugin(options: {
+//   onSave?: (content: string) => void;
+//   debounceMs?: number;
+// }) {
+//   const { onSave, debounceMs = 300 } = options;
+//   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+//   let lastContent: string | null = null;
+//
+//   return keymap({
+//     // This is a no-op keymap, but we use the view lifecycle for persistence
+//   });
+// }
 
 /**
  * BlockEditor component - A React wrapper around ProseMirror for editing a single block.

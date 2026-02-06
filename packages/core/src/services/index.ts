@@ -17,7 +17,7 @@ import {
   PropertyRepository,
 } from '../repositories/index.js';
 
-export { PageService, type PageWithBlocks } from './page-service.js';
+export { PageService, type PageWithBlocks, type PageBacklink } from './page-service.js';
 export { BlockService, type BlockBacklinkResult, type RebalanceCallback } from './block-service.js';
 export { GraphService, type GraphResult, type SuggestedLink } from './graph-service.js';
 
