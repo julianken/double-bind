@@ -28,3 +28,13 @@ export {
   getContentAfterCursor,
   type OutlinerContext,
 } from './outliner.js';
+
+export {
+  createInputRulesPlugin,
+  headingRule,
+  bulletRule,
+  todoUncheckedRule,
+  todoCheckedRule,
+  codeBlockRule,
+  type InputRulesConfig,
+} from './input-rules.js';
