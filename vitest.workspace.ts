@@ -5,6 +5,7 @@ export default defineWorkspace([
   'packages/types',
   'packages/test-utils',
   'packages/migrations',
+  'packages/query-lang',
   'packages/core',
   'packages/ui-primitives',
   'packages/desktop',
