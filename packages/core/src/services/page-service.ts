@@ -203,4 +203,30 @@ export class PageService {
       );
     }
   }
+
+  /**
+   * Get all non-deleted pages sorted by updated_at descending.
+   *
+   * @param options - Optional filtering and pagination options
+   * @returns Array of pages sorted by updated_at descending
+   * @throws DoubleBindError with context on repository failure
+   */
+  async getAllPages(options?: { limit?: number; offset?: number }): Promise<Page[]> {
+    try {
+      return await this.pageRepo.getAll({
+        includeDeleted: false,
+        limit: options?.limit,
+        offset: options?.offset,
+      });
+    } catch (error) {
+      if (error instanceof DoubleBindError) {
+        throw error;
+      }
+      throw new DoubleBindError(
+        `Failed to get all pages: ${error instanceof Error ? error.message : String(error)}`,
+        ErrorCode.DB_QUERY_FAILED,
+        error instanceof Error ? error : undefined
+      );
+    }
+  }
 }
