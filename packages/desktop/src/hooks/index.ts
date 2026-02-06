@@ -29,3 +29,5 @@ export {
 } from './useGlobalKeyboardShortcuts.js';
 
 export { useResizable, type UseResizableOptions, type UseResizableResult } from './useResizable.js';
+
+export { useBacklinks, type UseBacklinksResult } from './useBacklinks.js';

@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { render, screen, waitFor, cleanup } from '@testing-library/react';
+import { render, screen, waitFor, cleanup, fireEvent } from '@testing-library/react';
 import type { Block, Page } from '@double-bind/types';
 import { PageView, PageTitle, BlockNode } from '../../../src/screens/PageView.js';
 import { ServiceProvider, type Services } from '../../../src/providers/ServiceProvider.js';
@@ -81,6 +81,7 @@ function createMockServices(overrides?: Partial<Services>): Services {
   return {
     pageService: {
       getPageWithBlocks: vi.fn().mockResolvedValue({ page: mockPage, blocks: mockBlocks }),
+      getPageBacklinks: vi.fn().mockResolvedValue([]),
       createPage: vi.fn(),
       deletePage: vi.fn(),
       getTodaysDailyNote: vi.fn(),
@@ -605,6 +606,310 @@ describe('PageView', () => {
 
       expect(services.pageService.getPageWithBlocks).toHaveBeenCalledWith('page-1');
       expect(services.pageService.getPageWithBlocks).toHaveBeenCalledWith('page-2');
+    });
+  });
+
+  // ==========================================================================
+  // Backlinks Section
+  // ==========================================================================
+
+  describe('Backlinks Section', () => {
+    it('renders backlinks section with data-testid', async () => {
+      const services = createMockServices();
+
+      render(
+        <TestWrapper services={services}>
+          <PageView pageId="page-1" />
+        </TestWrapper>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('backlinks-section')).toBeDefined();
+      });
+
+      expect(screen.getByTestId('backlinks-section-header')).toBeDefined();
+    });
+
+    it('fetches backlinks for the page', async () => {
+      const services = createMockServices();
+
+      render(
+        <TestWrapper services={services}>
+          <PageView pageId="page-1" />
+        </TestWrapper>
+      );
+
+      await waitFor(() => {
+        expect(services.pageService.getPageBacklinks).toHaveBeenCalledWith('page-1');
+      });
+    });
+
+    it('shows loading state while fetching backlinks', async () => {
+      const services = createMockServices();
+      // Make backlinks fetch never resolve to keep loading state
+      (services.pageService.getPageBacklinks as ReturnType<typeof vi.fn>).mockImplementation(
+        () => new Promise(() => {}) // Never resolves
+      );
+
+      render(
+        <TestWrapper services={services}>
+          <PageView pageId="page-1" />
+        </TestWrapper>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('backlinks-section-header')).toBeDefined();
+      });
+
+      // Header should show Loading... text when backlinks are loading
+      expect(screen.getByText('Loading...')).toBeDefined();
+    });
+
+    it('shows backlink count when loaded', async () => {
+      const services = createMockServices();
+      const mockBacklinks = [
+        {
+          block: {
+            blockId: 'backlink-block-1',
+            pageId: 'source-page-1',
+            parentId: null,
+            content: 'Links to [[Test Page]]',
+            contentType: 'text',
+            order: 'a0',
+            isCollapsed: false,
+            isDeleted: false,
+            createdAt: 1704067200000,
+            updatedAt: 1704067200000,
+          },
+          page: {
+            pageId: 'source-page-1',
+            title: 'Source Page',
+            createdAt: 1704067200000,
+            updatedAt: 1704067200000,
+            isDeleted: false,
+            dailyNoteDate: null,
+          },
+        },
+      ];
+      (services.pageService.getPageBacklinks as ReturnType<typeof vi.fn>).mockResolvedValue(
+        mockBacklinks
+      );
+
+      render(
+        <TestWrapper services={services}>
+          <PageView pageId="page-1" />
+        </TestWrapper>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('backlinks-count')).toBeDefined();
+      });
+
+      expect(screen.getByTestId('backlinks-count').textContent).toBe('1');
+    });
+
+    it('shows zero count when no backlinks', async () => {
+      const services = createMockServices();
+      (services.pageService.getPageBacklinks as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+
+      render(
+        <TestWrapper services={services}>
+          <PageView pageId="page-1" />
+        </TestWrapper>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('backlinks-count')).toBeDefined();
+      });
+
+      expect(screen.getByTestId('backlinks-count').textContent).toBe('0');
+    });
+
+    it('renders backlinks content when expanded', async () => {
+      const services = createMockServices();
+
+      render(
+        <TestWrapper services={services}>
+          <PageView pageId="page-1" />
+        </TestWrapper>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('backlinks-section')).toBeDefined();
+      });
+
+      // Backlinks should be expanded by default
+      expect(screen.getByTestId('backlinks-content')).toBeDefined();
+    });
+
+    it('toggles backlinks visibility on header click', async () => {
+      const services = createMockServices();
+
+      render(
+        <TestWrapper services={services}>
+          <PageView pageId="page-1" />
+        </TestWrapper>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('backlinks-section-header')).toBeDefined();
+      });
+
+      // Backlinks content should be visible initially
+      expect(screen.getByTestId('backlinks-content')).toBeDefined();
+
+      // Click header to collapse
+      fireEvent.click(screen.getByTestId('backlinks-section-header'));
+
+      // Backlinks content should be hidden
+      expect(screen.queryByTestId('backlinks-content')).toBeNull();
+
+      // Click header again to expand
+      fireEvent.click(screen.getByTestId('backlinks-section-header'));
+
+      // Backlinks content should be visible again
+      expect(screen.getByTestId('backlinks-content')).toBeDefined();
+    });
+
+    it('header has correct aria-expanded state', async () => {
+      const services = createMockServices();
+
+      render(
+        <TestWrapper services={services}>
+          <PageView pageId="page-1" />
+        </TestWrapper>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('backlinks-section-header')).toBeDefined();
+      });
+
+      // Initially expanded
+      expect(screen.getByTestId('backlinks-section-header').getAttribute('aria-expanded')).toBe(
+        'true'
+      );
+
+      // Click to collapse
+      fireEvent.click(screen.getByTestId('backlinks-section-header'));
+
+      expect(screen.getByTestId('backlinks-section-header').getAttribute('aria-expanded')).toBe(
+        'false'
+      );
+    });
+  });
+
+  // ==========================================================================
+  // Keyboard Shortcuts
+  // ==========================================================================
+
+  describe('Keyboard Shortcuts', () => {
+    it('Ctrl+B toggles backlinks visibility', async () => {
+      const services = createMockServices();
+
+      render(
+        <TestWrapper services={services}>
+          <PageView pageId="page-1" />
+        </TestWrapper>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('backlinks-content')).toBeDefined();
+      });
+
+      // Initially expanded
+      expect(screen.getByTestId('backlinks-content')).toBeDefined();
+
+      // Press Ctrl+B to collapse
+      fireEvent.keyDown(window, { key: 'b', ctrlKey: true });
+
+      // Backlinks content should be hidden
+      expect(screen.queryByTestId('backlinks-content')).toBeNull();
+
+      // Press Ctrl+B again to expand
+      fireEvent.keyDown(window, { key: 'b', ctrlKey: true });
+
+      // Backlinks content should be visible again
+      expect(screen.getByTestId('backlinks-content')).toBeDefined();
+    });
+
+    it('Cmd+B toggles backlinks visibility (macOS)', async () => {
+      const services = createMockServices();
+
+      // Mock navigator.platform to simulate macOS
+      const originalPlatform = Object.getOwnPropertyDescriptor(Navigator.prototype, 'platform');
+      Object.defineProperty(Navigator.prototype, 'platform', {
+        value: 'MacIntel',
+        configurable: true,
+      });
+
+      try {
+        render(
+          <TestWrapper services={services}>
+            <PageView pageId="page-1" />
+          </TestWrapper>
+        );
+
+        await waitFor(() => {
+          expect(screen.getByTestId('backlinks-content')).toBeDefined();
+        });
+
+        // Initially expanded
+        expect(screen.getByTestId('backlinks-content')).toBeDefined();
+
+        // Press Cmd+B to collapse (metaKey for macOS)
+        fireEvent.keyDown(window, { key: 'b', metaKey: true });
+
+        // Backlinks content should be hidden
+        expect(screen.queryByTestId('backlinks-content')).toBeNull();
+      } finally {
+        // Restore original platform
+        if (originalPlatform) {
+          Object.defineProperty(Navigator.prototype, 'platform', originalPlatform);
+        }
+      }
+    });
+
+    it('does not toggle backlinks when B pressed without modifier', async () => {
+      const services = createMockServices();
+
+      render(
+        <TestWrapper services={services}>
+          <PageView pageId="page-1" />
+        </TestWrapper>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('backlinks-content')).toBeDefined();
+      });
+
+      // Initially expanded
+      expect(screen.getByTestId('backlinks-content')).toBeDefined();
+
+      // Press B without modifier
+      fireEvent.keyDown(window, { key: 'b' });
+
+      // Backlinks content should still be visible
+      expect(screen.getByTestId('backlinks-content')).toBeDefined();
+    });
+
+    it('uppercase B also toggles backlinks', async () => {
+      const services = createMockServices();
+
+      render(
+        <TestWrapper services={services}>
+          <PageView pageId="page-1" />
+        </TestWrapper>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('backlinks-content')).toBeDefined();
+      });
+
+      // Press Ctrl+Shift+B (uppercase B)
+      fireEvent.keyDown(window, { key: 'B', ctrlKey: true });
+
+      // Should still toggle (implementation uses toLowerCase())
+      expect(screen.queryByTestId('backlinks-content')).toBeNull();
     });
   });
 });

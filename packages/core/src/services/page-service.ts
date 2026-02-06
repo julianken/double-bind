@@ -25,6 +25,17 @@ export interface PageWithBlocks {
 }
 
 /**
+ * Result type for page backlinks (incoming links to a page).
+ * Each backlink includes the referencing block and its source page.
+ */
+export interface PageBacklink {
+  /** The block containing the link to the target page */
+  block: Block;
+  /** The page containing the referencing block */
+  page: Page;
+}
+
+/**
  * Service for high-level page operations.
  *
  * Orchestrates PageRepository, BlockRepository, and LinkRepository
@@ -248,6 +259,61 @@ export class PageService {
       throw new DoubleBindError(
         `Failed to update title for page "${pageId}": ${error instanceof Error ? error.message : String(error)}`,
         ErrorCode.DB_MUTATION_FAILED,
+        error instanceof Error ? error : undefined
+      );
+    }
+  }
+
+  /**
+   * Get all backlinks (incoming links) to a page.
+   *
+   * Returns blocks from other pages that link to this page,
+   * along with their page context for grouping in the UI.
+   *
+   * @param pageId - The target page identifier
+   * @returns Array of backlinks with block and page information
+   * @throws DoubleBindError with context on repository failure
+   */
+  async getPageBacklinks(pageId: PageId): Promise<PageBacklink[]> {
+    try {
+      const inLinks = await this.linkRepo.getInLinks(pageId);
+
+      // For each incoming link, get the source page info
+      const results: PageBacklink[] = [];
+      for (const link of inLinks) {
+        // Get the source page
+        const sourcePage = await this.pageRepo.getById(link.sourceId);
+        if (!sourcePage) {
+          // Skip if source page was deleted
+          continue;
+        }
+
+        // Get the context block
+        if (!link.contextBlockId) {
+          // Skip links without context block
+          continue;
+        }
+
+        const block = await this.blockRepo.getById(link.contextBlockId);
+        if (!block) {
+          // Skip if block was deleted
+          continue;
+        }
+
+        results.push({
+          block,
+          page: sourcePage,
+        });
+      }
+
+      return results;
+    } catch (error) {
+      if (error instanceof DoubleBindError) {
+        throw error;
+      }
+      throw new DoubleBindError(
+        `Failed to get backlinks for page "${pageId}": ${error instanceof Error ? error.message : String(error)}`,
+        ErrorCode.DB_QUERY_FAILED,
         error instanceof Error ? error : undefined
       );
     }
