@@ -25,3 +25,6 @@ export type { CreatePageInput, CreateBlockInput, UpdateBlockInput } from './inpu
 
 // GraphDB interface
 export type { GraphDB, QueryResult, MutationResult } from './graph-db.js';
+
+// Search types
+export type { SearchResult, SearchOptions } from './search.js';
