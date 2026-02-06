@@ -20,6 +20,18 @@ export default defineWorkspace([
     },
   },
 
+  // Migrations integration tests - runs migration tests with real CozoDB
+  {
+    test: {
+      name: 'migrations-integration',
+      root: './packages/migrations',
+      globals: true,
+      environment: 'node',
+      include: ['test/integration/**/*.{test,spec}.ts'],
+      passWithNoTests: true,
+    },
+  },
+
   // Scripts test project - tests for build/utility scripts
   {
     test: {
