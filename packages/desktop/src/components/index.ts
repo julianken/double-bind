@@ -45,3 +45,14 @@ export {
   CODEMIRROR_DEFAULT_STYLES,
   type CodeMirrorEditorProps,
 } from './CodeMirrorEditor.js';
+
+export {
+  QueryResultTable,
+  detectColumnType,
+  formatValue,
+  type QueryResultTableProps,
+  type ColumnType,
+  type SortDirection,
+  type SortState,
+  type NavigationTarget,
+} from './QueryResultTable.js';
