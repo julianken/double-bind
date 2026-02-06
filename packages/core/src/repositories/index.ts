@@ -59,3 +59,4 @@ export {
   type BlockBacklink,
 } from './link-repository.js';
 export { BlockRepository, computeParentKey, type BlockSearchResult } from './block-repository.js';
+export { PropertyRepository, type PropertyValueType } from './property-repository.js';
