@@ -368,7 +368,7 @@ describe('App', () => {
       expect(screen.getByTestId('command-palette')).toBeDefined();
     });
 
-    it('command palette takes priority over current page', () => {
+    it('command palette overlays current page', () => {
       useAppStore.setState({
         currentPageId: 'page/test',
         commandPaletteOpen: true,
@@ -376,9 +376,10 @@ describe('App', () => {
 
       render(<App />);
 
-      // Command palette should be shown, not page view
+      // Command palette should be shown as an overlay
       expect(screen.getByTestId('command-palette')).toBeDefined();
-      expect(screen.queryByTestId('page-view')).toBeNull();
+      // Page view should still exist in the DOM (just behind the modal overlay)
+      expect(screen.getByTestId('page-view')).toBeDefined();
     });
   });
 });
