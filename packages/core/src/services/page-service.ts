@@ -229,4 +229,27 @@ export class PageService {
       );
     }
   }
+
+  /**
+   * Update a page's title.
+   *
+   * @param pageId - The page identifier
+   * @param title - The new title
+   * @throws DoubleBindError with PAGE_NOT_FOUND if page doesn't exist
+   * @throws DoubleBindError with context on repository failure
+   */
+  async updateTitle(pageId: PageId, title: string): Promise<void> {
+    try {
+      await this.pageRepo.update(pageId, { title });
+    } catch (error) {
+      if (error instanceof DoubleBindError) {
+        throw error;
+      }
+      throw new DoubleBindError(
+        `Failed to update title for page "${pageId}": ${error instanceof Error ? error.message : String(error)}`,
+        ErrorCode.DB_MUTATION_FAILED,
+        error instanceof Error ? error : undefined
+      );
+    }
+  }
 }
