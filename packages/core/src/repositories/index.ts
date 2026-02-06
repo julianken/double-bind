@@ -58,3 +58,4 @@ export {
   type InLink,
   type BlockBacklink,
 } from './link-repository.js';
+export { BlockRepository, computeParentKey, type BlockSearchResult } from './block-repository.js';
