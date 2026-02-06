@@ -192,6 +192,7 @@ function SearchResultItem({
         gap: '12px',
         width: '100%',
         padding: '12px 16px',
+        minHeight: '44px', // WCAG 2.1 AA touch target requirement
         border: 'none',
         borderRadius: '6px',
         backgroundColor: isSelected ? '#e0e7ff' : 'transparent',
