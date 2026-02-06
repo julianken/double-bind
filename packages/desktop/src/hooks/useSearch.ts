@@ -165,7 +165,8 @@ async function mockSearch(query: string, signal?: AbortSignal): Promise<SearchRe
       id: 'mock-block-1',
       type: 'block',
       title: `Block containing "${query}"`,
-      highlight: `...text with <mark>${query}</mark> highlighted...`,
+      // NOTE: Real implementation MUST sanitize with DOMPurify before rendering HTML
+      highlight: `...text with "${query}" highlighted...`,
       pageId: 'mock-page-2',
       score: 0.85,
     },
