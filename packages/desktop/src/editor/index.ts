@@ -12,6 +12,8 @@ export {
   type HeadingLevel,
   type NodeTypeName,
   type MarkTypeName,
-} from './schema';
+} from './schema.js';
 
 export * from './plugins/index.js';
+
+export { textToDoc, docToText, validateRoundTrip } from './serialization.js';
