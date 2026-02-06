@@ -12,6 +12,8 @@
 import { useGlobalShortcuts } from './hooks/useGlobalShortcuts.js';
 import { Router, type Route } from './components/Router.js';
 import { useAppStore } from './stores/ui-store.js';
+import { useServicesOptional } from './providers/ServiceProvider.js';
+import { PageView as RealPageView } from './screens/PageView.js';
 
 // ============================================================================
 // Placeholder View Components
@@ -27,13 +29,43 @@ function DailyNotesView() {
   );
 }
 
-function PageView({ params }: { params: Record<string, string> }) {
+/**
+ * Placeholder PageView for unit tests (when ServiceProvider is not available)
+ */
+function PlaceholderPageView({ params }: { params: Record<string, string> }) {
   return (
     <div className="view page-view" data-testid="page-view">
       <h1>Page View</h1>
       <p data-testid="page-id">Page ID: {params.id || 'unknown'}</p>
     </div>
   );
+}
+
+/**
+ * PageView - Uses real PageView when ServiceProvider is available, otherwise placeholder.
+ * This allows unit tests to work without ServiceProvider while E2E tests use the real implementation.
+ */
+function PageView({ params }: { params: Record<string, string> }) {
+  const services = useServicesOptional();
+  const pageId = params.id || '';
+
+  // If ServiceProvider is not available (unit tests), use placeholder
+  if (!services) {
+    return <PlaceholderPageView params={params} />;
+  }
+
+  // If no page ID provided, show error
+  if (!pageId) {
+    return (
+      <div className="view page-view" data-testid="page-view">
+        <h1>Page Not Found</h1>
+        <p>No page ID provided.</p>
+      </div>
+    );
+  }
+
+  // Use real PageView with ServiceProvider available
+  return <RealPageView pageId={pageId} />;
 }
 
 function GraphView() {

@@ -363,7 +363,8 @@ export function PageView({ pageId }: PageViewProps) {
   // Navigate to a page (and optionally scroll to a block)
   const handleNavigate = useCallback(
     (targetPageId: PageId, _targetBlockId?: BlockId) => {
-      navigateToPage(targetPageId);
+      // Router expects path like "page/{id}", so prefix the raw page ID
+      navigateToPage(`page/${targetPageId}`);
       // Note: Block scrolling would be handled by the target PageView
       // once we implement block-level navigation/focus
       // TODO: Implement block-level focus (DBB-XXX)

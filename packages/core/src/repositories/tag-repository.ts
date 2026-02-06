@@ -35,7 +35,8 @@ export class TagRepository {
   async getByEntity(entityId: string): Promise<Tag[]> {
     const script = `
 ?[entity_id, tag, created_at] :=
-    *tags{ entity_id: $entity_id, tag, created_at }
+    *tags{ entity_id, tag, created_at },
+    entity_id == $entity_id
 `.trim();
 
     const result = await this.db.query(script, { entity_id: entityId });
@@ -52,7 +53,8 @@ export class TagRepository {
   async getByTag(tag: string): Promise<Tag[]> {
     const script = `
 ?[entity_id, tag, created_at] :=
-    *tags{ entity_id, tag: $tag, created_at }
+    *tags{ entity_id, tag, created_at },
+    tag == $tag
 `.trim();
 
     const result = await this.db.query(script, { tag });
