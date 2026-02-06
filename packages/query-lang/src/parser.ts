@@ -944,8 +944,21 @@ class Parser {
     }
 
     if (this.lexer.check('NUMBER')) {
-      const value = this.lexer.consume().value;
-      return parseFloat(value);
+      const numberToken = this.lexer.consume();
+      const parsed = parseFloat(numberToken.value);
+      if (!Number.isFinite(parsed)) {
+        throw new ParseError(
+          'Invalid number value',
+          [createError('INVALID_FILTER_VALUE', {
+            line: numberToken.line,
+            column: numberToken.column,
+            customMessage: `Invalid number "${numberToken.value}" (NaN or Infinity not allowed)`,
+          })],
+          numberToken.line,
+          numberToken.column
+        );
+      }
+      return parsed;
     }
 
     if (this.lexer.check('TRUE')) {
@@ -1132,7 +1145,20 @@ class Parser {
       );
     }
 
-    const limit = parseInt(this.lexer.consume().value, 10);
+    const limitValueToken = this.lexer.consume();
+    const limit = parseInt(limitValueToken.value, 10);
+    if (!Number.isFinite(limit)) {
+      throw new ParseError(
+        'Invalid limit value',
+        [createError('INVALID_SYNTAX', {
+          line: limitValueToken.line,
+          column: limitValueToken.column,
+          customMessage: `Invalid limit "${limitValueToken.value}" (NaN or Infinity not allowed)`,
+        })],
+        limitValueToken.line,
+        limitValueToken.column
+      );
+    }
 
     let offset: number | undefined;
     if (this.lexer.check('OFFSET')) {
@@ -1152,7 +1178,20 @@ class Parser {
         );
       }
 
-      offset = parseInt(this.lexer.consume().value, 10);
+      const offsetValueToken = this.lexer.consume();
+      offset = parseInt(offsetValueToken.value, 10);
+      if (!Number.isFinite(offset)) {
+        throw new ParseError(
+          'Invalid offset value',
+          [createError('INVALID_SYNTAX', {
+            line: offsetValueToken.line,
+            column: offsetValueToken.column,
+            customMessage: `Invalid offset "${offsetValueToken.value}" (NaN or Infinity not allowed)`,
+          })],
+          offsetValueToken.line,
+          offsetValueToken.column
+        );
+      }
     }
 
     return { limit, offset };
@@ -1182,7 +1221,21 @@ class Parser {
       );
     }
 
-    return parseInt(this.lexer.consume().value, 10);
+    const depthValueToken = this.lexer.consume();
+    const depth = parseInt(depthValueToken.value, 10);
+    if (!Number.isFinite(depth)) {
+      throw new ParseError(
+        'Invalid depth value',
+        [createError('INVALID_SYNTAX', {
+          line: depthValueToken.line,
+          column: depthValueToken.column,
+          customMessage: `Invalid depth "${depthValueToken.value}" (NaN or Infinity not allowed)`,
+        })],
+        depthValueToken.line,
+        depthValueToken.column
+      );
+    }
+    return depth;
   }
 }
 
