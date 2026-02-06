@@ -6,7 +6,7 @@
  */
 
 import { createContext, useContext, type ReactNode } from 'react';
-import type { PageService, BlockService, GraphService } from '@double-bind/core';
+import type { PageService, BlockService, GraphService, SavedQueryService } from '@double-bind/core';
 
 /**
  * Services container - holds all service instances.
@@ -15,6 +15,7 @@ export interface Services {
   pageService: PageService;
   blockService: BlockService;
   graphService: GraphService;
+  savedQueryService: SavedQueryService;
 }
 
 /**

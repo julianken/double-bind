@@ -10,18 +10,21 @@ import { PageService } from './page-service.js';
 import { BlockService } from './block-service.js';
 import { GraphService } from './graph-service.js';
 import { SearchService } from './search-service.js';
+import { SavedQueryService } from './saved-query-service.js';
 import {
   PageRepository,
   BlockRepository,
   LinkRepository,
   TagRepository,
   PropertyRepository,
+  SavedQueryRepository,
 } from '../repositories/index.js';
 
 export { PageService, type PageWithBlocks, type PageBacklink } from './page-service.js';
 export { BlockService, type BlockBacklinkResult, type RebalanceCallback } from './block-service.js';
 export { GraphService, type GraphResult, type SuggestedLink } from './graph-service.js';
 export { SearchService } from './search-service.js';
+export { SavedQueryService, type ListSavedQueriesOptions } from './saved-query-service.js';
 
 /**
  * All services bundled for dependency injection.
@@ -35,6 +38,7 @@ export interface Services {
   blockService: BlockService;
   graphService: GraphService;
   searchService: SearchService;
+  savedQueryService: SavedQueryService;
 }
 
 /**
@@ -74,17 +78,20 @@ export function createServices(db: GraphDB): Services {
   const linkRepo = new LinkRepository(db);
   const tagRepo = new TagRepository(db);
   const propertyRepo = new PropertyRepository(db);
+  const savedQueryRepo = new SavedQueryRepository(db);
 
   // Wire up services with their dependencies
   const pageService = new PageService(pageRepo, blockRepo, linkRepo);
   const blockService = new BlockService(blockRepo, linkRepo, pageRepo, tagRepo, propertyRepo);
   const graphService = new GraphService(db);
   const searchService = new SearchService(db);
+  const savedQueryService = new SavedQueryService(savedQueryRepo);
 
   return {
     pageService,
     blockService,
     graphService,
     searchService,
+    savedQueryService,
   };
 }

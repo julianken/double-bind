@@ -120,13 +120,16 @@ describe('Migration Integration Tests', () => {
     it('skips already applied migrations on second run', async () => {
       const mockDb = db as MockGraphDB;
 
-      // Seed that first migration is already applied
-      mockDb.seed('metadata', [['applied_migrations', '["001-initial-schema"]']]);
+      // Seed that all migrations are already applied
+      mockDb.seed('metadata', [
+        ['applied_migrations', '["001-initial-schema","002-saved-queries"]'],
+      ]);
 
       const result = await runMigrations(db);
 
       expect(result.applied).toEqual([]);
       expect(result.alreadyApplied).toContain('001-initial-schema');
+      expect(result.alreadyApplied).toContain('002-saved-queries');
     });
 
     it('updates schema version metadata', async () => {

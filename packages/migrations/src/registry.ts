@@ -3,6 +3,7 @@
 
 import type { Migration } from './types.js';
 import { migration as v001 } from './migrations/001-initial-schema.js';
+import { migration as v002 } from './migrations/002-saved-queries.js';
 
 /**
  * All migrations in version order.
@@ -10,4 +11,4 @@ import { migration as v001 } from './migrations/001-initial-schema.js';
  * Each migration is imported from its own file in the migrations/ directory.
  * Migrations are applied in version order (lowest to highest).
  */
-export const ALL_MIGRATIONS: Migration[] = [v001];
+export const ALL_MIGRATIONS: Migration[] = [v001, v002];

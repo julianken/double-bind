@@ -36,6 +36,11 @@ export {
   PropertySchema,
   parsePropertyRow,
   type PropertyRow,
+  // Saved Query
+  SavedQueryRowSchema,
+  SavedQuerySchema,
+  parseSavedQueryRow,
+  type SavedQueryRow,
   // Repositories
   PageRepository,
   BlockRepository,
@@ -52,6 +57,8 @@ export {
   type BlockBacklink,
   PropertyRepository,
   type PropertyValueType,
+  SavedQueryRepository,
+  type GetAllSavedQueriesOptions,
 } from './repositories/index.js';
 
 // Parsers
@@ -87,6 +94,8 @@ export {
   type RebalanceCallback,
   GraphService,
   type GraphResult,
+  SavedQueryService,
+  type ListSavedQueriesOptions,
   createServices,
   type Services,
 } from './services/index.js';
