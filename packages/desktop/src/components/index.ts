@@ -64,3 +64,10 @@ export {
   type QueryHistoryPanelProps,
   type QueryHistoryItemProps,
 } from './QueryHistoryPanel.js';
+
+export {
+  VisualQueryBuilder,
+  type VisualQueryBuilderProps,
+  type FilterRow,
+  type FilterGroupRow,
+} from './VisualQueryBuilder.js';
