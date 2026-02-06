@@ -405,6 +405,28 @@ export class BlockService {
   }
 
   /**
+   * Get a block by its ID.
+   *
+   * @param blockId - The block identifier
+   * @returns The block if found, null otherwise
+   * @throws DoubleBindError with context on repository failure
+   */
+  async getById(blockId: BlockId): Promise<Block | null> {
+    try {
+      return await this.blockRepo.getById(blockId);
+    } catch (error) {
+      if (error instanceof DoubleBindError) {
+        throw error;
+      }
+      throw new DoubleBindError(
+        `Failed to get block "${blockId}": ${error instanceof Error ? error.message : String(error)}`,
+        ErrorCode.DB_QUERY_FAILED,
+        error instanceof Error ? error : undefined
+      );
+    }
+  }
+
+  /**
    * Get all blocks that reference this block (backlinks).
    *
    * Returns blocks with their page context. The page info is populated
