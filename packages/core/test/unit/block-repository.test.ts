@@ -466,6 +466,7 @@ describe('BlockRepository', () => {
 
       await repo.move(blockId, newParentId, 'b');
 
+      // move() uses an atomic transaction - single mutation with all params
       expect(db.lastMutation.params.old_parent_key).toBe(oldParentId);
       expect(db.lastMutation.params.new_parent_key).toBe(newParentId);
     });
@@ -481,6 +482,7 @@ describe('BlockRepository', () => {
 
       await repo.move(blockId, null, 'b');
 
+      // move() uses an atomic transaction - single mutation with all params
       expect(db.lastMutation.params.old_parent_key).toBe(oldParentId);
       expect(db.lastMutation.params.new_parent_key).toBe(`__page:${pageId}`);
       expect(db.lastMutation.params.new_parent_id).toBeNull();
@@ -492,6 +494,7 @@ describe('BlockRepository', () => {
 
       await repo.move(blockId, null, 'xyz');
 
+      // move() uses an atomic transaction - single mutation with all params
       expect(db.lastMutation.params.new_order).toBe('xyz');
     });
 
@@ -508,6 +511,7 @@ describe('BlockRepository', () => {
 
       await repo.move(blockId, null, 'b');
 
+      // move() uses an atomic transaction - single mutation with all params
       expect(db.lastMutation.params.content).toBe('Preserved content');
       expect(db.lastMutation.params.content_type).toBe('heading');
       expect(db.lastMutation.params.is_collapsed).toBe(true);
@@ -748,6 +752,7 @@ describe('BlockRepository', () => {
 
       await repo.create({ pageId, content: 'Block', order: 'z' });
 
+      // create() uses an atomic transaction - single mutation with all params
       expect(db.lastMutation.params.order).toBe('z');
     });
 
@@ -756,6 +761,7 @@ describe('BlockRepository', () => {
 
       await repo.create({ pageId, content: 'Block', order: 'abc123xyz' });
 
+      // create() uses an atomic transaction - single mutation with all params
       expect(db.lastMutation.params.order).toBe('abc123xyz');
     });
 
@@ -764,6 +770,7 @@ describe('BlockRepository', () => {
 
       await repo.create({ pageId, content: 'Block', order: 'a0.5' });
 
+      // create() uses an atomic transaction - single mutation with all params
       expect(db.lastMutation.params.order).toBe('a0.5');
     });
   });
@@ -780,6 +787,7 @@ describe('BlockRepository', () => {
 
       await repo.move(blockId, parentId, 'z');
 
+      // move() uses an atomic transaction - single mutation with all params
       expect(db.lastMutation.params.new_parent_id).toBe(parentId);
       expect(db.lastMutation.params.old_parent_key).toBe(parentId);
       expect(db.lastMutation.params.new_parent_key).toBe(parentId);
@@ -855,8 +863,9 @@ describe('BlockRepository', () => {
     it('should create root block with null parentId', async () => {
       const pageId = '01ARZ3NDEKTSV4RRFFQ69G5PAG';
 
-      await repo.create({ pageId, content: 'Root block', parentId: null });
+      await repo.create({ pageId, content: 'Root block' });
 
+      // create() uses an atomic transaction - single mutation with all params
       expect(db.lastMutation.params.parent_id).toBeNull();
       expect(db.lastMutation.params.parent_key).toBe(`__page:${pageId}`);
     });
@@ -867,6 +876,7 @@ describe('BlockRepository', () => {
 
       await repo.create({ pageId, content: 'Child block', parentId });
 
+      // create() uses an atomic transaction - single mutation with all params
       expect(db.lastMutation.params.parent_id).toBe(parentId);
       expect(db.lastMutation.params.parent_key).toBe(parentId);
     });
