@@ -213,6 +213,7 @@ function createCallbackOutlinerPlugin(options: {
 /**
  * Creates a simple persistence plugin that uses callbacks instead of BlockService.
  * This is used when blockService is not provided (e.g., in tests).
+ * @internal Currently unused - reserved for future use
  */
 // TODO: Implement callback-based persistence (DBB-XXX)
 // This function is commented out until needed to satisfy noUnusedLocals

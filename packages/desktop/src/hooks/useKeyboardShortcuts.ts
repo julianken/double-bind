@@ -179,6 +179,7 @@ export function useKeyboardShortcuts(
  *
  * Shortcuts:
  * - Ctrl+D / Cmd+D: Navigate to daily notes view (sets currentPageId to null)
+ * - Ctrl+G / Cmd+G: Open graph view (navigates to /graph route)
  *
  * @param options - Optional configuration
  */
@@ -190,12 +191,23 @@ export function useAppKeyboardShortcuts(options?: UseKeyboardShortcutsOptions): 
     useAppStore.setState({ currentPageId: null });
   }, []);
 
+  const navigateToGraphView = useCallback(() => {
+    // Navigate to graph view using a special route path
+    useAppStore.setState({ currentPageId: 'graph' });
+  }, []);
+
   const shortcuts: KeyboardShortcut[] = [
     {
       key: 'd',
       ctrlOrCmd: true,
       handler: setCurrentPageToNull,
       description: 'Navigate to daily notes',
+    },
+    {
+      key: 'g',
+      ctrlOrCmd: true,
+      handler: navigateToGraphView,
+      description: 'Open graph view',
     },
   ];
 
