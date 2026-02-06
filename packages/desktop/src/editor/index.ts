@@ -30,3 +30,11 @@ export {
   editorHasFocus,
   type BlockEditorProps,
 } from './BlockEditor.js';
+
+// Autocomplete dropdown component (DBB-197)
+export {
+  AutocompleteDropdown,
+  AUTOCOMPLETE_CSS_CLASSES,
+  AUTOCOMPLETE_DEFAULT_STYLES,
+  type AutocompleteDropdownProps,
+} from './AutocompleteDropdown.js';
