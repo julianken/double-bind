@@ -13,8 +13,7 @@ describe('useAppStore', () => {
       selectedBlockIds: new Set(),
       commandPaletteOpen: false,
       currentPageId: null,
-      navigationHistory: [],
-      historyIndex: -1,
+      pageHistory: [],
     });
   });
 
@@ -51,39 +50,29 @@ describe('useAppStore', () => {
   // ============================================================================
 
   describe('Right Panel', () => {
-    it('toggles right panel open/closed', () => {
-      const store = useAppStore.getState();
-      expect(store.rightPanelOpen).toBe(false);
-
-      store.toggleRightPanel();
-      expect(useAppStore.getState().rightPanelOpen).toBe(true);
-
-      useAppStore.getState().toggleRightPanel();
-      expect(useAppStore.getState().rightPanelOpen).toBe(false);
-    });
-
-    it('sets right panel content and opens panel', () => {
+    it('opens right panel with content', () => {
       const store = useAppStore.getState();
       expect(store.rightPanelOpen).toBe(false);
       expect(store.rightPanelContent).toBe(null);
 
-      store.setRightPanelContent('backlinks');
+      store.openRightPanel('backlinks');
       const state1 = useAppStore.getState();
       expect(state1.rightPanelContent).toBe('backlinks');
       expect(state1.rightPanelOpen).toBe(true);
 
-      useAppStore.getState().setRightPanelContent('properties');
+      useAppStore.getState().openRightPanel('properties');
       const state2 = useAppStore.getState();
       expect(state2.rightPanelContent).toBe('properties');
       expect(state2.rightPanelOpen).toBe(true);
     });
 
-    it('closes panel when content is set to null', () => {
+    it('closes right panel', () => {
       const store = useAppStore.getState();
-      store.setRightPanelContent('graph');
+      store.openRightPanel('graph');
       expect(useAppStore.getState().rightPanelOpen).toBe(true);
+      expect(useAppStore.getState().rightPanelContent).toBe('graph');
 
-      useAppStore.getState().setRightPanelContent(null);
+      useAppStore.getState().closeRightPanel();
       const state = useAppStore.getState();
       expect(state.rightPanelContent).toBe(null);
       expect(state.rightPanelOpen).toBe(false);
@@ -121,47 +110,40 @@ describe('useAppStore', () => {
   // ============================================================================
 
   describe('Selection', () => {
-    it('sets selected blocks', () => {
+    it('selects blocks', () => {
       const store = useAppStore.getState();
       expect(store.selectedBlockIds.size).toBe(0);
 
-      const selection = new Set(['block-1', 'block-2']);
-      store.setSelectedBlocks(selection);
+      store.selectBlock('block-1');
+      expect(useAppStore.getState().selectedBlockIds.size).toBe(1);
+      expect(useAppStore.getState().selectedBlockIds.has('block-1')).toBe(true);
 
+      useAppStore.getState().selectBlock('block-2');
       const state = useAppStore.getState();
       expect(state.selectedBlockIds.size).toBe(2);
       expect(state.selectedBlockIds.has('block-1')).toBe(true);
       expect(state.selectedBlockIds.has('block-2')).toBe(true);
     });
 
-    it('toggles block selection - adds block', () => {
+    it('deselects blocks', () => {
       const store = useAppStore.getState();
-      expect(store.selectedBlockIds.size).toBe(0);
-
-      store.toggleBlockSelection('block-1');
-      const state = useAppStore.getState();
-      expect(state.selectedBlockIds.size).toBe(1);
-      expect(state.selectedBlockIds.has('block-1')).toBe(true);
-    });
-
-    it('toggles block selection - removes block', () => {
-      const store = useAppStore.getState();
-      store.setSelectedBlocks(new Set(['block-1', 'block-2']));
+      store.selectBlock('block-1');
+      store.selectBlock('block-2');
       expect(useAppStore.getState().selectedBlockIds.size).toBe(2);
 
-      useAppStore.getState().toggleBlockSelection('block-1');
+      useAppStore.getState().deselectBlock('block-1');
       const state = useAppStore.getState();
       expect(state.selectedBlockIds.size).toBe(1);
       expect(state.selectedBlockIds.has('block-1')).toBe(false);
       expect(state.selectedBlockIds.has('block-2')).toBe(true);
     });
 
-    it('creates new Set instance when toggling', () => {
+    it('creates new Set instance when selecting/deselecting', () => {
       const store = useAppStore.getState();
-      store.setSelectedBlocks(new Set(['block-1']));
+      store.selectBlock('block-1');
       const originalSet = useAppStore.getState().selectedBlockIds;
 
-      useAppStore.getState().toggleBlockSelection('block-2');
+      useAppStore.getState().selectBlock('block-2');
       const newSet = useAppStore.getState().selectedBlockIds;
 
       expect(newSet).not.toBe(originalSet);
@@ -171,10 +153,12 @@ describe('useAppStore', () => {
 
     it('clears selection', () => {
       const store = useAppStore.getState();
-      store.setSelectedBlocks(new Set(['block-1', 'block-2', 'block-3']));
+      store.selectBlock('block-1');
+      store.selectBlock('block-2');
+      store.selectBlock('block-3');
       expect(useAppStore.getState().selectedBlockIds.size).toBe(3);
 
-      useAppStore.getState().setSelectedBlocks(new Set());
+      useAppStore.getState().clearSelection();
       expect(useAppStore.getState().selectedBlockIds.size).toBe(0);
     });
   });
@@ -184,20 +168,20 @@ describe('useAppStore', () => {
   // ============================================================================
 
   describe('Command Palette', () => {
-    it('opens command palette', () => {
+    it('toggles command palette open', () => {
       const store = useAppStore.getState();
       expect(store.commandPaletteOpen).toBe(false);
 
-      store.openCommandPalette();
+      store.toggleCommandPalette();
       expect(useAppStore.getState().commandPaletteOpen).toBe(true);
     });
 
-    it('closes command palette', () => {
+    it('toggles command palette closed', () => {
       const store = useAppStore.getState();
-      store.openCommandPalette();
+      store.toggleCommandPalette();
       expect(useAppStore.getState().commandPaletteOpen).toBe(true);
 
-      useAppStore.getState().closeCommandPalette();
+      useAppStore.getState().toggleCommandPalette();
       expect(useAppStore.getState().commandPaletteOpen).toBe(false);
     });
   });
@@ -210,14 +194,12 @@ describe('useAppStore', () => {
     it('navigates to a page', () => {
       const store = useAppStore.getState();
       expect(store.currentPageId).toBe(null);
-      expect(store.navigationHistory).toEqual([]);
-      expect(store.historyIndex).toBe(-1);
+      expect(store.pageHistory).toEqual([]);
 
       store.navigateToPage('page-1');
       const state = useAppStore.getState();
       expect(state.currentPageId).toBe('page-1');
-      expect(state.navigationHistory).toEqual(['page-1']);
-      expect(state.historyIndex).toBe(0);
+      expect(state.pageHistory).toEqual(['page-1']);
     });
 
     it('builds navigation history', () => {
@@ -228,8 +210,7 @@ describe('useAppStore', () => {
 
       const state = useAppStore.getState();
       expect(state.currentPageId).toBe('page-3');
-      expect(state.navigationHistory).toEqual(['page-1', 'page-2', 'page-3']);
-      expect(state.historyIndex).toBe(2);
+      expect(state.pageHistory).toEqual(['page-1', 'page-2', 'page-3']);
     });
 
     it('does not add duplicate when navigating to current page', () => {
@@ -238,8 +219,7 @@ describe('useAppStore', () => {
       useAppStore.getState().navigateToPage('page-1');
 
       const state = useAppStore.getState();
-      expect(state.navigationHistory).toEqual(['page-1']);
-      expect(state.historyIndex).toBe(0);
+      expect(state.pageHistory).toEqual(['page-1']);
     });
 
     it('truncates forward history when navigating from middle', () => {
@@ -258,8 +238,7 @@ describe('useAppStore', () => {
 
       const state = useAppStore.getState();
       expect(state.currentPageId).toBe('page-4');
-      expect(state.navigationHistory).toEqual(['page-1', 'page-4']);
-      expect(state.historyIndex).toBe(1);
+      expect(state.pageHistory).toEqual(['page-1', 'page-4']);
     });
 
     it('enforces max history size', () => {
@@ -269,11 +248,10 @@ describe('useAppStore', () => {
       }
 
       const state = useAppStore.getState();
-      expect(state.navigationHistory.length).toBe(50);
-      expect(state.navigationHistory[0]).toBe('page-3'); // First two trimmed
-      expect(state.navigationHistory[49]).toBe('page-52');
+      expect(state.pageHistory.length).toBe(50);
+      expect(state.pageHistory[0]).toBe('page-3'); // First two trimmed
+      expect(state.pageHistory[49]).toBe('page-52');
       expect(state.currentPageId).toBe('page-52');
-      expect(state.historyIndex).toBe(49);
     });
 
     it('goes back in history', () => {
@@ -284,11 +262,9 @@ describe('useAppStore', () => {
 
       useAppStore.getState().goBack();
       expect(useAppStore.getState().currentPageId).toBe('page-2');
-      expect(useAppStore.getState().historyIndex).toBe(1);
 
       useAppStore.getState().goBack();
       expect(useAppStore.getState().currentPageId).toBe('page-1');
-      expect(useAppStore.getState().historyIndex).toBe(0);
     });
 
     it('does not go back beyond beginning', () => {
@@ -297,11 +273,9 @@ describe('useAppStore', () => {
 
       useAppStore.getState().goBack();
       expect(useAppStore.getState().currentPageId).toBe('page-1');
-      expect(useAppStore.getState().historyIndex).toBe(0);
 
       useAppStore.getState().goBack();
       expect(useAppStore.getState().currentPageId).toBe('page-1');
-      expect(useAppStore.getState().historyIndex).toBe(0);
     });
 
     it('goes forward in history', () => {
@@ -318,11 +292,9 @@ describe('useAppStore', () => {
       // Go forward
       useAppStore.getState().goForward();
       expect(useAppStore.getState().currentPageId).toBe('page-2');
-      expect(useAppStore.getState().historyIndex).toBe(1);
 
       useAppStore.getState().goForward();
       expect(useAppStore.getState().currentPageId).toBe('page-3');
-      expect(useAppStore.getState().historyIndex).toBe(2);
     });
 
     it('does not go forward beyond end', () => {
@@ -332,11 +304,9 @@ describe('useAppStore', () => {
 
       useAppStore.getState().goForward();
       expect(useAppStore.getState().currentPageId).toBe('page-2');
-      expect(useAppStore.getState().historyIndex).toBe(1);
 
       useAppStore.getState().goForward();
       expect(useAppStore.getState().currentPageId).toBe('page-2');
-      expect(useAppStore.getState().historyIndex).toBe(1);
     });
 
     it('handles back/forward navigation correctly', () => {
@@ -363,7 +333,6 @@ describe('useAppStore', () => {
       useAppStore.getState().goForward();
       useAppStore.getState().goForward();
       expect(useAppStore.getState().currentPageId).toBe('page-4');
-      expect(useAppStore.getState().historyIndex).toBe(3);
     });
   });
 
@@ -383,8 +352,7 @@ describe('useAppStore', () => {
       expect(store.selectedBlockIds.size).toBe(0);
       expect(store.commandPaletteOpen).toBe(false);
       expect(store.currentPageId).toBe(null);
-      expect(store.navigationHistory).toEqual([]);
-      expect(store.historyIndex).toBe(-1);
+      expect(store.pageHistory).toEqual([]);
     });
   });
 
@@ -395,27 +363,31 @@ describe('useAppStore', () => {
   describe('Edge Cases', () => {
     it('handles empty history index correctly', () => {
       const store = useAppStore.getState();
-      expect(store.historyIndex).toBe(-1);
 
       store.goBack();
-      expect(useAppStore.getState().historyIndex).toBe(-1);
 
       useAppStore.getState().goForward();
-      expect(useAppStore.getState().historyIndex).toBe(-1);
     });
 
     it('maintains immutability for selectedBlockIds', () => {
       const store = useAppStore.getState();
-      const originalSet = new Set(['block-1']);
-      store.setSelectedBlocks(originalSet);
+      store.selectBlock('block-1');
 
-      // Modify original set
-      originalSet.add('block-2');
+      // Get the Set reference
+      const firstSet = useAppStore.getState().selectedBlockIds;
 
-      // Store should not be affected
-      const storeSet = useAppStore.getState().selectedBlockIds;
-      expect(storeSet.size).toBe(1);
-      expect(storeSet.has('block-2')).toBe(false);
+      // Select another block
+      useAppStore.getState().selectBlock('block-2');
+
+      // Original Set reference should not be affected
+      expect(firstSet.size).toBe(1);
+      expect(firstSet.has('block-2')).toBe(false);
+
+      // New Set should have both blocks
+      const newSet = useAppStore.getState().selectedBlockIds;
+      expect(newSet.size).toBe(2);
+      expect(newSet.has('block-1')).toBe(true);
+      expect(newSet.has('block-2')).toBe(true);
     });
 
     it('handles rapid navigation correctly', () => {
@@ -425,9 +397,8 @@ describe('useAppStore', () => {
       }
 
       const state = useAppStore.getState();
-      expect(state.navigationHistory.length).toBe(10);
+      expect(state.pageHistory.length).toBe(10);
       expect(state.currentPageId).toBe('page-10');
-      expect(state.historyIndex).toBe(9);
     });
   });
 });

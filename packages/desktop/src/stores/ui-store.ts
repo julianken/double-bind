@@ -29,8 +29,8 @@ export interface AppStore {
   // === Right Panel ===
   rightPanelOpen: boolean;
   rightPanelContent: RightPanelContent;
-  toggleRightPanel: () => void;
-  setRightPanelContent: (content: RightPanelContent) => void;
+  openRightPanel: (content: RightPanelContent) => void;
+  closeRightPanel: () => void;
 
   // === Focus ===
   focusedBlockId: string | null;
@@ -38,18 +38,18 @@ export interface AppStore {
 
   // === Selection ===
   selectedBlockIds: Set<string>;
-  setSelectedBlocks: (blockIds: Set<string>) => void;
-  toggleBlockSelection: (blockId: string) => void;
+  selectBlock: (blockId: string) => void;
+  deselectBlock: (blockId: string) => void;
+  clearSelection: () => void;
 
   // === Command Palette ===
   commandPaletteOpen: boolean;
-  openCommandPalette: () => void;
-  closeCommandPalette: () => void;
+  toggleCommandPalette: () => void;
 
   // === Navigation ===
   currentPageId: string | null;
-  navigationHistory: string[];
-  historyIndex: number;
+  pageHistory: string[];
+  historyIndex: number; // Internal: tracks position in history for back/forward
   navigateToPage: (pageId: string) => void;
   goBack: () => void;
   goForward: () => void;
@@ -71,9 +71,9 @@ export const useAppStore = create<AppStore>((set) => ({
   // === Right Panel ===
   rightPanelOpen: false,
   rightPanelContent: null,
-  toggleRightPanel: () => set((state) => ({ rightPanelOpen: !state.rightPanelOpen })),
-  setRightPanelContent: (content: RightPanelContent) =>
-    set({ rightPanelContent: content, rightPanelOpen: content !== null }),
+  openRightPanel: (content: RightPanelContent) =>
+    set({ rightPanelContent: content, rightPanelOpen: true }),
+  closeRightPanel: () => set({ rightPanelOpen: false, rightPanelContent: null }),
 
   // === Focus ===
   focusedBlockId: null,
@@ -81,27 +81,28 @@ export const useAppStore = create<AppStore>((set) => ({
 
   // === Selection ===
   selectedBlockIds: new Set(),
-  setSelectedBlocks: (blockIds: Set<string>) => set({ selectedBlockIds: new Set(blockIds) }),
-  toggleBlockSelection: (blockId: string) =>
+  selectBlock: (blockId: string) =>
     set((state) => {
       const newSelection = new Set(state.selectedBlockIds);
-      if (newSelection.has(blockId)) {
-        newSelection.delete(blockId);
-      } else {
-        newSelection.add(blockId);
-      }
+      newSelection.add(blockId);
       return { selectedBlockIds: newSelection };
     }),
+  deselectBlock: (blockId: string) =>
+    set((state) => {
+      const newSelection = new Set(state.selectedBlockIds);
+      newSelection.delete(blockId);
+      return { selectedBlockIds: newSelection };
+    }),
+  clearSelection: () => set({ selectedBlockIds: new Set() }),
 
   // === Command Palette ===
   commandPaletteOpen: false,
-  openCommandPalette: () => set({ commandPaletteOpen: true }),
-  closeCommandPalette: () => set({ commandPaletteOpen: false }),
+  toggleCommandPalette: () => set((state) => ({ commandPaletteOpen: !state.commandPaletteOpen })),
 
   // === Navigation ===
   currentPageId: null,
-  navigationHistory: [],
-  historyIndex: -1,
+  pageHistory: [],
+  historyIndex: -1, // Internal state for tracking position in history
 
   navigateToPage: (pageId: string) =>
     set((state) => {
@@ -111,7 +112,7 @@ export const useAppStore = create<AppStore>((set) => ({
       }
 
       // When navigating to a new page, truncate forward history
-      const newHistory = state.navigationHistory.slice(0, state.historyIndex + 1);
+      const newHistory = state.pageHistory.slice(0, state.historyIndex + 1);
       newHistory.push(pageId);
 
       // Enforce max history size by removing oldest entries
@@ -122,7 +123,7 @@ export const useAppStore = create<AppStore>((set) => ({
 
       return {
         currentPageId: pageId,
-        navigationHistory: trimmedHistory,
+        pageHistory: trimmedHistory,
         historyIndex: trimmedHistory.length - 1,
       };
     }),
@@ -135,20 +136,20 @@ export const useAppStore = create<AppStore>((set) => ({
 
       const newIndex = state.historyIndex - 1;
       return {
-        currentPageId: state.navigationHistory[newIndex],
+        currentPageId: state.pageHistory[newIndex],
         historyIndex: newIndex,
       };
     }),
 
   goForward: () =>
     set((state) => {
-      if (state.historyIndex >= state.navigationHistory.length - 1) {
+      if (state.historyIndex >= state.pageHistory.length - 1) {
         return state;
       }
 
       const newIndex = state.historyIndex + 1;
       return {
-        currentPageId: state.navigationHistory[newIndex],
+        currentPageId: state.pageHistory[newIndex],
         historyIndex: newIndex,
       };
     }),
