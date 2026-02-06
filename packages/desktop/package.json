@@ -3,10 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "main": "./src/index.ts",
-  "types": "./src/index.ts",
   "scripts": {
-    "build": "tsc --build",
+    "dev": "vite",
+    "build": "tsc --build && vite build",
+    "preview": "vite preview",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint src/",
@@ -14,11 +16,20 @@
   },
   "dependencies": {
     "@double-bind/types": "workspace:*",
-    "@double-bind/core": "workspace:*"
+    "@double-bind/core": "workspace:*",
+    "@tauri-apps/api": "^2.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "zustand": "^5.0.0"
   },
   "devDependencies": {
     "@double-bind/test-utils": "workspace:*",
+    "@tauri-apps/cli": "^2.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.3.0",
     "typescript": "^5.7.0",
+    "vite": "^6.0.0",
     "vitest": "^2.0.0"
   }
 }
