@@ -29,6 +29,7 @@ Thumbs.db
 
 # Tauri
 packages/desktop/src-tauri/target/
+packages/desktop/src-tauri/migrations/*.sql
 
 # Debug artifacts
 debug-*.spec.ts
