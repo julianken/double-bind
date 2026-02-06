@@ -18,6 +18,9 @@
     "@double-bind/core": "workspace:*",
     "@double-bind/types": "workspace:*",
     "@tauri-apps/api": "^2.0.0",
+    "prosemirror-model": "^1.25.4",
+    "prosemirror-state": "^1.4.4",
+    "prosemirror-view": "^1.41.5",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "zustand": "^5.0.0"
