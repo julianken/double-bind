@@ -27,3 +27,5 @@ export {
   type KeyboardShortcutActions,
   type UseGlobalKeyboardShortcutsOptions,
 } from './useGlobalKeyboardShortcuts.js';
+
+export { useResizable, type UseResizableOptions, type UseResizableResult } from './useResizable.js';
