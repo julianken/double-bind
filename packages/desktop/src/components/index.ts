@@ -25,3 +25,6 @@ export {
   type BlockEditorProps,
   type StaticBlockContentProps,
 } from './BlockNode.js';
+
+export { PageList, PageListItem } from './PageList.js';
+export type { PageListProps, PageListItemProps } from './PageList.js';
