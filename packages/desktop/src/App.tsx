@@ -9,11 +9,70 @@
  * The sidebar persists while content swaps based on navigation.
  */
 
+import { useContext } from 'react';
 import { useGlobalShortcuts } from './hooks/useGlobalShortcuts.js';
 import { Router, type Route } from './components/Router.js';
 import { useAppStore } from './stores/ui-store.js';
-import { useServicesOptional } from './providers/ServiceProvider.js';
+import { useServicesOptional, ServiceContext } from './providers/ServiceProvider.js';
 import { PageView as RealPageView } from './screens/PageView.js';
+import { GraphViewScreen } from './screens/GraphViewScreen.js';
+import { Sidebar as FullSidebar } from './layout/Sidebar.js';
+
+// ============================================================================
+// Sidebar Component - Uses full Sidebar when ServiceProvider is available,
+// otherwise renders a placeholder for unit testing without services.
+// ============================================================================
+
+function PlaceholderSidebar() {
+  const sidebarOpen = useAppStore((s) => s.sidebarOpen);
+  const sidebarWidth = useAppStore((s) => s.sidebarWidth);
+  const navigateToPage = useAppStore((s) => s.navigateToPage);
+
+  if (!sidebarOpen) {
+    return null;
+  }
+
+  return (
+    <aside
+      className="sidebar"
+      data-testid="sidebar"
+      style={{ width: sidebarWidth }}
+      role="navigation"
+      aria-label="Main navigation"
+    >
+      <div className="sidebar-header">
+        <h2>Double Bind</h2>
+      </div>
+      <nav className="sidebar-nav">
+        <button onClick={() => navigateToPage('')} aria-label="Daily Notes">
+          Daily Notes
+        </button>
+        <button onClick={() => navigateToPage('graph')} aria-label="Graph View">
+          Graph
+        </button>
+        <button onClick={() => navigateToPage('query')} aria-label="Query Editor">
+          Query
+        </button>
+      </nav>
+      <div className="sidebar-pages">
+        <h3>Pages</h3>
+        <p>Page list will appear here.</p>
+      </div>
+    </aside>
+  );
+}
+
+function Sidebar() {
+  const services = useContext(ServiceContext);
+
+  // When ServiceProvider is present, use the full-featured Sidebar
+  if (services) {
+    return <FullSidebar />;
+  }
+
+  // Placeholder for unit tests without ServiceProvider
+  return <PlaceholderSidebar />;
+}
 
 // ============================================================================
 // Placeholder View Components
@@ -68,15 +127,6 @@ function PageView({ params }: { params: Record<string, string> }) {
   return <RealPageView pageId={pageId} />;
 }
 
-function GraphView() {
-  return (
-    <div className="view graph-view" data-testid="graph-view">
-      <h1>Graph View</h1>
-      <p>Knowledge graph visualization will appear here.</p>
-    </div>
-  );
-}
-
 function SearchView({ params }: { params: Record<string, string> }) {
   return (
     <div className="view search-view" data-testid="search-view">
@@ -91,6 +141,27 @@ function QueryView() {
     <div className="view query-view" data-testid="query-view">
       <h1>Datalog Query Editor</h1>
       <p>Query editor will appear here.</p>
+    </div>
+  );
+}
+
+/**
+ * GraphView - Renders real GraphViewScreen when services are available,
+ * otherwise renders a placeholder for unit testing without ServiceProvider.
+ */
+function GraphView() {
+  const services = useContext(ServiceContext);
+
+  // When ServiceProvider is present, use the real GraphViewScreen
+  if (services) {
+    return <GraphViewScreen params={{}} />;
+  }
+
+  // Placeholder for unit tests without ServiceProvider
+  return (
+    <div className="view graph-view" data-testid="graph-view">
+      <h1>Graph View</h1>
+      <p>Graph visualization will appear here.</p>
     </div>
   );
 }
@@ -130,49 +201,6 @@ const routes: Route[] = [
   { id: 'query', path: '/query', component: QueryView },
   { id: 'command-palette', path: '/command-palette', component: CommandPalette },
 ];
-
-// ============================================================================
-// Sidebar Component
-// ============================================================================
-
-function Sidebar() {
-  const sidebarOpen = useAppStore((s) => s.sidebarOpen);
-  const sidebarWidth = useAppStore((s) => s.sidebarWidth);
-  const navigateToPage = useAppStore((s) => s.navigateToPage);
-
-  if (!sidebarOpen) {
-    return null;
-  }
-
-  return (
-    <aside
-      className="sidebar"
-      data-testid="sidebar"
-      style={{ width: sidebarWidth }}
-      role="navigation"
-      aria-label="Main navigation"
-    >
-      <div className="sidebar-header">
-        <h2>Double Bind</h2>
-      </div>
-      <nav className="sidebar-nav">
-        <button onClick={() => navigateToPage('')} aria-label="Daily Notes">
-          Daily Notes
-        </button>
-        <button onClick={() => navigateToPage('graph')} aria-label="Graph View">
-          Graph
-        </button>
-        <button onClick={() => navigateToPage('query')} aria-label="Query Editor">
-          Query
-        </button>
-      </nav>
-      <div className="sidebar-pages">
-        <h3>Pages</h3>
-        <p>Page list will appear here.</p>
-      </div>
-    </aside>
-  );
-}
 
 // ============================================================================
 // Navigation Bar Component

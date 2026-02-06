@@ -19,8 +19,9 @@ export interface Services {
 
 /**
  * Service context - null when used outside provider.
+ * Exported for components that need to check context availability without throwing.
  */
-const ServiceContext = createContext<Services | null>(null);
+export const ServiceContext = createContext<Services | null>(null);
 
 /**
  * Props for ServiceProvider component.

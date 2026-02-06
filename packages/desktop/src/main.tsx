@@ -1,8 +1,15 @@
+/**
+ * Main entry point for the Double-Bind desktop application.
+ *
+ * Initializes services using the Tauri GraphDB client and renders the app
+ * wrapped in ServiceProvider for dependency injection.
+ */
+
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { tauriGraphDB, createServices } from '@double-bind/core';
 import { ServiceProvider } from './providers/ServiceProvider.js';
-import { App } from './App';
+import { App } from './App.js';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
