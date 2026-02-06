@@ -96,6 +96,51 @@ fn get_db_path(app: &tauri::AppHandle) -> PathBuf {
     data_dir.join("db")
 }
 
+/// Run database migrations before webview loads
+///
+/// Migrations run with ScriptMutability::Mutable directly — not through the
+/// Tauri command blocklist. This allows ::create, ::remove, ::fts, etc.
+///
+/// Migration scripts are embedded via include_str!() from .sql files extracted
+/// at build time. This avoids IPC round-trips and ensures migrations complete
+/// before the app loads.
+fn run_migrations(db: &cozo::DbInstance) -> Result<(), String> {
+    // List of migrations: (name, embedded SQL content)
+    let migrations: Vec<(&str, &str)> = vec![
+        ("001-initial-schema", include_str!("../migrations/001-initial-schema.sql")),
+        // Future migrations added here
+    ];
+
+    // Check current schema version from metadata relation
+    let version_result = db.run_script_str(
+        "?[value] := *metadata{ key: 'schema_version', value }",
+        Default::default(),
+        cozo::ScriptMutability::Immutable,
+    );
+
+    let current_version: i64 = match version_result {
+        Ok(result) => {
+            // Parse version from result; 0 if metadata relation doesn't exist yet
+            result.rows.first()
+                .and_then(|row| row[0].as_str())
+                .and_then(|v| v.parse().ok())
+                .unwrap_or(0)
+        }
+        Err(_) => 0, // metadata relation doesn't exist yet (fresh DB)
+    };
+
+    // Apply migrations that haven't been applied yet
+    for (i, (name, script)) in migrations.iter().enumerate() {
+        let version = (i + 1) as i64;
+        if version > current_version {
+            db.run_script_str(script, Default::default(), cozo::ScriptMutability::Mutable)
+                .map_err(|e| format!("Migration {} failed: {}", name, e))?;
+        }
+    }
+
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -108,8 +153,8 @@ pub fn run() {
             )
             .expect("Failed to open database");
 
-            // TODO: Run migrations here before webview loads
-            // run_migrations(&db).expect("Migration failed");
+            // Run migrations before webview loads
+            run_migrations(&db).expect("Migration failed");
 
             app.manage(DbState(db));
             Ok(())
