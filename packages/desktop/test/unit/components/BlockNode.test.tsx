@@ -10,6 +10,7 @@ import {
   BulletHandle,
   BlockEditor,
   StaticBlockContent,
+  STATIC_BLOCK_CONTENT_CSS_CLASSES,
 } from '../../../src/components/BlockNode.js';
 import { useAppStore } from '../../../src/stores/ui-store.js';
 import { clearQueryCache } from '../../../src/hooks/useCozoQuery.js';
@@ -169,6 +170,12 @@ describe('StaticBlockContent', () => {
       render(<StaticBlockContent content="" />);
       expect(screen.getByTestId('static-block-content')).toBeDefined();
     });
+
+    it('applies container CSS class', () => {
+      render(<StaticBlockContent content="Test" />);
+      const container = screen.getByRole('button');
+      expect(container.className).toContain(STATIC_BLOCK_CONTENT_CSS_CLASSES.container);
+    });
   });
 
   describe('Interactions', () => {
@@ -205,6 +212,15 @@ describe('StaticBlockContent', () => {
       // Should not throw
       fireEvent.click(screen.getByTestId('static-block-content'));
     });
+
+    it('ignores other key presses', () => {
+      const onClick = vi.fn();
+      render(<StaticBlockContent content="Test" onClick={onClick} />);
+
+      fireEvent.keyDown(screen.getByTestId('static-block-content'), { key: 'Tab' });
+
+      expect(onClick).not.toHaveBeenCalled();
+    });
   });
 
   describe('Accessibility', () => {
@@ -217,6 +233,259 @@ describe('StaticBlockContent', () => {
       render(<StaticBlockContent content="Test" />);
       const element = screen.getByTestId('static-block-content');
       expect(element.getAttribute('tabIndex')).toBe('0');
+    });
+
+    it('sets aria-label for accessibility', () => {
+      render(<StaticBlockContent content="Accessible content" />);
+      const container = screen.getByRole('button');
+      expect(container.getAttribute('aria-label')).toBe('Accessible content');
+    });
+  });
+
+  describe('Inline Formatting', () => {
+    it('renders bold text with **', () => {
+      render(<StaticBlockContent content="This is **bold** text" />);
+
+      const boldElement = screen.getByText('bold');
+      expect(boldElement.tagName).toBe('STRONG');
+      expect(boldElement.className).toContain(STATIC_BLOCK_CONTENT_CSS_CLASSES.bold);
+    });
+
+    it('renders italic text with *', () => {
+      render(<StaticBlockContent content="This is *italic* text" />);
+
+      const italicElement = screen.getByText('italic');
+      expect(italicElement.tagName).toBe('EM');
+      expect(italicElement.className).toContain(STATIC_BLOCK_CONTENT_CSS_CLASSES.italic);
+    });
+
+    it('renders italic text with _', () => {
+      render(<StaticBlockContent content="This is _italic_ text" />);
+
+      const italicElement = screen.getByText('italic');
+      expect(italicElement.tagName).toBe('EM');
+    });
+
+    it('renders code with backticks', () => {
+      render(<StaticBlockContent content="Use `const x = 1` here" />);
+
+      const codeElement = screen.getByText('const x = 1');
+      expect(codeElement.tagName).toBe('CODE');
+      expect(codeElement.className).toContain(STATIC_BLOCK_CONTENT_CSS_CLASSES.code);
+    });
+
+    it('renders highlight with ^^', () => {
+      render(<StaticBlockContent content="This is ^^highlighted^^ text" />);
+
+      const highlightElement = screen.getByText('highlighted');
+      expect(highlightElement.tagName).toBe('MARK');
+      expect(highlightElement.className).toContain(STATIC_BLOCK_CONTENT_CSS_CLASSES.highlight);
+    });
+
+    it('renders strikethrough with ~~', () => {
+      render(<StaticBlockContent content="This is ~~deleted~~ text" />);
+
+      const strikeElement = screen.getByText('deleted');
+      expect(strikeElement.tagName).toBe('DEL');
+      expect(strikeElement.className).toContain(STATIC_BLOCK_CONTENT_CSS_CLASSES.strikethrough);
+    });
+
+    it('handles multiple formatting in same content', () => {
+      render(<StaticBlockContent content="**Bold** and *italic* and `code`" />);
+
+      expect(screen.getByText('Bold').tagName).toBe('STRONG');
+      expect(screen.getByText('italic').tagName).toBe('EM');
+      expect(screen.getByText('code').tagName).toBe('CODE');
+    });
+  });
+
+  describe('Page Links', () => {
+    it('renders page link with [[]]', () => {
+      render(<StaticBlockContent content="Link to [[My Page]]" />);
+
+      const linkElement = screen.getByText('[[My Page]]');
+      expect(linkElement.className).toContain(STATIC_BLOCK_CONTENT_CSS_CLASSES.pageLink);
+      expect(linkElement.getAttribute('data-link-title')).toBe('My Page');
+    });
+
+    it('renders multiple page links', () => {
+      render(<StaticBlockContent content="[[Page A]] and [[Page B]]" />);
+
+      expect(screen.getByText('[[Page A]]')).toBeDefined();
+      expect(screen.getByText('[[Page B]]')).toBeDefined();
+    });
+
+    it('handles page links with special characters', () => {
+      render(<StaticBlockContent content="See [[2024-01-15 Notes]]" />);
+
+      const linkElement = screen.getByText('[[2024-01-15 Notes]]');
+      expect(linkElement.getAttribute('data-link-title')).toBe('2024-01-15 Notes');
+    });
+  });
+
+  describe('Block References', () => {
+    it('renders block reference with (())', () => {
+      render(<StaticBlockContent content="See ((01HXQ4E2JKGN3STP6VWDHM2QYZ))" />);
+
+      const refElement = screen.getByText('((01HXQ4E2JKGN3STP6VWDHM2QYZ))');
+      expect(refElement.className).toContain(STATIC_BLOCK_CONTENT_CSS_CLASSES.blockRef);
+      expect(refElement.getAttribute('data-block-id')).toBe('01HXQ4E2JKGN3STP6VWDHM2QYZ');
+    });
+
+    it('renders multiple block references', () => {
+      render(
+        <StaticBlockContent content="((01HXQ4E2JKGN3STP6VWDHM2QYA)) and ((01HXQ4E2JKGN3STP6VWDHM2QYB))" />
+      );
+
+      expect(screen.getByText('((01HXQ4E2JKGN3STP6VWDHM2QYA))')).toBeDefined();
+      expect(screen.getByText('((01HXQ4E2JKGN3STP6VWDHM2QYB))')).toBeDefined();
+    });
+  });
+
+  describe('Tags', () => {
+    it('renders simple tag with #', () => {
+      render(<StaticBlockContent content="Tagged with #project" />);
+
+      const tagElement = screen.getByText('#project');
+      expect(tagElement.className).toContain(STATIC_BLOCK_CONTENT_CSS_CLASSES.tag);
+      expect(tagElement.getAttribute('data-tag')).toBe('project');
+    });
+
+    it('renders multi-word tag with #[[]]', () => {
+      render(<StaticBlockContent content="Tagged with #[[multi word tag]]" />);
+
+      const tagElement = screen.getByText('#multi word tag');
+      expect(tagElement.className).toContain(STATIC_BLOCK_CONTENT_CSS_CLASSES.tag);
+      expect(tagElement.getAttribute('data-tag')).toBe('multi word tag');
+    });
+
+    it('renders multiple tags', () => {
+      render(<StaticBlockContent content="#tag1 and #tag2 and #[[tag three]]" />);
+
+      expect(screen.getByText('#tag1')).toBeDefined();
+      expect(screen.getByText('#tag2')).toBeDefined();
+      expect(screen.getByText('#tag three')).toBeDefined();
+    });
+
+    it('handles tags with hyphens', () => {
+      render(<StaticBlockContent content="Use #my-tag here" />);
+
+      const tagElement = screen.getByText('#my-tag');
+      expect(tagElement.getAttribute('data-tag')).toBe('my-tag');
+    });
+  });
+
+  describe('Todo Blocks', () => {
+    it('renders unchecked todo with checkbox', () => {
+      render(<StaticBlockContent content="[ ] Buy groceries" contentType="todo" />);
+
+      const container = screen.getByRole('button');
+      expect(container.className).toContain(STATIC_BLOCK_CONTENT_CSS_CLASSES.todo);
+
+      // Should have checkbox
+      const checkbox = container.querySelector(`.${STATIC_BLOCK_CONTENT_CSS_CLASSES.checkbox}`);
+      expect(checkbox).toBeDefined();
+      expect(checkbox?.textContent).toBe('\u2610'); // Unchecked ballot box
+    });
+
+    it('renders checked todo with [x]', () => {
+      render(<StaticBlockContent content="[x] Task done" contentType="todo" />);
+
+      const container = screen.getByRole('button');
+      const checkbox = container.querySelector(`.${STATIC_BLOCK_CONTENT_CSS_CLASSES.checkbox}`);
+      expect(checkbox?.textContent).toBe('\u2611'); // Checked ballot box
+      expect(checkbox?.className).toContain(STATIC_BLOCK_CONTENT_CSS_CLASSES.checkboxChecked);
+    });
+
+    it('renders checked todo with [X]', () => {
+      render(<StaticBlockContent content="[X] Task done" contentType="todo" />);
+
+      const container = screen.getByRole('button');
+      const checkbox = container.querySelector(`.${STATIC_BLOCK_CONTENT_CSS_CLASSES.checkbox}`);
+      expect(checkbox?.textContent).toBe('\u2611');
+    });
+
+    it('renders checked todo with [done]', () => {
+      render(<StaticBlockContent content="[done] Completed task" contentType="todo" />);
+
+      const container = screen.getByRole('button');
+      const checkbox = container.querySelector(`.${STATIC_BLOCK_CONTENT_CSS_CLASSES.checkbox}`);
+      expect(checkbox?.textContent).toBe('\u2611');
+    });
+
+    it('removes checkbox syntax from displayed content', () => {
+      render(<StaticBlockContent content="[x] Clean the house" contentType="todo" />);
+
+      expect(screen.getByText('Clean the house')).toBeDefined();
+      // Should not show the [x] in the text
+      expect(screen.queryByText('[x]')).toBeNull();
+    });
+
+    it('sets todo-specific aria-label', () => {
+      render(<StaticBlockContent content="[ ] Important task" contentType="todo" />);
+
+      const container = screen.getByRole('button');
+      expect(container.getAttribute('aria-label')).toBe('Todo: Important task');
+    });
+  });
+
+  describe('Mixed Content', () => {
+    it('handles formatting with page links', () => {
+      render(<StaticBlockContent content="**Bold** text with [[Page Link]]" />);
+
+      expect(screen.getByText('Bold').tagName).toBe('STRONG');
+      expect(screen.getByText('[[Page Link]]').className).toContain(
+        STATIC_BLOCK_CONTENT_CSS_CLASSES.pageLink
+      );
+    });
+
+    it('handles tags with formatting', () => {
+      render(<StaticBlockContent content="#project has *italic* content" />);
+
+      expect(screen.getByText('#project').className).toContain(
+        STATIC_BLOCK_CONTENT_CSS_CLASSES.tag
+      );
+      expect(screen.getByText('italic').tagName).toBe('EM');
+    });
+
+    it('handles complex content with all elements', () => {
+      render(
+        <StaticBlockContent content="**Bold** [[Link]] #tag `code` ((01HXQ4E2JKGN3STP6VWDHM2QYZ))" />
+      );
+
+      expect(screen.getByText('Bold').tagName).toBe('STRONG');
+      expect(screen.getByText('[[Link]]').className).toContain(
+        STATIC_BLOCK_CONTENT_CSS_CLASSES.pageLink
+      );
+      expect(screen.getByText('#tag').className).toContain(STATIC_BLOCK_CONTENT_CSS_CLASSES.tag);
+      expect(screen.getByText('code').tagName).toBe('CODE');
+      expect(screen.getByText('((01HXQ4E2JKGN3STP6VWDHM2QYZ))').className).toContain(
+        STATIC_BLOCK_CONTENT_CSS_CLASSES.blockRef
+      );
+    });
+  });
+
+  describe('Edge Cases', () => {
+    it('handles content with only whitespace', () => {
+      render(<StaticBlockContent content="   " />);
+
+      const container = screen.getByRole('button');
+      expect(container).toBeDefined();
+    });
+
+    it('handles unclosed formatting marks', () => {
+      render(<StaticBlockContent content="This is **unclosed bold" />);
+
+      // Should render as plain text, not crash
+      expect(screen.getByText('This is **unclosed bold')).toBeDefined();
+    });
+
+    it('handles very long content', () => {
+      const longContent = 'A'.repeat(10000);
+      render(<StaticBlockContent content={longContent} />);
+
+      const container = screen.getByRole('button');
+      expect(container).toBeDefined();
     });
   });
 });
