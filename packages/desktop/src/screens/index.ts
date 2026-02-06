@@ -12,3 +12,6 @@ export type { DailyNotesViewProps } from './DailyNotesView.js';
 
 export { GraphViewScreen } from './GraphViewScreen.js';
 export type { GraphViewScreenProps } from './GraphViewScreen.js';
+
+export { SearchResultsView, HighlightedText } from './SearchResultsView.js';
+export type { SearchResultsViewProps, HighlightedTextProps } from './SearchResultsView.js';

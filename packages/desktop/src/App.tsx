@@ -16,6 +16,7 @@ import { useAppStore } from './stores/ui-store.js';
 import { useServicesOptional, ServiceContext } from './providers/ServiceProvider.js';
 import { PageView as RealPageView } from './screens/PageView.js';
 import { GraphViewScreen } from './screens/GraphViewScreen.js';
+import { SearchResultsView as RealSearchResultsView } from './screens/SearchResultsView.js';
 import { Sidebar as FullSidebar } from './layout/Sidebar.js';
 
 // ============================================================================
@@ -127,7 +128,19 @@ function PageView({ params }: { params: Record<string, string> }) {
   return <RealPageView pageId={pageId} />;
 }
 
+/**
+ * SearchView - Uses real SearchResultsView when ServiceProvider is available,
+ * otherwise renders a placeholder for unit testing without ServiceProvider.
+ */
 function SearchView({ params }: { params: Record<string, string> }) {
+  const services = useContext(ServiceContext);
+
+  // When ServiceProvider is present, use the real SearchResultsView
+  if (services) {
+    return <RealSearchResultsView params={params} />;
+  }
+
+  // Placeholder for unit tests without ServiceProvider
   return (
     <div className="view search-view" data-testid="search-view">
       <h1>Search Results</h1>
@@ -197,7 +210,7 @@ function CommandPalette() {
 const routes: Route[] = [
   { id: 'page', path: '/page/:id', component: PageView },
   { id: 'graph', path: '/graph', component: GraphView },
-  { id: 'search', path: '/search/:query', component: SearchView },
+  { id: 'search', path: '/search', component: SearchView },
   { id: 'query', path: '/query', component: QueryView },
   { id: 'command-palette', path: '/command-palette', component: CommandPalette },
 ];
