@@ -36,6 +36,9 @@ export {
   PropertySchema,
   parsePropertyRow,
   type PropertyRow,
+  // Repositories
+  PageRepository,
+  type GetAllOptions,
 } from './repositories/index.js';
 
 // Parsers

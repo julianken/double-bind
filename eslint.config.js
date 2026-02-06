@@ -32,10 +32,13 @@ export default tseslint.config(
       ecmaVersion: 2022,
       sourceType: 'module',
       parserOptions: {
-        project: [
-          './packages/*/tsconfig.json',
-          './packages/*/tsconfig.lint.json',
-        ],
+        projectService: {
+          allowDefaultProject: [
+            'packages/*/test/*.ts',
+            'packages/*/test/*/*.ts',
+            'packages/*/test/*/*/*.ts',
+          ],
+        },
         tsconfigRootDir: import.meta.dirname,
       },
     },

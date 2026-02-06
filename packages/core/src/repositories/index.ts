@@ -46,3 +46,6 @@ export {
   parsePropertyRow,
   type PropertyRow,
 } from './property-repository.schemas.js';
+
+// Repositories - Datalog query construction for domain entities
+export { PageRepository, type GetAllOptions } from './page-repository.js';
