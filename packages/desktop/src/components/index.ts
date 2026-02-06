@@ -40,6 +40,13 @@ export { SplitPane, type SplitPaneProps } from './SplitPane.js';
 export { BlockRefAutocomplete, type BlockRefAutocompleteProps } from './BlockRefAutocomplete.js';
 
 export {
+  CodeMirrorEditor,
+  CODEMIRROR_CSS_CLASSES,
+  CODEMIRROR_DEFAULT_STYLES,
+  type CodeMirrorEditorProps,
+} from './CodeMirrorEditor.js';
+
+export {
   QueryResultTable,
   detectColumnType,
   formatValue,
