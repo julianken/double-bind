@@ -6,3 +6,9 @@
 
 export { Router } from './Router.js';
 export type { Route, RouteComponentProps, RouterProps } from './Router.js';
+
+export {
+  ErrorBoundary,
+  type ErrorBoundaryProps,
+  type ErrorBoundaryState,
+} from './ErrorBoundary.js';
