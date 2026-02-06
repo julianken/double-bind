@@ -15,3 +15,7 @@ export {
 // Stores
 export { useAppStore } from './stores/index.js';
 export type { AppStore, RightPanelContent } from './stores/index.js';
+
+// Components
+export { Router } from './components/index.js';
+export type { Route, RouteComponentProps, RouterProps } from './components/index.js';
