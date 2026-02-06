@@ -38,7 +38,10 @@ export {
   type PropertyRow,
   // Repositories
   PageRepository,
+  BlockRepository,
+  computeParentKey,
   type GetAllOptions,
+  type BlockSearchResult,
   TagRepository,
   type TagWithCount,
   LinkRepository,
