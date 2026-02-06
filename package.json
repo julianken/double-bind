@@ -1,0 +1,25 @@
+{
+  "name": "double-bind",
+  "private": true,
+  "scripts": {
+    "build": "pnpm -r --filter='!@double-bind/desktop' build",
+    "build:desktop": "pnpm --filter=@double-bind/desktop build",
+    "dev": "pnpm --filter=@double-bind/desktop dev",
+    "dev:desktop": "pnpm --filter=@double-bind/desktop tauri:dev",
+    "test": "pnpm -r test",
+    "test:unit": "pnpm -r test:unit",
+    "test:e2e": "pnpm --filter=@double-bind/desktop test:e2e",
+    "test:e2e:full": "pnpm --filter=@double-bind/desktop test:e2e:full",
+    "test:e2e:summary": "node scripts/test-summary.js",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "clean": "pnpm -r clean"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0"
+  },
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
