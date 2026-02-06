@@ -9,3 +9,6 @@ export { PageView, PageTitle, BlockNode, type PageViewProps } from './PageView.j
 
 export { DailyNotesView, formatDailyNoteDate, getTodayISODate } from './DailyNotesView.js';
 export type { DailyNotesViewProps } from './DailyNotesView.js';
+
+export { GraphViewScreen } from './GraphViewScreen.js';
+export type { GraphViewScreenProps } from './GraphViewScreen.js';
