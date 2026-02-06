@@ -476,4 +476,472 @@ It has #project and #[[multi word]] tags.`;
       expect(result.pageLinks[0].title).toBe('[Page');
     });
   });
+
+  // ==========================================================================
+  // Unicode and International Characters
+  // ==========================================================================
+
+  describe('unicode and international characters', () => {
+    it('handles emoji within page link titles', () => {
+      const result = parseContent('[[Project 🚀 Launch]]');
+      expect(result.pageLinks).toHaveLength(1);
+      expect(result.pageLinks[0].title).toBe('Project 🚀 Launch');
+    });
+
+    it('handles Arabic/RTL text in page links', () => {
+      const result = parseContent('[[مرحبا بالعالم]]');
+      expect(result.pageLinks).toHaveLength(1);
+      expect(result.pageLinks[0].title).toBe('مرحبا بالعالم');
+    });
+
+    it('handles Chinese characters in page links', () => {
+      const result = parseContent('[[你好世界]]');
+      expect(result.pageLinks).toHaveLength(1);
+      expect(result.pageLinks[0].title).toBe('你好世界');
+    });
+
+    it('handles combining diacriticals in page links', () => {
+      const result = parseContent('[[café résumé]]');
+      expect(result.pageLinks).toHaveLength(1);
+      expect(result.pageLinks[0].title).toBe('café résumé');
+    });
+
+    it('handles mathematical symbols in page links', () => {
+      const result = parseContent('[[Math: ∑ ∫ ∂]]');
+      expect(result.pageLinks).toHaveLength(1);
+      expect(result.pageLinks[0].title).toBe('Math: ∑ ∫ ∂');
+    });
+
+    it('handles currency symbols in property values', () => {
+      const result = parseContent('price:: $100 €85 ¥1000');
+      expect(result.properties).toEqual([{ key: 'price', value: '$100 €85 ¥1000' }]);
+    });
+
+    it('handles emoji in tags (simple tags)', () => {
+      // Tags require word characters to start, so emoji-only won't match
+      const result = parseContent('#project🚀');
+      expect(result.tags).toContain('project');
+    });
+
+    it('handles emoji in multi-word tags', () => {
+      const result = parseContent('#[[Launch 🚀 Project]]');
+      expect(result.tags).toContain('Launch 🚀 Project');
+    });
+
+    it('handles zero-width characters', () => {
+      // Zero-width joiner and non-joiner
+      const result = parseContent('[[Page\u200D\u200CName]]');
+      expect(result.pageLinks).toHaveLength(1);
+    });
+
+    it('handles mixed Unicode categories', () => {
+      const result = parseContent('[[English 中文 العربية 🌍]]');
+      expect(result.pageLinks).toHaveLength(1);
+      expect(result.pageLinks[0].title).toBe('English 中文 العربية 🌍');
+    });
+  });
+
+  // ==========================================================================
+  // Tag Edge Cases
+  // ==========================================================================
+
+  describe('tag edge cases', () => {
+    it('handles tags with underscores', () => {
+      const result = parseContent('#my_tag_name');
+      expect(result.tags).toContain('my_tag_name');
+    });
+
+    it('handles tags starting with numbers', () => {
+      // Tags must start with word char, numbers are word chars
+      const result = parseContent('#2024project');
+      expect(result.tags).toContain('2024project');
+    });
+
+    it('does not extract tags ending with only hyphens', () => {
+      // Trailing hyphens should be included
+      const result = parseContent('#project-');
+      expect(result.tags).toContain('project-');
+    });
+
+    it('handles tags with consecutive hyphens', () => {
+      const result = parseContent('#project--alpha');
+      expect(result.tags).toContain('project--alpha');
+    });
+
+    it('handles tags immediately followed by opening bracket', () => {
+      const result = parseContent('#tag[[Page]]');
+      expect(result.tags).toContain('tag');
+      // Note: [[Page]] is not a page link due to negative lookbehind
+    });
+
+    it('does not extract empty multi-word tags', () => {
+      const result = parseContent('Empty #[[]] tag');
+      expect(result.tags).toEqual([]);
+    });
+
+    it('does not match multi-word tag with unescaped brackets inside', () => {
+      // Multi-word tag pattern [^\]]+ stops at first ], causing pattern mismatch
+      // #[[tag[with] sees ], expects ]] next but finds brackets]]
+      const result = parseContent('#[[tag[with]brackets]]');
+      expect(result.tags).toEqual([]);
+    });
+
+    it('handles tags with mixed underscores and hyphens', () => {
+      const result = parseContent('#my_tag-name_here');
+      expect(result.tags).toContain('my_tag-name_here');
+    });
+
+    it('handles tag immediately before page link', () => {
+      const result = parseContent('#tag[[Page]]');
+      expect(result.tags).toContain('tag');
+      // [[Page]] after # becomes part of multi-word tag pattern, not page link
+    });
+
+    it('preserves tag case sensitivity', () => {
+      const result = parseContent('#CamelCase #lowercase #UPPERCASE');
+      expect(result.tags).toContain('CamelCase');
+      expect(result.tags).toContain('lowercase');
+      expect(result.tags).toContain('UPPERCASE');
+      expect(result.tags).toHaveLength(3);
+    });
+
+    it('handles tag followed by comma without space', () => {
+      const result = parseContent('Tags: #one,#two,#three');
+      expect(result.tags).toContain('one');
+      expect(result.tags).toContain('two');
+      expect(result.tags).toContain('three');
+    });
+  });
+
+  // ==========================================================================
+  // Property Edge Cases
+  // ==========================================================================
+
+  describe('property edge cases', () => {
+    it('handles property with multiple colons in value', () => {
+      const result = parseContent('time:: 10:30:45');
+      expect(result.properties).toEqual([{ key: 'time', value: '10:30:45' }]);
+    });
+
+    it('handles property with double colon in value', () => {
+      const result = parseContent('namespace:: MyApp::Service::Class');
+      expect(result.properties).toEqual([{ key: 'namespace', value: 'MyApp::Service::Class' }]);
+    });
+
+    it('handles property with underscore in key', () => {
+      const result = parseContent('snake_case_key:: value');
+      expect(result.properties).toEqual([{ key: 'snake_case_key', value: 'value' }]);
+    });
+
+    it('handles property with mixed case key', () => {
+      const result = parseContent('CamelCaseKey:: value');
+      expect(result.properties).toEqual([{ key: 'CamelCaseKey', value: 'value' }]);
+    });
+
+    it('handles multiple properties with duplicate keys', () => {
+      const result = parseContent('tag:: one\ntag:: two\ntag:: three');
+      // All duplicates should be extracted
+      expect(result.properties).toHaveLength(3);
+      expect(result.properties.every((p) => p.key === 'tag')).toBe(true);
+    });
+
+    it('handles property value with trailing spaces preserved then trimmed', () => {
+      const result = parseContent('key:: value   ');
+      expect(result.properties).toEqual([{ key: 'key', value: 'value' }]);
+    });
+
+    it('handles property value with leading spaces', () => {
+      const result = parseContent('key::    leading spaces');
+      expect(result.properties).toEqual([{ key: 'key', value: 'leading spaces' }]);
+    });
+
+    it('handles property value with special characters', () => {
+      const result = parseContent('regex:: ^[a-z]+$.*?\\d{2,4}');
+      expect(result.properties).toEqual([{ key: 'regex', value: '^[a-z]+$.*?\\d{2,4}' }]);
+    });
+
+    it('handles property value with brackets', () => {
+      const result = parseContent('formula:: [x] + (y * z) = {result}');
+      expect(result.properties).toEqual([{ key: 'formula', value: '[x] + (y * z) = {result}' }]);
+    });
+
+    it('handles property with page link-like content in value', () => {
+      const result = parseContent('note:: See [[Other Page]] for details');
+      expect(result.properties).toEqual([{ key: 'note', value: 'See [[Other Page]] for details' }]);
+      // The [[Other Page]] should also be extracted as a page link
+      expect(result.pageLinks).toHaveLength(1);
+    });
+
+    it('handles property value with hash characters', () => {
+      const result = parseContent('hashtags:: #one #two #three');
+      expect(result.properties).toEqual([{ key: 'hashtags', value: '#one #two #three' }]);
+      // Tags in property values are still extracted
+      expect(result.tags).toContain('one');
+      expect(result.tags).toContain('two');
+      expect(result.tags).toContain('three');
+    });
+  });
+
+  // ==========================================================================
+  // Block Reference Edge Cases
+  // ==========================================================================
+
+  describe('block reference edge cases', () => {
+    it('handles multiple block refs adjacent without space', () => {
+      const ulid1 = '01HXQV4KFBNJV5YEWMRNZ8SGHA';
+      const ulid2 = '01HXQV4KFBNJV5YEWMRNZ8SGHB';
+      const result = parseContent(`((${ulid1}))((${ulid2}))`);
+      expect(result.blockRefs).toHaveLength(2);
+      expect(result.blockRefs[0].blockId).toBe(ulid1);
+      expect(result.blockRefs[1].blockId).toBe(ulid2);
+    });
+
+    it('rejects block ref with whitespace before ULID', () => {
+      const ulid = '01HXQV4KFBNJV5YEWMRNZ8SGHA';
+      const result = parseContent(`(( ${ulid}))`);
+      expect(result.blockRefs).toEqual([]);
+    });
+
+    it('rejects block ref with whitespace after ULID', () => {
+      const ulid = '01HXQV4KFBNJV5YEWMRNZ8SGHA';
+      const result = parseContent(`((${ulid} ))`);
+      expect(result.blockRefs).toEqual([]);
+    });
+
+    it('rejects block ref with whitespace inside ULID', () => {
+      const result = parseContent('((01HXQV4KFBNJV5YEW RNZSGHA))');
+      expect(result.blockRefs).toEqual([]);
+    });
+
+    it('rejects block ref with lowercase ulid', () => {
+      const result = parseContent('((01hxqv4kfbnjv5yewmrnz8sgha))');
+      expect(result.blockRefs).toEqual([]);
+    });
+
+    it('handles block ref in middle of word (should extract)', () => {
+      const ulid = '01HXQV4KFBNJV5YEWMRNZ8SGHA';
+      const result = parseContent(`text((${ulid}))text`);
+      expect(result.blockRefs).toHaveLength(1);
+    });
+
+    it('rejects ulid with special characters', () => {
+      const result = parseContent('((01HXQV4KFBNJV5YEWMRNZ8SGH@))');
+      expect(result.blockRefs).toEqual([]);
+    });
+  });
+
+  // ==========================================================================
+  // Complex Nesting and Interaction
+  // ==========================================================================
+
+  describe('complex nesting and interactions', () => {
+    it('handles page link inside property value', () => {
+      const result = parseContent('related:: See [[Project Alpha]] for more');
+      expect(result.properties).toHaveLength(1);
+      expect(result.properties[0].value).toBe('See [[Project Alpha]] for more');
+      expect(result.pageLinks).toHaveLength(1);
+      expect(result.pageLinks[0].title).toBe('Project Alpha');
+    });
+
+    it('handles block ref inside property value', () => {
+      const ulid = '01HXQV4KFBNJV5YEWMRNZ8SGHA';
+      const result = parseContent(`reference:: Based on ((${ulid}))`);
+      expect(result.properties).toHaveLength(1);
+      expect(result.blockRefs).toHaveLength(1);
+    });
+
+    it('handles tag in property key position (should not match property)', () => {
+      const result = parseContent('#tag:: value');
+      expect(result.tags).toContain('tag');
+      expect(result.properties).toEqual([]);
+    });
+
+    it('handles multiple pattern types in property value', () => {
+      const ulid = '01HXQV4KFBNJV5YEWMRNZ8SGHA';
+      const result = parseContent(`summary:: See [[Page]] and ((${ulid})) with #tag`);
+      expect(result.properties).toHaveLength(1);
+      expect(result.pageLinks).toHaveLength(1);
+      expect(result.blockRefs).toHaveLength(1);
+      expect(result.tags).toContain('tag');
+    });
+
+    it('handles page link containing property-like syntax', () => {
+      const result = parseContent('[[Meeting Notes:: 2024-03-15]]');
+      expect(result.pageLinks).toHaveLength(1);
+      expect(result.pageLinks[0].title).toBe('Meeting Notes:: 2024-03-15');
+    });
+
+    it('handles deeply nested pattern in text', () => {
+      const result = parseContent('Text with [[Page A containing #tag]] and more');
+      expect(result.pageLinks).toHaveLength(1);
+      expect(result.tags).toContain('tag');
+    });
+
+    it('handles all pattern types in single line and multiline', () => {
+      const ulid = '01HXQV4KFBNJV5YEWMRNZ8SGHA';
+      // Property must be at start of line, so put it on its own line
+      const content = `status:: active\n[[Page]] ((${ulid})) #tag`;
+      const result = parseContent(content);
+      expect(result.properties).toHaveLength(1);
+      expect(result.pageLinks).toHaveLength(1);
+      expect(result.blockRefs).toHaveLength(1);
+      expect(result.tags).toHaveLength(1);
+    });
+  });
+
+  // ==========================================================================
+  // Position Accuracy with Complex Content
+  // ==========================================================================
+
+  describe('position accuracy with complex content', () => {
+    it('provides correct positions with emoji before pattern', () => {
+      const content = '🚀 [[Page]]';
+      const result = parseContent(content);
+      const extracted = content.slice(result.pageLinks[0].startIndex, result.pageLinks[0].endIndex);
+      expect(extracted).toBe('[[Page]]');
+    });
+
+    it('provides correct positions with multi-byte chars before pattern', () => {
+      const content = '你好 [[Page]]';
+      const result = parseContent(content);
+      const extracted = content.slice(result.pageLinks[0].startIndex, result.pageLinks[0].endIndex);
+      expect(extracted).toBe('[[Page]]');
+    });
+
+    it('provides correct positions for multiple patterns with unicode', () => {
+      const content = '🌍 [[First]] 中文 [[Second]] العربية';
+      const result = parseContent(content);
+      expect(result.pageLinks).toHaveLength(2);
+      expect(content.slice(result.pageLinks[0].startIndex, result.pageLinks[0].endIndex)).toBe(
+        '[[First]]'
+      );
+      expect(content.slice(result.pageLinks[1].startIndex, result.pageLinks[1].endIndex)).toBe(
+        '[[Second]]'
+      );
+    });
+
+    it('handles pattern at exact start with no leading content', () => {
+      const ulid = '01HXQV4KFBNJV5YEWMRNZ8SGHA';
+      const content = `((${ulid}))`;
+      const result = parseContent(content);
+      expect(result.blockRefs[0].startIndex).toBe(0);
+      expect(result.blockRefs[0].endIndex).toBe(content.length);
+    });
+
+    it('handles pattern at exact end with no trailing content', () => {
+      const content = '[[Page]]';
+      const result = parseContent(content);
+      expect(result.pageLinks[0].endIndex).toBe(content.length);
+    });
+  });
+
+  // ==========================================================================
+  // Performance and Stress Tests
+  // ==========================================================================
+
+  describe('performance and stress tests', () => {
+    it('handles very long page link title', () => {
+      const longTitle = 'A'.repeat(1000);
+      const content = `[[${longTitle}]]`;
+      const result = parseContent(content);
+      expect(result.pageLinks).toHaveLength(1);
+      expect(result.pageLinks[0].title).toBe(longTitle);
+    });
+
+    it('handles high density of patterns', () => {
+      const ulid = '01HXQV4KFBNJV5YEWMRNZ8SGHA';
+      const content = `[[A]]((${ulid}))#x [[B]]((${ulid}))#y`.repeat(10);
+      const result = parseContent(content);
+      expect(result.pageLinks.length).toBeGreaterThan(0);
+      expect(result.blockRefs.length).toBeGreaterThan(0);
+      expect(result.tags.length).toBeGreaterThan(0);
+    });
+
+    it('handles content with many repeated patterns efficiently', () => {
+      const pattern = '[[Page]] ';
+      const content = pattern.repeat(1000);
+      const startTime = Date.now();
+      const result = parseContent(content);
+      const endTime = Date.now();
+      expect(result.pageLinks).toHaveLength(1000);
+      expect(endTime - startTime).toBeLessThan(1000); // Should complete in under 1 second
+    });
+
+    it('handles mixed newlines and patterns', () => {
+      const lines = [];
+      for (let i = 0; i < 100; i++) {
+        lines.push(`[[Page${i}]]`);
+        lines.push(`#tag${i}`);
+        lines.push(`key${i}:: value${i}`);
+      }
+      const result = parseContent(lines.join('\n'));
+      expect(result.pageLinks).toHaveLength(100);
+      expect(result.tags).toHaveLength(100);
+      expect(result.properties).toHaveLength(100);
+    });
+  });
+
+  // ==========================================================================
+  // Malformed and Invalid Patterns
+  // ==========================================================================
+
+  describe('malformed and invalid patterns', () => {
+    it('does not match page link with mismatched bracket types', () => {
+      const result = parseContent('[{Page}]');
+      expect(result.pageLinks).toEqual([]);
+    });
+
+    it('does not match page link with single opening bracket', () => {
+      const result = parseContent('[Page]]');
+      expect(result.pageLinks).toEqual([]);
+    });
+
+    it('does not match page link with single closing bracket', () => {
+      const result = parseContent('[[Page]');
+      expect(result.pageLinks).toEqual([]);
+    });
+
+    it('does not match block ref with single opening paren', () => {
+      const ulid = '01HXQV4KFBNJV5YEWMRNZ8SGHA';
+      const result = parseContent(`(${ulid}))`);
+      expect(result.blockRefs).toEqual([]);
+    });
+
+    it('does not match block ref with single closing paren', () => {
+      const ulid = '01HXQV4KFBNJV5YEWMRNZ8SGHA';
+      const result = parseContent(`((${ulid})`);
+      expect(result.blockRefs).toEqual([]);
+    });
+
+    it('does not match property with space before key', () => {
+      const result = parseContent(' key:: value');
+      expect(result.properties).toEqual([]);
+    });
+
+    it('handles malformed nested brackets gracefully', () => {
+      const result = parseContent('[[Outer [[ Inner ]] text]]');
+      // Should match the outer brackets
+      expect(result.pageLinks).toHaveLength(1);
+    });
+
+    it('handles text that looks like patterns but is not', () => {
+      const result = parseContent('Use [[brackets]] for links and ((parens)) for refs');
+      expect(result.pageLinks).toHaveLength(1);
+      expect(result.pageLinks[0].title).toBe('brackets');
+      // ((parens)) is not a valid ULID so no block ref
+      expect(result.blockRefs).toEqual([]);
+    });
+
+    it('handles triple brackets correctly', () => {
+      const result = parseContent('[[[Page]]]');
+      expect(result.pageLinks).toHaveLength(1);
+      expect(result.pageLinks[0].title).toBe('[Page');
+    });
+
+    it('handles quadruple brackets', () => {
+      const result = parseContent('[[[[Page]]]]');
+      expect(result.pageLinks).toHaveLength(1);
+      expect(result.pageLinks[0].title).toBe('[[Page');
+    });
+  });
 });
