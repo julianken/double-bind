@@ -45,6 +45,14 @@ export {
 
 // Layout
 export { AppShell, type AppShellProps } from './layout/index.js';
+export {
+  Sidebar,
+  SearchBar,
+  QuickCapture,
+  PageList,
+  SidebarFooter,
+  type SidebarProps,
+} from './layout/index.js';
 
 // Screens
 export { PageView, PageTitle, BlockNode, type PageViewProps } from './screens/index.js';
