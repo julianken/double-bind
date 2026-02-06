@@ -102,6 +102,9 @@ importers:
       '@double-bind/core':
         specifier: workspace:*
         version: link:../core
+      '@double-bind/query-lang':
+        specifier: workspace:*
+        version: link:../query-lang
       '@double-bind/types':
         specifier: workspace:*
         version: link:../types
