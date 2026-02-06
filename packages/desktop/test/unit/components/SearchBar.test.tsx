@@ -1,5 +1,15 @@
 /**
  * Unit tests for SearchBar component
+ *
+ * Tests cover:
+ * - Rendering (placeholder, icons, shortcuts)
+ * - Input behavior (typing, debouncing)
+ * - Minimum length hint display
+ * - Clear button functionality
+ * - Keyboard shortcuts (Escape, Ctrl+K)
+ * - Loading state display
+ * - Navigation on search
+ * - Accessibility features
  */
 
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
@@ -162,6 +172,84 @@ describe('SearchBar', () => {
   });
 
   // ============================================================================
+  // Minimum Length Hint
+  // ============================================================================
+
+  describe('Minimum Length Hint', () => {
+    it('does not show hint when input is empty', () => {
+      render(<SearchBar />);
+
+      expect(screen.queryByTestId('search-bar-min-length-hint')).toBeNull();
+    });
+
+    it('shows hint when query is 1 character', async () => {
+      const user = userEvent.setup();
+      render(<SearchBar />);
+
+      const input = screen.getByTestId('search-bar-input');
+      await user.type(input, 'a');
+
+      expect(screen.getByTestId('search-bar-min-length-hint')).toBeDefined();
+      expect(screen.getByText('Type at least 2 characters')).toBeDefined();
+    });
+
+    it('hides hint when query reaches minimum length', async () => {
+      const user = userEvent.setup();
+      render(<SearchBar />);
+
+      const input = screen.getByTestId('search-bar-input');
+      await user.type(input, 'ab');
+
+      expect(screen.queryByTestId('search-bar-min-length-hint')).toBeNull();
+    });
+
+    it('hides hint when query is cleared', async () => {
+      const user = userEvent.setup();
+      render(<SearchBar />);
+
+      const input = screen.getByTestId('search-bar-input');
+      await user.type(input, 'a');
+
+      // Hint should be visible
+      expect(screen.getByTestId('search-bar-min-length-hint')).toBeDefined();
+
+      // Clear using backspace
+      await user.type(input, '{Backspace}');
+
+      // Hint should be hidden
+      expect(screen.queryByTestId('search-bar-min-length-hint')).toBeNull();
+    });
+
+    it('shows hint again when deleting back to 1 character', async () => {
+      const user = userEvent.setup();
+      render(<SearchBar />);
+
+      const input = screen.getByTestId('search-bar-input');
+      await user.type(input, 'abc');
+
+      // Hint should not be visible
+      expect(screen.queryByTestId('search-bar-min-length-hint')).toBeNull();
+
+      // Delete to 1 character
+      await user.type(input, '{Backspace}{Backspace}');
+
+      // Hint should be visible
+      expect(screen.getByTestId('search-bar-min-length-hint')).toBeDefined();
+    });
+
+    it('has aria-live attribute for accessibility', async () => {
+      const user = userEvent.setup();
+      render(<SearchBar />);
+
+      const input = screen.getByTestId('search-bar-input');
+      await user.type(input, 'a');
+
+      const hint = screen.getByTestId('search-bar-min-length-hint');
+      expect(hint.getAttribute('aria-live')).toBe('polite');
+    });
+  });
+
+  // ============================================================================
   // Clear Button
   // ============================================================================
 
@@ -215,6 +303,23 @@ describe('SearchBar', () => {
       await user.type(input, 'test');
 
       expect(screen.getByLabelText('Clear search')).toBeDefined();
+    });
+
+    it('hides minimum length hint after clearing', async () => {
+      const user = userEvent.setup();
+      render(<SearchBar />);
+
+      const input = screen.getByTestId('search-bar-input');
+      await user.type(input, 'a');
+
+      // Hint should be visible
+      expect(screen.getByTestId('search-bar-min-length-hint')).toBeDefined();
+
+      const clearButton = screen.getByTestId('search-bar-clear');
+      await user.click(clearButton);
+
+      // Hint should be hidden
+      expect(screen.queryByTestId('search-bar-min-length-hint')).toBeNull();
     });
   });
 
@@ -343,7 +448,7 @@ describe('SearchBar', () => {
       const input = screen.getByTestId('search-bar-input');
       await user.type(input, 'test query');
 
-      // The mock search has a 300ms delay, so loading should be visible
+      // The mock search has a delay, so loading should be visible
       await waitFor(() => {
         expect(screen.getByTestId('search-loading-spinner')).toBeDefined();
       });
@@ -356,13 +461,26 @@ describe('SearchBar', () => {
       const input = screen.getByTestId('search-bar-input');
       await user.type(input, 'test query');
 
-      // Wait for search to complete (300ms mock delay + buffer)
+      // Wait for search to complete
       await waitFor(
         () => {
           expect(screen.queryByTestId('search-loading-spinner')).toBeNull();
         },
         { timeout: 1000 }
       );
+    });
+
+    it('does not show loading spinner for single character input', async () => {
+      const user = userEvent.setup();
+      render(<SearchBar />);
+
+      const input = screen.getByTestId('search-bar-input');
+      await user.type(input, 'a');
+
+      // Wait a moment to ensure loading doesn't appear
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      expect(screen.queryByTestId('search-loading-spinner')).toBeNull();
     });
   });
 
@@ -488,6 +606,17 @@ describe('SearchBar', () => {
 
       const input = screen.getByTestId('search-bar-input');
       expect(input.getAttribute('type')).toBe('search');
+    });
+
+    it('minimum length hint has aria-live for screen readers', async () => {
+      const user = userEvent.setup();
+      render(<SearchBar />);
+
+      const input = screen.getByTestId('search-bar-input');
+      await user.type(input, 'a');
+
+      const hint = screen.getByTestId('search-bar-min-length-hint');
+      expect(hint.getAttribute('aria-live')).toBe('polite');
     });
   });
 });
