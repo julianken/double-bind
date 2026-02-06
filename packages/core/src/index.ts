@@ -84,6 +84,8 @@ export {
   BlockService,
   type BlockBacklinkResult,
   type RebalanceCallback,
+  GraphService,
+  type GraphResult,
   createServices,
   type Services,
 } from './services/index.js';
