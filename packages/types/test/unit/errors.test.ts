@@ -16,6 +16,7 @@ describe('Error Types', () => {
     it('should have domain error codes', () => {
       expect(ErrorCode.PAGE_NOT_FOUND).toBe('PAGE_NOT_FOUND');
       expect(ErrorCode.BLOCK_NOT_FOUND).toBe('BLOCK_NOT_FOUND');
+      expect(ErrorCode.SAVED_QUERY_NOT_FOUND).toBe('SAVED_QUERY_NOT_FOUND');
       expect(ErrorCode.INVALID_CONTENT).toBe('INVALID_CONTENT');
       expect(ErrorCode.CIRCULAR_REFERENCE).toBe('CIRCULAR_REFERENCE');
     });
@@ -31,9 +32,10 @@ describe('Error Types', () => {
 
     it('should have all expected error codes', () => {
       const allCodes = Object.values(ErrorCode);
-      expect(allCodes).toHaveLength(10);
+      expect(allCodes).toHaveLength(11);
       expect(allCodes).toContain('DB_CONNECTION_FAILED');
       expect(allCodes).toContain('PAGE_NOT_FOUND');
+      expect(allCodes).toContain('SAVED_QUERY_NOT_FOUND');
       expect(allCodes).toContain('IMPORT_PARSE_ERROR');
       expect(allCodes).toContain('BLOCKED_OPERATION');
     });
@@ -106,6 +108,7 @@ describe('Error Types', () => {
       const domainCodes = [
         ErrorCode.PAGE_NOT_FOUND,
         ErrorCode.BLOCK_NOT_FOUND,
+        ErrorCode.SAVED_QUERY_NOT_FOUND,
         ErrorCode.INVALID_CONTENT,
         ErrorCode.CIRCULAR_REFERENCE,
       ];
