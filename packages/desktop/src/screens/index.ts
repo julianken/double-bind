@@ -6,3 +6,6 @@
  */
 
 export { PageView, PageTitle, BlockNode, type PageViewProps } from './PageView.js';
+
+export { DailyNotesView, formatDailyNoteDate, getTodayISODate } from './DailyNotesView.js';
+export type { DailyNotesViewProps } from './DailyNotesView.js';
