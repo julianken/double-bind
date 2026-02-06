@@ -279,4 +279,246 @@ describe('LinkRepository', () => {
       await expect(repo.getOutLinks(sourceId)).rejects.toThrow();
     });
   });
+
+  describe('createLink edge cases', () => {
+    it('should handle self-referencing links', async () => {
+      const pageId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
+
+      await repo.createLink({
+        sourceId: pageId,
+        targetId: pageId,
+        linkType: 'reference',
+        contextBlockId: null,
+      });
+
+      expect(db.lastMutation.params.source_id).toBe(pageId);
+      expect(db.lastMutation.params.target_id).toBe(pageId);
+    });
+
+    it('should validate all link types', async () => {
+      const linkTypes: Array<'reference' | 'embed' | 'tag'> = ['reference', 'embed', 'tag'];
+
+      for (const linkType of linkTypes) {
+        await repo.createLink({
+          sourceId: 'source',
+          targetId: 'target',
+          linkType,
+          contextBlockId: null,
+        });
+
+        expect(db.lastMutation.params.link_type).toBe(linkType);
+      }
+    });
+
+    it('should set timestamp on link creation', async () => {
+      const before = Date.now();
+
+      await repo.createLink({
+        sourceId: 'source',
+        targetId: 'target',
+        linkType: 'reference',
+        contextBlockId: null,
+      });
+
+      const after = Date.now();
+      const timestamp = db.lastMutation.params.now as number;
+      expect(timestamp).toBeGreaterThanOrEqual(before);
+      expect(timestamp).toBeLessThanOrEqual(after);
+    });
+
+    it('should handle contextBlockId with all link types', async () => {
+      const blockId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
+
+      await repo.createLink({
+        sourceId: 'source',
+        targetId: 'target',
+        linkType: 'embed',
+        contextBlockId: blockId,
+      });
+
+      expect(db.lastMutation.params.context_block_id).toBe(blockId);
+    });
+  });
+
+  describe('createBlockRef edge cases', () => {
+    it('should handle self-referencing block refs', async () => {
+      const blockId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
+
+      await repo.createBlockRef({
+        sourceBlockId: blockId,
+        targetBlockId: blockId,
+      });
+
+      expect(db.lastMutation.params.source_block_id).toBe(blockId);
+      expect(db.lastMutation.params.target_block_id).toBe(blockId);
+    });
+
+    it('should set timestamp on block ref creation', async () => {
+      const before = Date.now();
+
+      await repo.createBlockRef({
+        sourceBlockId: 'source',
+        targetBlockId: 'target',
+      });
+
+      const after = Date.now();
+      const timestamp = db.lastMutation.params.now as number;
+      expect(timestamp).toBeGreaterThanOrEqual(before);
+      expect(timestamp).toBeLessThanOrEqual(after);
+    });
+  });
+
+  describe('removeLinksFromBlock edge cases', () => {
+    it('should not throw when removing links from block with no links', async () => {
+      const blockId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
+
+      await expect(repo.removeLinksFromBlock(blockId)).resolves.not.toThrow();
+      expect(db.mutations).toHaveLength(2);
+    });
+
+    it('should use same block_id for both removals', async () => {
+      const blockId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
+
+      await repo.removeLinksFromBlock(blockId);
+
+      expect(db.mutations[0]?.params.block_id).toBe(blockId);
+      expect(db.mutations[1]?.params.block_id).toBe(blockId);
+    });
+
+    it('should execute removals sequentially', async () => {
+      const blockId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
+
+      await repo.removeLinksFromBlock(blockId);
+
+      // First mutation should be for links
+      expect(db.mutations[0]?.script).toContain('*links{');
+      expect(db.mutations[0]?.script).toContain(':rm links');
+
+      // Second mutation should be for block_refs
+      expect(db.mutations[1]?.script).toContain('*block_refs{');
+      expect(db.mutations[1]?.script).toContain(':rm block_refs');
+    });
+  });
+
+  describe('getOutLinks edge cases', () => {
+    it('should handle page with no outgoing links', async () => {
+      db.seed('links', []);
+
+      const result = await repo.getOutLinks('page-with-no-links');
+
+      expect(result).toEqual([]);
+    });
+
+    it('should handle multiple links to same target', async () => {
+      const sourceId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
+      const targetId = '01ARZ3NDEKTSV4RRFFQ69G5FAW';
+      const now = Date.now();
+
+      db.seed('links', [
+        [sourceId, targetId, 'reference', now, 'block-1', 'Target'],
+        [sourceId, targetId, 'embed', now + 1000, 'block-2', 'Target'],
+      ]);
+
+      const result = await repo.getOutLinks(sourceId);
+
+      expect(result).toHaveLength(2);
+      expect(result[0]?.linkType).toBe('reference');
+      expect(result[1]?.linkType).toBe('embed');
+    });
+
+    it('should filter by source_id correctly', async () => {
+      const now = Date.now();
+      db.seed('links', [
+        ['source-1', 'target-a', 'reference', now, null, 'Target A'],
+        ['source-2', 'target-b', 'reference', now, null, 'Target B'],
+      ]);
+
+      const result = await repo.getOutLinks('source-1');
+
+      expect(result).toHaveLength(1);
+      expect(result[0]?.targetId).toBe('target-a');
+    });
+  });
+
+  describe('getInLinks edge cases', () => {
+    it('should handle page with no incoming links', async () => {
+      db.seed('links', []);
+
+      const result = await repo.getInLinks('page-with-no-backlinks');
+
+      expect(result).toEqual([]);
+    });
+
+    it('should filter by target_id correctly', async () => {
+      db.seed('links', []);
+
+      await repo.getInLinks('target-page');
+
+      expect(db.lastQuery.script).toContain('target_id: $page_id');
+      expect(db.lastQuery.params.page_id).toBe('target-page');
+    });
+
+    it('should join with non-deleted blocks only', async () => {
+      db.seed('links', []);
+
+      await repo.getInLinks('target-page');
+
+      expect(db.lastQuery.script).toContain('is_deleted: false');
+    });
+  });
+
+  describe('getBlockBacklinks edge cases', () => {
+    it('should handle block with no backlinks', async () => {
+      db.seed('block_refs', []);
+
+      const result = await repo.getBlockBacklinks('block-with-no-refs');
+
+      expect(result).toEqual([]);
+    });
+
+    it('should filter by target block correctly', async () => {
+      db.seed('block_refs', []);
+
+      await repo.getBlockBacklinks('target-block');
+
+      expect(db.lastQuery.script).toContain('target_block_id: $target');
+      expect(db.lastQuery.params.target).toBe('target-block');
+    });
+
+    it('should join with non-deleted blocks only', async () => {
+      db.seed('block_refs', []);
+
+      await repo.getBlockBacklinks('target-block');
+
+      expect(db.lastQuery.script).toContain('is_deleted: false');
+    });
+  });
+
+  describe('link and block ref parameterization', () => {
+    it('should use parameterized values for all link fields', async () => {
+      await repo.createLink({
+        sourceId: 'source',
+        targetId: 'target',
+        linkType: 'reference',
+        contextBlockId: 'block',
+      });
+
+      expect(db.lastMutation.script).toContain('$source_id');
+      expect(db.lastMutation.script).toContain('$target_id');
+      expect(db.lastMutation.script).toContain('$link_type');
+      expect(db.lastMutation.script).toContain('$now');
+      expect(db.lastMutation.script).toContain('$context_block_id');
+    });
+
+    it('should use parameterized values for block refs', async () => {
+      await repo.createBlockRef({
+        sourceBlockId: 'source',
+        targetBlockId: 'target',
+      });
+
+      expect(db.lastMutation.script).toContain('$source_block_id');
+      expect(db.lastMutation.script).toContain('$target_block_id');
+      expect(db.lastMutation.script).toContain('$now');
+    });
+  });
 });

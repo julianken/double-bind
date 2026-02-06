@@ -214,4 +214,171 @@ describe('TagRepository', () => {
       await expect(repo.getByEntity('entity-1')).rejects.toThrow();
     });
   });
+
+  describe('addTag edge cases', () => {
+    it('should handle empty string tag name', async () => {
+      await repo.addTag('entity-1', '');
+
+      expect(db.lastMutation.params.tag).toBe('');
+    });
+
+    it('should handle tags with whitespace', async () => {
+      await repo.addTag('entity-1', '  tag with spaces  ');
+
+      expect(db.lastMutation.params.tag).toBe('  tag with spaces  ');
+    });
+
+    it('should handle tags with special characters', async () => {
+      const tag = 'tag-with-special_chars#123';
+      await repo.addTag('entity-1', tag);
+
+      expect(db.lastMutation.params.tag).toBe(tag);
+    });
+
+    it('should handle unicode tags', async () => {
+      const tag = '标签-тег-🏷️';
+      await repo.addTag('entity-1', tag);
+
+      expect(db.lastMutation.params.tag).toBe(tag);
+    });
+
+    it('should handle very long tag names', async () => {
+      const longTag = 'a'.repeat(1000);
+      await repo.addTag('entity-1', longTag);
+
+      expect(db.lastMutation.params.tag).toBe(longTag);
+    });
+  });
+
+  describe('removeTag edge cases', () => {
+    it('should not throw when removing non-existent tag', async () => {
+      await expect(repo.removeTag('entity-1', 'nonexistent')).resolves.not.toThrow();
+    });
+
+    it('should be case-sensitive on removal', async () => {
+      await repo.removeTag('entity-1', 'MyTag');
+
+      expect(db.lastMutation.params.tag).toBe('MyTag');
+    });
+
+    it('should handle empty string tag removal', async () => {
+      await repo.removeTag('entity-1', '');
+
+      expect(db.lastMutation.params.tag).toBe('');
+    });
+  });
+
+  describe('getByTag case sensitivity', () => {
+    it('should differentiate between uppercase and lowercase tags', async () => {
+      const now = Date.now();
+      db.seed('tags', [
+        ['entity-1', 'TAG', now],
+        ['entity-2', 'tag', now],
+        ['entity-3', 'Tag', now],
+      ]);
+
+      const result = await repo.getByTag('tag');
+
+      expect(result).toHaveLength(1);
+      expect(result[0]?.tag).toBe('tag');
+    });
+
+    it('should handle tags with mixed case in query', async () => {
+      const now = Date.now();
+      db.seed('tags', [['entity-1', 'MiXeDcAsE', now]]);
+
+      const result = await repo.getByTag('MiXeDcAsE');
+
+      expect(result).toHaveLength(1);
+      expect(result[0]?.entityId).toBe('entity-1');
+    });
+  });
+
+  describe('getAllTags edge cases', () => {
+    it('should handle single tag with multiple entities', async () => {
+      const now = Date.now();
+      // MockGraphDB doesn't do aggregation, but we verify the query structure
+      db.seed('tags', [
+        ['entity-1', 'popular', now],
+        ['entity-2', 'popular', now],
+        ['entity-3', 'popular', now],
+      ]);
+
+      await repo.getAllTags();
+
+      expect(db.lastQuery.script).toContain('count(entity_id)');
+    });
+
+    it('should order by count descending', async () => {
+      db.seed('tags', []);
+
+      await repo.getAllTags();
+
+      expect(db.lastQuery.script).toContain(':order -count(entity_id)');
+    });
+  });
+
+  describe('getByEntity multiple tags', () => {
+    it('should return multiple tags in order', async () => {
+      const entityId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
+      const now = Date.now();
+      db.seed('tags', [
+        [entityId, 'first', now],
+        [entityId, 'second', now + 1000],
+        [entityId, 'third', now + 2000],
+      ]);
+
+      const result = await repo.getByEntity(entityId);
+
+      expect(result).toHaveLength(3);
+      expect(result[0]?.tag).toBe('first');
+      expect(result[1]?.tag).toBe('second');
+      expect(result[2]?.tag).toBe('third');
+    });
+
+    it('should handle entity with no tags', async () => {
+      db.seed('tags', []);
+
+      const result = await repo.getByEntity('entity-without-tags');
+
+      expect(result).toEqual([]);
+    });
+
+    it('should not return tags from other entities', async () => {
+      const now = Date.now();
+      db.seed('tags', [
+        ['entity-1', 'tag1', now],
+        ['entity-2', 'tag2', now],
+        ['entity-3', 'tag3', now],
+      ]);
+
+      const result = await repo.getByEntity('entity-1');
+
+      expect(result).toHaveLength(1);
+      expect(result[0]?.tag).toBe('tag1');
+    });
+  });
+
+  describe('tag timestamps', () => {
+    it('should set created_at when adding tag', async () => {
+      const before = Date.now();
+      await repo.addTag('entity-1', 'newtag');
+      const after = Date.now();
+
+      const timestamp = db.lastMutation.params.now as number;
+      expect(timestamp).toBeGreaterThanOrEqual(before);
+      expect(timestamp).toBeLessThanOrEqual(after);
+    });
+
+    it('should preserve timestamp format in queries', async () => {
+      const entityId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
+      const timestamp = Date.now();
+      db.seed('tags', [[entityId, 'tag1', timestamp]]);
+
+      const result = await repo.getByEntity(entityId);
+
+      expect(result[0]?.createdAt).toBe(timestamp);
+      expect(typeof result[0]?.createdAt).toBe('number');
+    });
+  });
 });

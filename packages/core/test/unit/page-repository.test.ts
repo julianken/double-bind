@@ -363,4 +363,215 @@ describe('PageRepository', () => {
       await expect(repo.getAll()).rejects.toThrow(DoubleBindError);
     });
   });
+
+  describe('getByTitle edge cases', () => {
+    it('should return null when title not found', async () => {
+      db.seed('pages', []);
+
+      const result = await repo.getByTitle('nonexistent');
+
+      expect(result).toBeNull();
+    });
+
+    it('should handle empty string title', async () => {
+      const pageId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
+      const now = Date.now();
+      db.seed('pages', [[pageId, '', now, now, false, null]]);
+
+      const result = await repo.getByTitle('');
+
+      expect(result?.title).toBe('');
+    });
+
+    it('should be case-sensitive', async () => {
+      const pageId1 = '01ARZ3NDEKTSV4RRFFQ69G5FA1';
+      const pageId2 = '01ARZ3NDEKTSV4RRFFQ69G5FA2';
+      const now = Date.now();
+      db.seed('pages', [
+        [pageId1, 'MyPage', now, now, false, null],
+        [pageId2, 'mypage', now, now, false, null],
+      ]);
+
+      const result = await repo.getByTitle('MyPage');
+
+      expect(result?.pageId).toBe(pageId1);
+    });
+
+    it('should handle titles with special characters', async () => {
+      const pageId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
+      const now = Date.now();
+      const title = 'Page with "quotes" and \'apostrophes\'';
+      db.seed('pages', [[pageId, title, now, now, false, null]]);
+
+      const result = await repo.getByTitle(title);
+
+      expect(result?.title).toBe(title);
+    });
+
+    it('should not return deleted pages', async () => {
+      const pageId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
+      const now = Date.now();
+      db.seed('pages', [[pageId, 'Deleted Page', now, now, true, null]]);
+
+      await repo.getByTitle('Deleted Page');
+
+      // MockGraphDB doesn't filter by is_deleted, but the query should have the filter
+      expect(db.lastQuery.script).toContain('is_deleted == false');
+      // In real DB this would return null, but MockGraphDB returns the seeded row
+      // This test verifies the query structure is correct
+    });
+
+    it('should construct correct query with title parameter', async () => {
+      db.seed('pages', []);
+
+      await repo.getByTitle('Test Title');
+
+      expect(db.lastQuery.script).toContain('title: $title');
+      expect(db.lastQuery.params).toEqual({ title: 'Test Title' });
+    });
+  });
+
+  describe('search edge cases', () => {
+    it('should handle empty query string', async () => {
+      db.seed('pages', []);
+
+      await repo.search('');
+
+      expect(db.lastQuery.params.query).toBe('');
+    });
+
+    it('should handle query with special FTS characters', async () => {
+      db.seed('pages', []);
+
+      const query = 'test AND query OR keyword';
+      await repo.search(query);
+
+      expect(db.lastQuery.params.query).toBe(query);
+    });
+
+    it('should only return non-deleted pages in search', async () => {
+      db.seed('pages', []);
+
+      await repo.search('test');
+
+      expect(db.lastQuery.script).toContain('is_deleted == false');
+    });
+  });
+
+  describe('create edge cases', () => {
+    it('should handle empty title', async () => {
+      await repo.create({ title: '' });
+
+      expect(db.lastMutation.params.title).toBe('');
+    });
+
+    it('should handle very long titles', async () => {
+      const longTitle = 'a'.repeat(10000);
+      await repo.create({ title: longTitle });
+
+      expect(db.lastMutation.params.title).toBe(longTitle);
+    });
+
+    it('should handle titles with newlines', async () => {
+      const title = 'Line 1\nLine 2\nLine 3';
+      await repo.create({ title });
+
+      expect(db.lastMutation.params.title).toBe(title);
+    });
+
+    it('should always set is_deleted to false on create', async () => {
+      await repo.create({ title: 'New Page' });
+
+      expect(db.lastMutation.script).toContain('false');
+    });
+  });
+
+  describe('update edge cases', () => {
+    it('should handle updating title to empty string', async () => {
+      const pageId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
+      const now = Date.now();
+      db.seed('pages', [[pageId, 'Original', now, now, false, null]]);
+
+      await repo.update(pageId, { title: '' });
+
+      expect(db.lastMutation.params.title).toBe('');
+    });
+
+    it('should handle clearing dailyNoteDate', async () => {
+      const pageId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
+      const now = Date.now();
+      db.seed('pages', [[pageId, 'Page', now, now, false, '2025-01-15']]);
+
+      await repo.update(pageId, { dailyNoteDate: null });
+
+      expect(db.lastMutation.params.daily_date).toBeNull();
+    });
+
+    it('should allow updating with no actual changes', async () => {
+      const pageId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
+      const now = Date.now();
+      db.seed('pages', [[pageId, 'Original', now, now, false, null]]);
+
+      await repo.update(pageId, {});
+
+      expect(db.lastMutation.params.title).toBe('Original');
+    });
+
+    it('should always increment updated_at even with no changes', async () => {
+      const pageId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
+      const oldTime = 1700000000;
+      db.seed('pages', [[pageId, 'Page', oldTime, oldTime, false, null]]);
+
+      const before = Date.now();
+      await repo.update(pageId, {});
+      const after = Date.now();
+
+      const newTime = db.lastMutation.params.now as number;
+      expect(newTime).toBeGreaterThanOrEqual(before);
+      expect(newTime).toBeLessThanOrEqual(after);
+      expect(newTime).toBeGreaterThan(oldTime);
+    });
+  });
+
+  describe('getAll pagination', () => {
+    it('should handle offset without limit', async () => {
+      db.seed('pages', []);
+
+      await repo.getAll({ offset: 50 });
+
+      expect(db.lastQuery.params).toEqual({ limit: 100, offset: 50 });
+    });
+
+    it('should handle zero offset', async () => {
+      db.seed('pages', []);
+
+      await repo.getAll({ offset: 0, limit: 10 });
+
+      expect(db.lastQuery.params).toEqual({ limit: 10, offset: 0 });
+    });
+
+    it('should handle large limit values', async () => {
+      db.seed('pages', []);
+
+      await repo.getAll({ limit: 10000 });
+
+      expect(db.lastQuery.params.limit).toBe(10000);
+    });
+  });
+
+  describe('softDelete idempotency', () => {
+    it('should verify getById filters deleted pages', async () => {
+      const pageId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
+      const now = Date.now();
+      // Seed with already deleted page
+      db.seed('pages', [[pageId, 'Deleted', now, now, true, null]]);
+
+      // getById should filter out deleted pages
+      await repo.getById(pageId);
+
+      // MockGraphDB returns the row, but the query should have is_deleted filter
+      expect(db.lastQuery.script).toContain('is_deleted == false');
+      // In a real DB with deleted page, this would be null
+    });
+  });
 });
