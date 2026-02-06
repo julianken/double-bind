@@ -33,3 +33,12 @@ export {
   type UseCozoQueryOptions,
   type UseCozoQueryResult,
 } from './hooks/index.js';
+
+// Editor
+export {
+  createPersistencePlugin,
+  persistencePluginKey,
+  getPersistenceState,
+  DEFAULT_DEBOUNCE_MS,
+  type PersistencePluginOptions,
+} from './editor/index.js';
