@@ -2,3 +2,4 @@
 // This package has zero dependencies
 
 export { DoubleBindError, ErrorCode } from './errors';
+export type { CreatePageInput, CreateBlockInput, UpdateBlockInput } from './inputs';
