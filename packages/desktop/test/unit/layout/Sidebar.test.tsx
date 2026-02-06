@@ -6,13 +6,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { createElement, type ReactNode } from 'react';
-import {
-  Sidebar,
-  SearchBar,
-  QuickCapture,
-  PageList,
-  SidebarFooter,
-} from '../../../src/layout/Sidebar.js';
+import { Sidebar, QuickCapture, PageList, SidebarFooter } from '../../../src/layout/Sidebar.js';
 import { useAppStore } from '../../../src/stores/ui-store.js';
 import { ServiceProvider, type Services } from '../../../src/providers/ServiceProvider.js';
 import type { PageService, BlockService, GraphService } from '@double-bind/core';
@@ -127,7 +121,7 @@ describe('Sidebar', () => {
       renderWithProvider(<Sidebar />);
 
       expect(screen.getByRole('search')).toBeDefined();
-      expect(screen.getByPlaceholderText('Search pages...')).toBeDefined();
+      expect(screen.getByPlaceholderText('Search pages and blocks...')).toBeDefined();
     });
 
     it('renders QuickCapture component', () => {
@@ -373,19 +367,6 @@ describe('Sidebar', () => {
   // ============================================================================
 
   describe('Stub Components', () => {
-    describe('SearchBar', () => {
-      it('renders with correct accessibility attributes', () => {
-        render(<SearchBar />);
-
-        const search = screen.getByRole('search');
-        expect(search).toBeDefined();
-
-        const input = screen.getByLabelText('Search pages');
-        expect(input).toBeDefined();
-        expect(input).toHaveProperty('disabled', true);
-      });
-    });
-
     describe('QuickCapture', () => {
       it('renders with correct accessibility attributes', () => {
         render(<QuickCapture />);
