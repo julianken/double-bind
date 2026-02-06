@@ -38,3 +38,14 @@ export { NewPageButton, type NewPageButtonProps } from './NewPageButton.js';
 export { SplitPane, type SplitPaneProps } from './SplitPane.js';
 
 export { BlockRefAutocomplete, type BlockRefAutocompleteProps } from './BlockRefAutocomplete.js';
+
+export {
+  QueryResultTable,
+  detectColumnType,
+  formatValue,
+  type QueryResultTableProps,
+  type ColumnType,
+  type SortDirection,
+  type SortState,
+  type NavigationTarget,
+} from './QueryResultTable.js';
