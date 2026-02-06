@@ -1,0 +1,21 @@
+# Build outputs
+dist/
+**/dist/
+
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Tauri/Rust
+src-tauri/
+**/src-tauri/
+
+# Lock files
+pnpm-lock.yaml
+
+# Generated files
+*.generated.ts
+*.d.ts
+
+# Coverage
+coverage/
