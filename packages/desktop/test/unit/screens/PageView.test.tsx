@@ -81,6 +81,7 @@ function createMockServices(overrides?: Partial<Services>): Services {
   return {
     pageService: {
       getPageWithBlocks: vi.fn().mockResolvedValue({ page: mockPage, blocks: mockBlocks }),
+      getPageBacklinks: vi.fn().mockResolvedValue([]),
       createPage: vi.fn(),
       deletePage: vi.fn(),
       getTodaysDailyNote: vi.fn(),
