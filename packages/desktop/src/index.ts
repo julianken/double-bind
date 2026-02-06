@@ -42,3 +42,6 @@ export {
   DEFAULT_DEBOUNCE_MS,
   type PersistencePluginOptions,
 } from './editor/index.js';
+
+// Layout
+export { AppShell, type AppShellProps } from './layout/index.js';
