@@ -14,7 +14,8 @@
   },
   "dependencies": {
     "@double-bind/types": "workspace:*",
-    "@double-bind/migrations": "workspace:*"
+    "@double-bind/migrations": "workspace:*",
+    "zod": "^3.24.0"
   },
   "devDependencies": {
     "@double-bind/test-utils": "workspace:*",
