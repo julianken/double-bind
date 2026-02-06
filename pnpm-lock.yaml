@@ -99,6 +99,9 @@ importers:
       prosemirror-commands:
         specifier: ^1.7.1
         version: 1.7.1
+      prosemirror-inputrules:
+        specifier: ^1.5.1
+        version: 1.5.1
       prosemirror-keymap:
         specifier: ^1.2.3
         version: 1.2.3
@@ -2033,6 +2036,9 @@ packages:
 
   prosemirror-commands@1.7.1:
     resolution: {integrity: sha512-rT7qZnQtx5c0/y/KlYaGvtG411S97UaL6gdp6RIZ23DLHanMYLyfGBV5DtSnZdthQql7W+lEVbpSfwtO8T+L2w==}
+
+  prosemirror-inputrules@1.5.1:
+    resolution: {integrity: sha512-7wj4uMjKaXWAQ1CDgxNzNtR9AlsuwzHfdFH1ygEHA2KHF2DOEaXl1CJfNPAKCg9qNEh4rum975QLaCiQPyY6Fw==}
 
   prosemirror-keymap@1.2.3:
     resolution: {integrity: sha512-4HucRlpiLd1IPQQXNqeo81BGtkY8Ai5smHhKW9jjPKRc2wQIxksg7Hl1tTI2IfT2B/LgX6bfYvXxEpJl7aKYKw==}
@@ -4026,6 +4032,11 @@ snapshots:
   prosemirror-commands@1.7.1:
     dependencies:
       prosemirror-model: 1.25.4
+      prosemirror-state: 1.4.4
+      prosemirror-transform: 1.11.0
+
+  prosemirror-inputrules@1.5.1:
+    dependencies:
       prosemirror-state: 1.4.4
       prosemirror-transform: 1.11.0
 
