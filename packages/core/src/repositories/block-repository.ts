@@ -345,4 +345,61 @@ export class BlockRepository {
 
     return result.rows.map((row) => parseBlockVersionRow(row as unknown[]));
   }
+
+  /**
+   * Rebalance the order keys for all siblings under a parent.
+   *
+   * This method regenerates evenly-spaced order keys for all children
+   * of the specified parent in a single atomic transaction. Used when
+   * pathological insertion patterns cause keys to grow too long.
+   *
+   * @param parentKey - The parent key (block_id or "__page:<page_id>" sentinel)
+   * @param newOrders - Map of block_id to new order key (must include all siblings)
+   * @throws DoubleBindError if the update fails
+   */
+  async rebalanceSiblings(parentKey: string, newOrders: Map<BlockId, string>): Promise<void> {
+    if (newOrders.size === 0) {
+      return;
+    }
+
+    const now = Date.now();
+
+    // First, fetch all blocks we need to update
+    const fetchScript = `
+?[block_id, page_id, parent_id, content, content_type, order, is_collapsed, is_deleted, created_at, updated_at] :=
+    *blocks_by_parent{ parent_id: $parent_key, block_id },
+    *blocks{ block_id, page_id, parent_id, content, content_type, order, is_collapsed, is_deleted, created_at, updated_at },
+    is_deleted == false
+`.trim();
+
+    const fetchResult = await this.db.query(fetchScript, { parent_key: parentKey });
+    const blocks = fetchResult.rows.map((row) => parseBlockRow(row as unknown[]));
+
+    // Build the update rows with new order keys
+    const updateRows: string[] = [];
+    for (const block of blocks) {
+      const newOrder = newOrders.get(block.blockId);
+      if (newOrder !== undefined) {
+        // Escape string values for Datalog
+        const escapedContent = block.content.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+        updateRows.push(
+          `["${block.blockId}", "${block.pageId}", ${block.parentId === null ? 'null' : `"${block.parentId}"`}, "${escapedContent}", "${block.contentType}", "${newOrder}", ${block.isCollapsed}, ${block.isDeleted}, ${block.createdAt}, ${now}]`
+        );
+      }
+    }
+
+    if (updateRows.length === 0) {
+      return;
+    }
+
+    // Execute the batch update in a single transaction
+    const updateScript = `
+?[block_id, page_id, parent_id, content, content_type, order, is_collapsed, is_deleted, created_at, updated_at] <- [
+    ${updateRows.join(',\n    ')}
+]
+:put blocks { block_id, page_id, parent_id, content, content_type, order, is_collapsed, is_deleted, created_at, updated_at }
+`.trim();
+
+    await this.db.mutate(updateScript, {});
+  }
 }

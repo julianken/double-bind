@@ -20,7 +20,13 @@ import type { PageRepository } from '../repositories/page-repository.js';
 import type { TagRepository } from '../repositories/tag-repository.js';
 import type { PropertyRepository } from '../repositories/property-repository.js';
 import { parseContent, type ParsedContent } from '../parsers/content-parser.js';
-import { keyBetween, keyForInsertAfter, DEFAULT_ORDER } from '../utils/ordering.js';
+import {
+  keyBetween,
+  keyForInsertAfter,
+  DEFAULT_ORDER,
+  needsRebalance,
+  rebalanceKeys,
+} from '../utils/ordering.js';
 
 /**
  * Backlink result including the referencing block and its page context.
@@ -31,12 +37,20 @@ export interface BlockBacklinkResult {
 }
 
 /**
+ * Callback invoked when a rebalance operation occurs.
+ * The parentKey identifies which siblings were rebalanced.
+ */
+export type RebalanceCallback = (parentKey: string) => void;
+
+/**
  * Service for high-level block operations.
  *
  * Orchestrates BlockRepository, LinkRepository, TagRepository, and PropertyRepository
  * to provide atomic block mutations with automatic content parsing.
  */
 export class BlockService {
+  private onRebalance?: RebalanceCallback;
+
   constructor(
     private readonly blockRepo: BlockRepository,
     private readonly linkRepo: LinkRepository,
@@ -44,6 +58,16 @@ export class BlockService {
     private readonly tagRepo: TagRepository,
     private readonly propertyRepo: PropertyRepository
   ) {}
+
+  /**
+   * Set the callback to be invoked when a rebalance operation occurs.
+   * Used by the UI layer to invalidate query caches.
+   *
+   * @param callback - Function called with the parentKey of rebalanced siblings
+   */
+  setRebalanceCallback(callback: RebalanceCallback): void {
+    this.onRebalance = callback;
+  }
 
   /**
    * Update block content and sync parsed elements.
@@ -434,6 +458,8 @@ export class BlockService {
 
   /**
    * Calculate the order key for inserting a block at a specific position.
+   * If the generated key exceeds the maximum length threshold, triggers
+   * a rebalance of all sibling order keys.
    *
    * @param pageId - The page context
    * @param parentId - Parent block ID (null for root level)
@@ -453,15 +479,65 @@ export class BlockService {
       return DEFAULT_ORDER;
     }
 
-    // If no afterBlockId specified, insert at the end
+    // Calculate the new order key
+    let newOrder: string;
     if (afterBlockId === null) {
+      // Insert at the end
       const lastSibling = siblings[siblings.length - 1]!;
-      return keyBetween(lastSibling.order, null);
+      newOrder = keyBetween(lastSibling.order, null);
+    } else {
+      // Find the position of afterBlockId
+      const afterIndex = siblings.findIndex((s) => s.blockId === afterBlockId);
+      newOrder = keyForInsertAfter(siblings, afterIndex);
     }
 
-    // Find the position of afterBlockId
-    const afterIndex = siblings.findIndex((s) => s.blockId === afterBlockId);
-    return keyForInsertAfter(siblings, afterIndex);
+    // Check if the new key exceeds the threshold
+    if (needsRebalance(newOrder)) {
+      // Trigger rebalance of all siblings plus the new position
+      // We need siblings.length + 1 keys (for the new block)
+      const rebalancedKeys = rebalanceKeys(siblings.length + 1);
+
+      // Determine where the new block should be inserted
+      let insertPosition: number;
+      if (afterBlockId === null) {
+        // Insert at the end
+        insertPosition = siblings.length;
+      } else {
+        const afterIndex = siblings.findIndex((s) => s.blockId === afterBlockId);
+        insertPosition = afterIndex < 0 ? siblings.length : afterIndex + 1;
+      }
+
+      // Build the new order map for existing siblings
+      const newOrders = new Map<string, string>();
+      let keyIndex = 0;
+      for (let i = 0; i < siblings.length; i++) {
+        if (i === insertPosition) {
+          // Skip one key for the new block
+          keyIndex++;
+        }
+        const sibling = siblings[i]!;
+        newOrders.set(sibling.blockId, rebalancedKeys[keyIndex]!);
+        keyIndex++;
+      }
+
+      // Handle case where insert position is at the end
+      if (insertPosition >= siblings.length) {
+        // The last key is for the new block
+      }
+
+      // Update all sibling orders in a single transaction
+      await this.blockRepo.rebalanceSiblings(parentKey, newOrders);
+
+      // Notify the callback about the rebalance
+      if (this.onRebalance) {
+        this.onRebalance(parentKey);
+      }
+
+      // Return the key for the new block
+      return rebalancedKeys[insertPosition]!;
+    }
+
+    return newOrder;
   }
 
   /**

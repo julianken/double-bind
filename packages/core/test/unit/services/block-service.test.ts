@@ -20,6 +20,7 @@ import { PropertyRepository } from '../../../src/repositories/property-repositor
 import { MockGraphDB } from '@double-bind/test-utils';
 import { DoubleBindError, ErrorCode } from '@double-bind/types';
 import type { Block, Page } from '@double-bind/types';
+import { MAX_KEY_LENGTH } from '../../../src/utils/ordering.js';
 
 describe('BlockService', () => {
   let mockDb: MockGraphDB;
@@ -769,6 +770,257 @@ describe('BlockService', () => {
 
       expect(error).toBe(originalError);
       expect(error.code).toBe(ErrorCode.BLOCKED_OPERATION);
+    });
+  });
+
+  describe('order key rebalancing', () => {
+    it('should set rebalance callback', () => {
+      const callback = vi.fn();
+      blockService.setRebalanceCallback(callback);
+
+      // Callback should be set (we can't directly test the private property)
+      // Instead we'll test it gets called when rebalance triggers
+      expect(callback).not.toHaveBeenCalled();
+    });
+
+    it('should trigger rebalance when new key exceeds threshold', async () => {
+      // Create a very long order key that exceeds the threshold
+      const longOrderKey = 'a'.repeat(MAX_KEY_LENGTH + 10);
+      const sibling1: Block = {
+        ...testBlock,
+        blockId: '01HXQ5NF6Z8V4JQXRK4KBBBBBB',
+        content: 'Sibling 1',
+        order: longOrderKey.slice(0, -5) + 'VVVVV', // Long key close to the insertion point
+      };
+      const sibling2: Block = {
+        ...testBlock,
+        blockId: '01HXQ5NF6Z8V4JQXRK4KCCCCCC',
+        content: 'Sibling 2',
+        order: longOrderKey, // Very long key
+      };
+
+      const createSpy = vi.spyOn(blockRepo, 'create');
+      const getByIdSpy = vi.spyOn(blockRepo, 'getById');
+      const getChildrenSpy = vi.spyOn(blockRepo, 'getChildren');
+      const rebalanceSiblingsSpy = vi.spyOn(blockRepo, 'rebalanceSiblings');
+      const removeLinksFromBlockSpy = vi.spyOn(linkRepo, 'removeLinksFromBlock');
+      const getTagsByEntitySpy = vi.spyOn(tagRepo, 'getByEntity');
+      const getPropsByEntitySpy = vi.spyOn(propertyRepo, 'getByEntity');
+
+      const rebalanceCallback = vi.fn();
+      blockService.setRebalanceCallback(rebalanceCallback);
+
+      const newBlockId = '01HXQ5NF6Z8V4JQXRK4KNEWBLK';
+      getChildrenSpy.mockResolvedValueOnce([sibling1, sibling2]); // Siblings with long keys
+      rebalanceSiblingsSpy.mockResolvedValueOnce(undefined);
+      createSpy.mockResolvedValueOnce(newBlockId);
+      removeLinksFromBlockSpy.mockResolvedValueOnce(undefined);
+      getTagsByEntitySpy.mockResolvedValueOnce([]);
+      getPropsByEntitySpy.mockResolvedValueOnce([]);
+      getByIdSpy.mockResolvedValueOnce({
+        ...testBlock,
+        blockId: newBlockId,
+        content: 'New block',
+        order: 'a1', // Rebalanced key
+      });
+
+      await blockService.createBlock(testPageId, null, 'New block', sibling1.blockId);
+
+      // Verify rebalance was triggered
+      expect(rebalanceSiblingsSpy).toHaveBeenCalled();
+
+      // Verify callback was invoked
+      expect(rebalanceCallback).toHaveBeenCalledWith(`__page:${testPageId}`);
+    });
+
+    it('should not trigger rebalance for normal key lengths', async () => {
+      const sibling: Block = {
+        ...testBlock,
+        blockId: '01HXQ5NF6Z8V4JQXRK4KBBBBBB',
+        content: 'Sibling',
+        order: 'a0', // Normal short key
+      };
+
+      const createSpy = vi.spyOn(blockRepo, 'create');
+      const getByIdSpy = vi.spyOn(blockRepo, 'getById');
+      const getChildrenSpy = vi.spyOn(blockRepo, 'getChildren');
+      const rebalanceSiblingsSpy = vi.spyOn(blockRepo, 'rebalanceSiblings');
+      const removeLinksFromBlockSpy = vi.spyOn(linkRepo, 'removeLinksFromBlock');
+      const getTagsByEntitySpy = vi.spyOn(tagRepo, 'getByEntity');
+      const getPropsByEntitySpy = vi.spyOn(propertyRepo, 'getByEntity');
+
+      const rebalanceCallback = vi.fn();
+      blockService.setRebalanceCallback(rebalanceCallback);
+
+      const newBlockId = '01HXQ5NF6Z8V4JQXRK4KNEWBLK';
+      getChildrenSpy.mockResolvedValueOnce([sibling]); // One sibling with normal key
+      createSpy.mockResolvedValueOnce(newBlockId);
+      removeLinksFromBlockSpy.mockResolvedValueOnce(undefined);
+      getTagsByEntitySpy.mockResolvedValueOnce([]);
+      getPropsByEntitySpy.mockResolvedValueOnce([]);
+      getByIdSpy.mockResolvedValueOnce({
+        ...testBlock,
+        blockId: newBlockId,
+        content: 'New block',
+        order: 'a1',
+      });
+
+      await blockService.createBlock(testPageId, null, 'New block', sibling.blockId);
+
+      // Verify rebalance was NOT triggered
+      expect(rebalanceSiblingsSpy).not.toHaveBeenCalled();
+
+      // Verify callback was NOT invoked
+      expect(rebalanceCallback).not.toHaveBeenCalled();
+    });
+
+    it('should preserve relative ordering after rebalance', async () => {
+      // Create siblings that will trigger rebalance
+      const longBase = 'a'.repeat(MAX_KEY_LENGTH);
+      const sibling1: Block = {
+        ...testBlock,
+        blockId: '01HXQ5NF6Z8V4JQXRK4KBBBBBB',
+        content: 'First',
+        order: longBase + 'A',
+      };
+      const sibling2: Block = {
+        ...testBlock,
+        blockId: '01HXQ5NF6Z8V4JQXRK4KCCCCCC',
+        content: 'Second',
+        order: longBase + 'M',
+      };
+      const sibling3: Block = {
+        ...testBlock,
+        blockId: '01HXQ5NF6Z8V4JQXRK4KDDDDDD',
+        content: 'Third',
+        order: longBase + 'Z',
+      };
+
+      const createSpy = vi.spyOn(blockRepo, 'create');
+      const getByIdSpy = vi.spyOn(blockRepo, 'getById');
+      const getChildrenSpy = vi.spyOn(blockRepo, 'getChildren');
+      const rebalanceSiblingsSpy = vi.spyOn(blockRepo, 'rebalanceSiblings');
+      const removeLinksFromBlockSpy = vi.spyOn(linkRepo, 'removeLinksFromBlock');
+      const getTagsByEntitySpy = vi.spyOn(tagRepo, 'getByEntity');
+      const getPropsByEntitySpy = vi.spyOn(propertyRepo, 'getByEntity');
+
+      const newBlockId = '01HXQ5NF6Z8V4JQXRK4KNEWBLK';
+      getChildrenSpy.mockResolvedValueOnce([sibling1, sibling2, sibling3]);
+      rebalanceSiblingsSpy.mockResolvedValueOnce(undefined);
+      createSpy.mockResolvedValueOnce(newBlockId);
+      removeLinksFromBlockSpy.mockResolvedValueOnce(undefined);
+      getTagsByEntitySpy.mockResolvedValueOnce([]);
+      getPropsByEntitySpy.mockResolvedValueOnce([]);
+      getByIdSpy.mockResolvedValueOnce({
+        ...testBlock,
+        blockId: newBlockId,
+        content: 'New block',
+        order: 'a2', // Should be after sibling1's new key
+      });
+
+      await blockService.createBlock(testPageId, null, 'New block', sibling1.blockId);
+
+      // Verify rebalance was called
+      expect(rebalanceSiblingsSpy).toHaveBeenCalled();
+
+      // Check the new orders map passed to rebalanceSiblings
+      const [parentKey, newOrders] = rebalanceSiblingsSpy.mock.calls[0]!;
+      expect(parentKey).toBe(`__page:${testPageId}`);
+
+      // The newOrders map should contain all three siblings
+      expect(newOrders.has(sibling1.blockId)).toBe(true);
+      expect(newOrders.has(sibling2.blockId)).toBe(true);
+      expect(newOrders.has(sibling3.blockId)).toBe(true);
+
+      // The new keys should preserve relative ordering
+      const newOrder1 = newOrders.get(sibling1.blockId)!;
+      const newOrder2 = newOrders.get(sibling2.blockId)!;
+      const newOrder3 = newOrders.get(sibling3.blockId)!;
+
+      expect(newOrder1 < newOrder2).toBe(true);
+      expect(newOrder2 < newOrder3).toBe(true);
+
+      // All new keys should be short
+      expect(newOrder1.length).toBeLessThanOrEqual(MAX_KEY_LENGTH);
+      expect(newOrder2.length).toBeLessThanOrEqual(MAX_KEY_LENGTH);
+      expect(newOrder3.length).toBeLessThanOrEqual(MAX_KEY_LENGTH);
+    });
+
+    it('should not trigger rebalance for moveBlock when new key is short', async () => {
+      // When moving to the end of a list (no afterBlockId), the new key
+      // is generated AFTER the last sibling's key, which produces a short key
+      const longOrderKey = 'a'.repeat(MAX_KEY_LENGTH + 10);
+      const targetParentId = '01HXQ5NF6Z8V4JQXRK4KPARENT';
+      const sibling: Block = {
+        ...testBlock,
+        blockId: '01HXQ5NF6Z8V4JQXRK4KBBBBBB',
+        parentId: targetParentId,
+        content: 'Sibling',
+        order: longOrderKey,
+      };
+
+      const getByIdSpy = vi.spyOn(blockRepo, 'getById');
+      const getChildrenSpy = vi.spyOn(blockRepo, 'getChildren');
+      const moveSpy = vi.spyOn(blockRepo, 'move');
+      const rebalanceSiblingsSpy = vi.spyOn(blockRepo, 'rebalanceSiblings');
+
+      const rebalanceCallback = vi.fn();
+      blockService.setRebalanceCallback(rebalanceCallback);
+
+      getByIdSpy.mockResolvedValueOnce(testBlock);
+      getChildrenSpy.mockResolvedValueOnce([sibling]); // Sibling with long key
+      moveSpy.mockResolvedValueOnce(undefined);
+
+      await blockService.moveBlock(testBlockId, targetParentId);
+
+      // Rebalance should NOT be triggered because keyBetween(longKey, null)
+      // generates a short key (just increments the last character)
+      expect(rebalanceSiblingsSpy).not.toHaveBeenCalled();
+      expect(rebalanceCallback).not.toHaveBeenCalled();
+    });
+
+    it('should trigger rebalance for moveBlock when new key exceeds threshold', async () => {
+      // To trigger rebalance, we need to insert BETWEEN two keys that are
+      // close together and already long
+      const longBase = 'a'.repeat(MAX_KEY_LENGTH);
+      const targetParentId = '01HXQ5NF6Z8V4JQXRK4KPARENT';
+      const afterBlockId = '01HXQ5NF6Z8V4JQXRK4KBBBBBB';
+      const sibling1: Block = {
+        ...testBlock,
+        blockId: afterBlockId,
+        parentId: targetParentId,
+        content: 'Sibling 1',
+        order: longBase + 'V', // Long key
+      };
+      const sibling2: Block = {
+        ...testBlock,
+        blockId: '01HXQ5NF6Z8V4JQXRK4KCCCCCC',
+        parentId: targetParentId,
+        content: 'Sibling 2',
+        order: longBase + 'W', // Next long key (inserting between will create even longer key)
+      };
+
+      const getByIdSpy = vi.spyOn(blockRepo, 'getById');
+      const getChildrenSpy = vi.spyOn(blockRepo, 'getChildren');
+      const moveSpy = vi.spyOn(blockRepo, 'move');
+      const rebalanceSiblingsSpy = vi.spyOn(blockRepo, 'rebalanceSiblings');
+
+      const rebalanceCallback = vi.fn();
+      blockService.setRebalanceCallback(rebalanceCallback);
+
+      getByIdSpy.mockResolvedValueOnce(testBlock);
+      getChildrenSpy.mockResolvedValueOnce([sibling1, sibling2]); // Siblings with long keys
+      rebalanceSiblingsSpy.mockResolvedValueOnce(undefined);
+      moveSpy.mockResolvedValueOnce(undefined);
+
+      // Move block to position after sibling1 (between sibling1 and sibling2)
+      await blockService.moveBlock(testBlockId, targetParentId, afterBlockId);
+
+      // Verify rebalance was triggered because the new key would exceed threshold
+      expect(rebalanceSiblingsSpy).toHaveBeenCalled();
+
+      // Verify callback was invoked with the parent key
+      expect(rebalanceCallback).toHaveBeenCalledWith(targetParentId);
     });
   });
 });
