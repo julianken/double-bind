@@ -60,3 +60,6 @@ export {
   type BlockReference,
   type ParsedProperty,
 } from './parsers/index.js';
+
+// Client implementations
+export { tauriGraphDB } from './client/index.js';
