@@ -13,6 +13,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { MiniGraph } from '@double-bind/ui-primitives';
 import type { PageId } from '@double-bind/types';
 import { ErrorBoundary } from '../components/ErrorBoundary.js';
+import { SearchBar } from '../components/SearchBar.js';
 import { useAppStore } from '../stores/ui-store.js';
 import { useNeighborhood } from '../hooks/useNeighborhood.js';
 
@@ -28,18 +29,6 @@ const LOCAL_STORAGE_KEY = 'sidebar-width';
 // ============================================================================
 // Stub Components
 // ============================================================================
-
-/**
- * SearchBar placeholder - filters pages by title.
- * TODO: Implement full search functionality in separate issue.
- */
-export function SearchBar() {
-  return (
-    <div className="sidebar-search" role="search">
-      <input type="search" placeholder="Search pages..." aria-label="Search pages" disabled />
-    </div>
-  );
-}
 
 /**
  * QuickCapture placeholder - rapid note capture.
