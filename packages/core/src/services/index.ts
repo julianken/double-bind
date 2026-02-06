@@ -19,7 +19,7 @@ import {
 
 export { PageService, type PageWithBlocks } from './page-service.js';
 export { BlockService, type BlockBacklinkResult, type RebalanceCallback } from './block-service.js';
-export { GraphService, type GraphResult } from './graph-service.js';
+export { GraphService, type GraphResult, type SuggestedLink } from './graph-service.js';
 
 /**
  * All services bundled for dependency injection.

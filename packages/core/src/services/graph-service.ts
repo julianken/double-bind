@@ -22,6 +22,14 @@ export interface GraphResult {
   edges: Link[];
 }
 
+/**
+ * Result type for suggested link operations.
+ */
+export interface SuggestedLink {
+  target: Page;
+  score: number;
+}
+
 /** Database row type for pages relation */
 type PageRow = [string, string, number, number, boolean, string | null];
 
@@ -182,6 +190,205 @@ export class GraphService {
       }
       throw new DoubleBindError(
         `Failed to get neighborhood for page "${pageId}" with ${hops} hops: ${error instanceof Error ? error.message : String(error)}`,
+        ErrorCode.DB_QUERY_FAILED,
+        error instanceof Error ? error : undefined
+      );
+    }
+  }
+
+  /**
+   * Calculate PageRank scores for all pages in the graph.
+   *
+   * Uses CozoDB's built-in PageRank algorithm to compute the importance
+   * of each page based on the link structure.
+   *
+   * @returns Map of page IDs to their PageRank scores (higher = more important)
+   * @throws DoubleBindError with context on query failure
+   */
+  async getPageRank(): Promise<Map<PageId, number>> {
+    try {
+      // Use CozoDB's built-in PageRank algorithm
+      // The algorithm takes the links relation and computes scores
+      const script = `
+rank[page_id, score] <~ PageRank(*links[source_id, target_id])
+?[page_id, score] := rank[page_id, score], *pages{ page_id, is_deleted: false }
+`.trim();
+
+      const result = await this.db.query(script);
+
+      const ranks = new Map<PageId, number>();
+      for (const row of result.rows) {
+        const pageId = row[0] as string;
+        const score = row[1] as number;
+
+        if (typeof pageId !== 'string') {
+          throw new DoubleBindError(
+            'Invalid page_id type in PageRank result',
+            ErrorCode.DB_QUERY_FAILED
+          );
+        }
+        if (typeof score !== 'number') {
+          throw new DoubleBindError(
+            'Invalid score type in PageRank result',
+            ErrorCode.DB_QUERY_FAILED
+          );
+        }
+
+        ranks.set(pageId, score);
+      }
+
+      return ranks;
+    } catch (error) {
+      if (error instanceof DoubleBindError) {
+        throw error;
+      }
+      throw new DoubleBindError(
+        `Failed to compute PageRank: ${error instanceof Error ? error.message : String(error)}`,
+        ErrorCode.DB_QUERY_FAILED,
+        error instanceof Error ? error : undefined
+      );
+    }
+  }
+
+  /**
+   * Detect communities in the graph using the Louvain algorithm.
+   *
+   * Uses CozoDB's built-in CommunityDetectionLouvain algorithm to partition
+   * pages into communities based on link density.
+   *
+   * @returns Map of page IDs to their community group IDs
+   * @throws DoubleBindError with context on query failure
+   */
+  async getCommunities(): Promise<Map<PageId, number>> {
+    try {
+      // Use CozoDB's built-in Louvain community detection algorithm
+      const script = `
+community[page_id, group] <~ CommunityDetectionLouvain(*links[source_id, target_id])
+?[page_id, group] := community[page_id, group], *pages{ page_id, is_deleted: false }
+`.trim();
+
+      const result = await this.db.query(script);
+
+      const communities = new Map<PageId, number>();
+      for (const row of result.rows) {
+        const pageId = row[0] as string;
+        const group = row[1] as number;
+
+        if (typeof pageId !== 'string') {
+          throw new DoubleBindError(
+            'Invalid page_id type in community result',
+            ErrorCode.DB_QUERY_FAILED
+          );
+        }
+        if (typeof group !== 'number') {
+          throw new DoubleBindError(
+            'Invalid group type in community result',
+            ErrorCode.DB_QUERY_FAILED
+          );
+        }
+
+        communities.set(pageId, group);
+      }
+
+      return communities;
+    } catch (error) {
+      if (error instanceof DoubleBindError) {
+        throw error;
+      }
+      throw new DoubleBindError(
+        `Failed to detect communities: ${error instanceof Error ? error.message : String(error)}`,
+        ErrorCode.DB_QUERY_FAILED,
+        error instanceof Error ? error : undefined
+      );
+    }
+  }
+
+  /**
+   * Get suggested pages to link to from a given page.
+   *
+   * Returns pages that are not yet linked from the source page but have
+   * high relevance based on shared connections (common neighbors).
+   * Uses Jaccard similarity to score potential links.
+   *
+   * @param pageId - The source page to get suggestions for
+   * @returns Array of suggested pages with their relevance scores, sorted by score descending
+   * @throws DoubleBindError with PAGE_NOT_FOUND if source page doesn't exist
+   * @throws DoubleBindError with context on query failure
+   */
+  async getSuggestedLinks(pageId: PageId): Promise<SuggestedLink[]> {
+    try {
+      // First verify the page exists
+      const verifyScript = `
+?[page_id] := *pages{ page_id: $page_id, is_deleted: false }
+`.trim();
+
+      const verifyResult = await this.db.query(verifyScript, { page_id: pageId });
+      if (verifyResult.rows.length === 0) {
+        throw new DoubleBindError(`Page not found: ${pageId}`, ErrorCode.PAGE_NOT_FOUND);
+      }
+
+      // Find pages that share common neighbors but aren't directly linked
+      // Score is based on number of shared connections (Jaccard-like scoring)
+      const script = `
+# Get all pages linked FROM the source page
+outgoing[target] := *links{ source_id: $page_id, target_id: target }
+
+# Get all pages that link TO the source page
+incoming[source] := *links{ target_id: $page_id, source_id: source }
+
+# All directly connected pages (both directions)
+connected[other] := outgoing[other]
+connected[other] := incoming[other]
+
+# Get neighbors of neighbors (2-hop connections)
+# These are candidates for suggested links
+candidates[candidate, count(shared)] :=
+    connected[shared],
+    *links{ source_id: shared, target_id: candidate },
+    *pages{ page_id: candidate, is_deleted: false },
+    candidate != $page_id,
+    not connected[candidate]
+
+candidates[candidate, count(shared)] :=
+    connected[shared],
+    *links{ target_id: shared, source_id: candidate },
+    *pages{ page_id: candidate, is_deleted: false },
+    candidate != $page_id,
+    not connected[candidate]
+
+# Return candidates with their scores and full page info
+?[page_id, title, created_at, updated_at, is_deleted, daily_note_date, score] :=
+    candidates[page_id, score],
+    *pages{ page_id, title, created_at, updated_at, is_deleted, daily_note_date }
+
+:order -score
+:limit 20
+`.trim();
+
+      const result = await this.db.query(script, { page_id: pageId });
+
+      const suggestions: SuggestedLink[] = [];
+      for (const row of result.rows) {
+        const page = this.rowToPage(row.slice(0, 6) as PageRow);
+        const score = row[6] as number;
+
+        if (typeof score !== 'number') {
+          throw new DoubleBindError(
+            'Invalid score type in suggested links result',
+            ErrorCode.DB_QUERY_FAILED
+          );
+        }
+
+        suggestions.push({ target: page, score });
+      }
+
+      return suggestions;
+    } catch (error) {
+      if (error instanceof DoubleBindError) {
+        throw error;
+      }
+      throw new DoubleBindError(
+        `Failed to get suggested links for page "${pageId}": ${error instanceof Error ? error.message : String(error)}`,
         ErrorCode.DB_QUERY_FAILED,
         error instanceof Error ? error : undefined
       );
