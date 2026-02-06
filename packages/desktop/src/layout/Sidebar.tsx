@@ -1,7 +1,7 @@
 /**
  * Sidebar - Main navigation sidebar component
  *
- * Contains page list, search bar, quick capture, and "New Page" button.
+ * Contains page list, search bar, quick capture, "New Page" button, and page neighborhood graph.
  * Collapsible via Ctrl+\ keyboard shortcut.
  * Width is resizable and persisted to localStorage.
  *
@@ -9,9 +9,12 @@
  * @see docs/frontend/keyboard-first.md for keyboard shortcuts
  */
 
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { MiniGraph } from '@double-bind/ui-primitives';
+import type { PageId } from '@double-bind/types';
 import { ErrorBoundary } from '../components/ErrorBoundary.js';
 import { useAppStore } from '../stores/ui-store.js';
+import { useNeighborhood } from '../hooks/useNeighborhood.js';
 
 // ============================================================================
 // Constants
@@ -177,6 +180,176 @@ function useSidebarKeyboard() {
 }
 
 // ============================================================================
+// Sidebar Graph Section
+// ============================================================================
+
+const GRAPH_SECTION_STORAGE_KEY = 'sidebar-graph-collapsed';
+const GRAPH_HOPS = 2;
+const GRAPH_WIDTH = 220;
+const GRAPH_HEIGHT = 180;
+
+interface SidebarGraphSectionProps {
+  /** Callback when a node is clicked for navigation */
+  onNavigate: (pageId: PageId) => void;
+}
+
+/**
+ * Collapsible graph section showing current page's neighborhood.
+ * Uses MiniGraph to visualize connected pages within N hops.
+ */
+function SidebarGraphSection({ onNavigate }: SidebarGraphSectionProps) {
+  const currentPageId = useAppStore((state) => state.currentPageId);
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem(GRAPH_SECTION_STORAGE_KEY) === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const { nodes, edges, isLoading } = useNeighborhood(currentPageId, GRAPH_HOPS);
+
+  // Persist collapsed state
+  const handleToggle = useCallback(() => {
+    setIsCollapsed((prev) => {
+      const newValue = !prev;
+      try {
+        localStorage.setItem(GRAPH_SECTION_STORAGE_KEY, String(newValue));
+      } catch {
+        // localStorage unavailable, ignore
+      }
+      return newValue;
+    });
+  }, []);
+
+  // Render loading state
+  const renderContent = () => {
+    if (!currentPageId) {
+      return (
+        <div
+          className="sidebar-graph-empty"
+          data-testid="sidebar-graph-empty"
+          style={{
+            padding: '12px',
+            color: '#6b7280',
+            fontSize: '12px',
+            textAlign: 'center',
+          }}
+        >
+          No page selected
+        </div>
+      );
+    }
+
+    if (isLoading) {
+      return (
+        <div
+          className="sidebar-graph-loading"
+          data-testid="sidebar-graph-loading"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            height: GRAPH_HEIGHT,
+            color: '#6b7280',
+            fontSize: '12px',
+          }}
+        >
+          Loading graph...
+        </div>
+      );
+    }
+
+    // Empty state: no connections (only the current page)
+    if (nodes.length <= 1) {
+      return (
+        <div
+          className="sidebar-graph-isolated"
+          data-testid="sidebar-graph-isolated"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            height: GRAPH_HEIGHT,
+            color: '#6b7280',
+            fontSize: '12px',
+            textAlign: 'center',
+            padding: '12px',
+          }}
+        >
+          No connections
+        </div>
+      );
+    }
+
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', padding: '8px 0' }}>
+        <MiniGraph
+          centerNodeId={currentPageId}
+          nodes={nodes}
+          edges={edges}
+          width={GRAPH_WIDTH}
+          height={GRAPH_HEIGHT}
+          onNodeClick={onNavigate}
+        />
+      </div>
+    );
+  };
+
+  return (
+    <section
+      className="sidebar-graph-section"
+      data-testid="sidebar-graph-section"
+      style={{
+        borderTop: '1px solid #e5e7eb',
+        marginTop: '8px',
+      }}
+    >
+      <button
+        type="button"
+        className="sidebar-graph-toggle"
+        onClick={handleToggle}
+        aria-expanded={!isCollapsed}
+        aria-controls="sidebar-graph-content"
+        data-testid="sidebar-graph-toggle"
+        style={{
+          width: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '8px 12px',
+          background: 'none',
+          border: 'none',
+          cursor: 'pointer',
+          fontSize: '12px',
+          fontWeight: 500,
+          color: '#374151',
+          textAlign: 'left',
+        }}
+      >
+        <span>Graph</span>
+        <span
+          style={{
+            transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)',
+            transition: 'transform 0.2s ease',
+          }}
+        >
+          {/* Down chevron */}
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+            <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="1.5" fill="none" />
+          </svg>
+        </span>
+      </button>
+      {!isCollapsed && (
+        <div id="sidebar-graph-content" data-testid="sidebar-graph-content">
+          {renderContent()}
+        </div>
+      )}
+    </section>
+  );
+}
+
+// ============================================================================
 // Resize Handle
 // ============================================================================
 
@@ -245,6 +418,7 @@ function ResizeHandle({ onResize, sidebarRef }: ResizeHandleProps) {
 function SidebarContent({ onNewPage }: SidebarProps) {
   const sidebarRef = useRef<HTMLElement>(null);
   const sidebarOpen = useAppStore((state) => state.sidebarOpen);
+  const navigateToPage = useAppStore((state) => state.navigateToPage);
   const { sidebarWidth, setSidebarWidth } = useSidebarWidthPersistence();
 
   // Register keyboard shortcuts
@@ -255,6 +429,13 @@ function SidebarContent({ onNewPage }: SidebarProps) {
       setSidebarWidth(width);
     },
     [setSidebarWidth]
+  );
+
+  const handleGraphNavigate = useCallback(
+    (pageId: PageId) => {
+      navigateToPage(pageId);
+    },
+    [navigateToPage]
   );
 
   if (!sidebarOpen) {
@@ -288,6 +469,7 @@ function SidebarContent({ onNewPage }: SidebarProps) {
         </button>
 
         <PageList />
+        <SidebarGraphSection onNavigate={handleGraphNavigate} />
         <SidebarFooter />
       </div>
 

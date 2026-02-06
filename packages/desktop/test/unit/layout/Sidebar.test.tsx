@@ -5,6 +5,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
+import { createElement, type ReactNode } from 'react';
 import {
   Sidebar,
   SearchBar,
@@ -13,6 +14,35 @@ import {
   SidebarFooter,
 } from '../../../src/layout/Sidebar.js';
 import { useAppStore } from '../../../src/stores/ui-store.js';
+import { ServiceProvider, type Services } from '../../../src/providers/ServiceProvider.js';
+import type { PageService, BlockService, GraphService } from '@double-bind/core';
+
+// ============================================================================
+// Mock Services
+// ============================================================================
+
+const createMockGraphService = () => ({
+  getNeighborhood: vi.fn().mockResolvedValue({ nodes: [], edges: [] }),
+  getFullGraph: vi.fn(),
+  getPageRank: vi.fn(),
+  getCommunities: vi.fn(),
+  getSuggestedLinks: vi.fn(),
+});
+
+const mockServices: Services = {
+  pageService: {} as PageService,
+  blockService: {} as BlockService,
+  graphService: createMockGraphService() as unknown as GraphService,
+};
+
+// Wrapper component for tests
+function TestWrapper({ children }: { children: ReactNode }) {
+  return createElement(ServiceProvider, { services: mockServices }, children);
+}
+
+function renderWithProvider(ui: React.ReactElement) {
+  return render(ui, { wrapper: TestWrapper });
+}
 
 // ============================================================================
 // Setup
@@ -79,7 +109,7 @@ describe('Sidebar', () => {
 
   describe('Rendering', () => {
     it('renders when sidebarOpen is true', () => {
-      render(<Sidebar />);
+      renderWithProvider(<Sidebar />);
 
       expect(screen.getByRole('complementary')).toBeDefined();
       expect(screen.getByLabelText('Application sidebar')).toBeDefined();
@@ -88,47 +118,54 @@ describe('Sidebar', () => {
     it('does not render when sidebarOpen is false', () => {
       useAppStore.setState({ sidebarOpen: false });
 
-      render(<Sidebar />);
+      renderWithProvider(<Sidebar />);
 
       expect(screen.queryByRole('complementary')).toBeNull();
     });
 
     it('renders SearchBar component', () => {
-      render(<Sidebar />);
+      renderWithProvider(<Sidebar />);
 
       expect(screen.getByRole('search')).toBeDefined();
       expect(screen.getByPlaceholderText('Search pages...')).toBeDefined();
     });
 
     it('renders QuickCapture component', () => {
-      render(<Sidebar />);
+      renderWithProvider(<Sidebar />);
 
       expect(screen.getByPlaceholderText('Quick capture...')).toBeDefined();
     });
 
     it('renders PageList component', () => {
-      render(<Sidebar />);
+      renderWithProvider(<Sidebar />);
 
       expect(screen.getByRole('navigation', { name: 'Page navigation' })).toBeDefined();
     });
 
     it('renders SidebarFooter component', () => {
-      render(<Sidebar />);
+      renderWithProvider(<Sidebar />);
 
       expect(screen.getByText('Double Bind')).toBeDefined();
     });
 
     it('renders New Page button', () => {
-      render(<Sidebar />);
+      renderWithProvider(<Sidebar />);
 
       expect(screen.getByRole('button', { name: 'Create new page' })).toBeDefined();
       expect(screen.getByText('+ New Page')).toBeDefined();
     });
 
     it('renders resize handle', () => {
-      render(<Sidebar />);
+      renderWithProvider(<Sidebar />);
 
       expect(screen.getByRole('separator', { name: 'Resize sidebar' })).toBeDefined();
+    });
+
+    it('renders graph section', () => {
+      renderWithProvider(<Sidebar />);
+
+      expect(screen.getByTestId('sidebar-graph-section')).toBeDefined();
+      expect(screen.getByTestId('sidebar-graph-toggle')).toBeDefined();
     });
   });
 
@@ -138,7 +175,7 @@ describe('Sidebar', () => {
 
   describe('New Page Button', () => {
     it('is disabled when no onNewPage callback is provided', () => {
-      render(<Sidebar />);
+      renderWithProvider(<Sidebar />);
 
       const button = screen.getByRole('button', { name: 'Create new page' });
       expect(button).toHaveProperty('disabled', true);
@@ -146,7 +183,7 @@ describe('Sidebar', () => {
 
     it('is enabled when onNewPage callback is provided', () => {
       const onNewPage = vi.fn();
-      render(<Sidebar onNewPage={onNewPage} />);
+      renderWithProvider(<Sidebar onNewPage={onNewPage} />);
 
       const button = screen.getByRole('button', { name: 'Create new page' });
       expect(button).toHaveProperty('disabled', false);
@@ -155,7 +192,7 @@ describe('Sidebar', () => {
     it('calls onNewPage when clicked', async () => {
       const user = userEvent.setup();
       const onNewPage = vi.fn();
-      render(<Sidebar onNewPage={onNewPage} />);
+      renderWithProvider(<Sidebar onNewPage={onNewPage} />);
 
       const button = screen.getByRole('button', { name: 'Create new page' });
       await user.click(button);
@@ -170,7 +207,7 @@ describe('Sidebar', () => {
 
   describe('Keyboard Shortcuts', () => {
     it('toggles sidebar with Ctrl+\\', () => {
-      render(<Sidebar />);
+      renderWithProvider(<Sidebar />);
 
       // Initially open
       expect(screen.getByRole('complementary')).toBeDefined();
@@ -186,7 +223,7 @@ describe('Sidebar', () => {
 
     it('opens sidebar with Ctrl+\\ when closed', () => {
       useAppStore.setState({ sidebarOpen: false });
-      render(<Sidebar />);
+      renderWithProvider(<Sidebar />);
 
       // Initially closed
       expect(screen.queryByRole('complementary')).toBeNull();
@@ -201,7 +238,7 @@ describe('Sidebar', () => {
     });
 
     it('does not toggle sidebar with just \\ key (no Ctrl)', () => {
-      render(<Sidebar />);
+      renderWithProvider(<Sidebar />);
 
       act(() => {
         fireEvent.keyDown(document, { key: '\\', ctrlKey: false });
@@ -212,7 +249,7 @@ describe('Sidebar', () => {
     });
 
     it('does not toggle sidebar with Ctrl+other key', () => {
-      render(<Sidebar />);
+      renderWithProvider(<Sidebar />);
 
       act(() => {
         fireEvent.keyDown(document, { key: 'a', ctrlKey: true });
@@ -229,7 +266,7 @@ describe('Sidebar', () => {
 
   describe('Width and Resize', () => {
     it('applies default width of 250px when no stored value', () => {
-      render(<Sidebar />);
+      renderWithProvider(<Sidebar />);
 
       const sidebar = screen.getByRole('complementary');
       expect(sidebar.style.width).toBe('250px');
@@ -237,7 +274,7 @@ describe('Sidebar', () => {
 
     it('loads width from localStorage on mount', () => {
       mockStorage['sidebar-width'] = '300';
-      render(<Sidebar />);
+      renderWithProvider(<Sidebar />);
 
       // Wait for effect to run
       const sidebar = screen.getByRole('complementary');
@@ -246,7 +283,7 @@ describe('Sidebar', () => {
 
     it('ignores invalid stored width below minimum', () => {
       mockStorage['sidebar-width'] = '100'; // Below minimum of 150
-      render(<Sidebar />);
+      renderWithProvider(<Sidebar />);
 
       // Should keep store default since 100 is below minimum and invalid
       const sidebar = screen.getByRole('complementary');
@@ -256,7 +293,7 @@ describe('Sidebar', () => {
 
     it('ignores invalid stored width above maximum', () => {
       mockStorage['sidebar-width'] = '600'; // Above maximum of 500
-      render(<Sidebar />);
+      renderWithProvider(<Sidebar />);
 
       // Should keep store default since 600 is above maximum and invalid
       const sidebar = screen.getByRole('complementary');
@@ -265,7 +302,7 @@ describe('Sidebar', () => {
     });
 
     it('persists width changes to localStorage', () => {
-      render(<Sidebar />);
+      renderWithProvider(<Sidebar />);
 
       // Change width in store
       act(() => {
@@ -277,7 +314,7 @@ describe('Sidebar', () => {
     });
 
     it('handles resize via mouse drag', () => {
-      render(<Sidebar />);
+      renderWithProvider(<Sidebar />);
 
       const resizeHandle = screen.getByRole('separator', { name: 'Resize sidebar' });
       const sidebar = screen.getByRole('complementary');
@@ -326,7 +363,7 @@ describe('Sidebar', () => {
     it('verifies Sidebar is wrapped in ErrorBoundary', () => {
       // We can verify the Sidebar is wrapped in an ErrorBoundary by checking
       // the component structure renders correctly
-      const { container } = render(<Sidebar />);
+      const { container } = renderWithProvider(<Sidebar />);
       expect(container.querySelector('.sidebar')).toBeDefined();
     });
   });
@@ -386,7 +423,7 @@ describe('Sidebar', () => {
 
   describe('Accessibility', () => {
     it('has correct ARIA role and label on sidebar', () => {
-      render(<Sidebar />);
+      renderWithProvider(<Sidebar />);
 
       const sidebar = screen.getByRole('complementary');
       expect(sidebar).toBeDefined();
@@ -394,7 +431,7 @@ describe('Sidebar', () => {
     });
 
     it('resize handle has correct ARIA attributes', () => {
-      render(<Sidebar />);
+      renderWithProvider(<Sidebar />);
 
       const handle = screen.getByRole('separator');
       expect(handle.getAttribute('aria-orientation')).toBe('vertical');
@@ -402,7 +439,7 @@ describe('Sidebar', () => {
     });
 
     it('New Page button has accessible name', () => {
-      render(<Sidebar />);
+      renderWithProvider(<Sidebar />);
 
       const button = screen.getByRole('button', { name: 'Create new page' });
       expect(button).toBeDefined();
@@ -415,7 +452,7 @@ describe('Sidebar', () => {
 
   describe('Store Integration', () => {
     it('uses sidebarOpen from store', () => {
-      render(<Sidebar />);
+      renderWithProvider(<Sidebar />);
       expect(screen.getByRole('complementary')).toBeDefined();
 
       act(() => {
@@ -426,14 +463,68 @@ describe('Sidebar', () => {
     });
 
     it('uses sidebarWidth from store', () => {
-      render(<Sidebar />);
+      const { rerender } = renderWithProvider(<Sidebar />);
 
       act(() => {
         useAppStore.getState().setSidebarWidth(400);
       });
 
+      // Re-render to pick up the store change
+      rerender(<Sidebar />);
+
       const sidebar = screen.getByRole('complementary');
       expect(sidebar.style.width).toBe('400px');
+    });
+  });
+
+  // ============================================================================
+  // Graph Section
+  // ============================================================================
+
+  describe('Graph Section', () => {
+    it('renders graph section toggle button', () => {
+      renderWithProvider(<Sidebar />);
+
+      expect(screen.getByTestId('sidebar-graph-toggle')).toBeDefined();
+      expect(screen.getByText('Graph')).toBeDefined();
+    });
+
+    it('shows "No page selected" when no current page', () => {
+      renderWithProvider(<Sidebar />);
+
+      expect(screen.getByTestId('sidebar-graph-empty')).toBeDefined();
+      expect(screen.getByText('No page selected')).toBeDefined();
+    });
+
+    it('can collapse and expand graph section', async () => {
+      const user = userEvent.setup();
+      renderWithProvider(<Sidebar />);
+
+      // Initially expanded
+      expect(screen.getByTestId('sidebar-graph-content')).toBeDefined();
+
+      // Click to collapse
+      await user.click(screen.getByTestId('sidebar-graph-toggle'));
+
+      // Content should be hidden
+      expect(screen.queryByTestId('sidebar-graph-content')).toBeNull();
+
+      // Click to expand
+      await user.click(screen.getByTestId('sidebar-graph-toggle'));
+
+      // Content should be visible again
+      expect(screen.getByTestId('sidebar-graph-content')).toBeDefined();
+    });
+
+    it('toggle button has correct aria-expanded attribute', async () => {
+      const user = userEvent.setup();
+      renderWithProvider(<Sidebar />);
+
+      const toggle = screen.getByTestId('sidebar-graph-toggle');
+      expect(toggle.getAttribute('aria-expanded')).toBe('true');
+
+      await user.click(toggle);
+      expect(toggle.getAttribute('aria-expanded')).toBe('false');
     });
   });
 });
