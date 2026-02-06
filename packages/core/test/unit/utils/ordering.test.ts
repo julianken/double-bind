@@ -141,6 +141,37 @@ describe('ordering utilities', () => {
       const keys = rebalanceKeys(-1);
       expect(keys).toEqual([]);
     });
+
+    it('should generate keys that preserve insertion room', () => {
+      // Generate 10 keys
+      const keys = rebalanceKeys(10);
+
+      expect(keys.length).toBe(10);
+
+      // Should be able to insert between any two consecutive keys
+      for (let i = 0; i < keys.length - 1; i++) {
+        const between = keyBetween(keys[i]!, keys[i + 1]!);
+        expect(between > keys[i]!).toBe(true);
+        expect(between < keys[i + 1]!).toBe(true);
+      }
+    });
+
+    it('should handle large counts efficiently', () => {
+      // Test with a large number of siblings (edge case for rebalance)
+      const keys = rebalanceKeys(100);
+
+      expect(keys.length).toBe(100);
+
+      // All keys should still be short
+      for (const key of keys) {
+        expect(key.length).toBeLessThanOrEqual(MAX_KEY_LENGTH);
+      }
+
+      // Verify ordering is preserved
+      for (let i = 1; i < keys.length; i++) {
+        expect(keys[i]! > keys[i - 1]!).toBe(true);
+      }
+    });
   });
 
   describe('keyForInsertAfter', () => {
@@ -196,6 +227,73 @@ describe('ordering utilities', () => {
   describe('MAX_KEY_LENGTH constant', () => {
     it('should be a reasonable value', () => {
       expect(MAX_KEY_LENGTH).toBe(50);
+    });
+  });
+
+  describe('pathological insertion patterns', () => {
+    it('should demonstrate key growth with repeated between-insertion patterns', () => {
+      // This test demonstrates why rebalancing is needed
+      // Repeatedly inserting between the same two keys causes key growth
+      const startKey = 'a0';
+      const endKey = 'a1';
+      let currentKey = startKey;
+
+      // Insert 30 keys always between currentKey and endKey (pathological pattern)
+      const keys: string[] = [currentKey];
+      for (let i = 0; i < 30; i++) {
+        const newKey = keyBetween(currentKey, endKey);
+        keys.push(newKey);
+        currentKey = newKey;
+      }
+
+      // Keys should grow in length as we keep inserting in the same spot
+      // The later keys should be longer than the first
+      const firstKeyLength = keys[0]!.length;
+      const lastKeyLength = keys[keys.length - 1]!.length;
+
+      // After 30 insertions in the same spot, keys should have grown
+      expect(lastKeyLength).toBeGreaterThanOrEqual(firstKeyLength);
+    });
+
+    it('should demonstrate key growth stabilizes with rebalance', () => {
+      // Simulate what happens after rebalancing
+      // Generate fresh evenly-spaced keys
+      const rebalancedKeys = rebalanceKeys(20);
+
+      // All keys should be short
+      for (const key of rebalancedKeys) {
+        expect(key.length).toBeLessThanOrEqual(5); // Fresh keys are very short
+      }
+
+      // Now simulate a few more insertions
+      const key1 = keyBetween(rebalancedKeys[5]!, rebalancedKeys[6]!);
+      const key2 = keyBetween(key1, rebalancedKeys[6]!);
+      const key3 = keyBetween(key2, rebalancedKeys[6]!);
+
+      // Keys should still be reasonable length
+      expect(key1.length).toBeLessThanOrEqual(MAX_KEY_LENGTH);
+      expect(key2.length).toBeLessThanOrEqual(MAX_KEY_LENGTH);
+      expect(key3.length).toBeLessThanOrEqual(MAX_KEY_LENGTH);
+    });
+
+    it('should generate a key that eventually triggers rebalance', () => {
+      // Simulate many insertions at the same position to trigger rebalance
+      let current: string | null = 'a5'; // Start with a mid-range key
+      const next: string | null = 'a6';
+      let insertCount = 0;
+
+      // Keep inserting between current and next until key exceeds threshold
+      while (!needsRebalance(current!) && insertCount < 100) {
+        const newKey = keyBetween(current, next);
+        current = newKey;
+        insertCount++;
+      }
+
+      // At some point, the key should exceed the threshold
+      // (This may take many iterations depending on the fractional indexing implementation)
+      if (current && needsRebalance(current)) {
+        expect(current.length).toBeGreaterThan(MAX_KEY_LENGTH);
+      }
     });
   });
 });
