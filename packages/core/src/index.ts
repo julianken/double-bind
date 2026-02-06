@@ -41,6 +41,12 @@ export {
   type GetAllOptions,
   TagRepository,
   type TagWithCount,
+  LinkRepository,
+  type CreateLinkInput,
+  type CreateBlockRefInput,
+  type LinkWithTargetTitle,
+  type InLink,
+  type BlockBacklink,
 } from './repositories/index.js';
 
 // Parsers
