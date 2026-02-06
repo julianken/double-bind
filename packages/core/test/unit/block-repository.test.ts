@@ -6,7 +6,7 @@
  * Layer 2 integration tests.
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { MockGraphDB } from '@double-bind/test-utils';
 import { DoubleBindError, ErrorCode } from '@double-bind/types';
 import { BlockRepository, computeParentKey } from '../../src/repositories/block-repository.js';
@@ -949,6 +949,327 @@ describe('BlockRepository', () => {
       expect(db.lastMutation.params.content_type).toBe('code');
       expect(db.lastMutation.params.order).toBe('xyz');
       expect(db.lastMutation.params.is_collapsed).toBe(true);
+    });
+  });
+
+  describe('rebalanceSiblings', () => {
+    const pageId = '01ARZ3NDEKTSV4RRFFQ69G5PAG';
+    const parentKey = `__page:${pageId}`;
+
+    it('should do nothing for empty newOrders map', async () => {
+      const newOrders = new Map<string, string>();
+
+      await repo.rebalanceSiblings(parentKey, newOrders);
+
+      // No mutation should have occurred - check mutations array is empty
+      expect(db.mutations.length).toBe(0);
+    });
+
+    it('should construct correct fetch query with parent_key parameter', async () => {
+      // The fetch query joins blocks_by_parent with blocks
+      // MockGraphDB can't handle this join, but we can verify the query structure
+
+      const newOrders = new Map<string, string>([['block1', 'a0']]);
+
+      // Will fail to find blocks, but we can still verify the query was made
+      // Seed empty data to avoid parse errors
+      db.seed('blocks_by_parent', []);
+
+      await repo.rebalanceSiblings(parentKey, newOrders);
+
+      // Verify the fetch query structure
+      const fetchQuery = db.queries[db.queries.length - 1];
+      expect(fetchQuery?.script).toContain('*blocks_by_parent{');
+      expect(fetchQuery?.script).toContain('parent_id: $parent_key');
+      expect(fetchQuery?.script).toContain('*blocks{');
+      expect(fetchQuery?.params.parent_key).toBe(parentKey);
+    });
+
+    it('should construct batch update mutation with correct structure', async () => {
+      // To test the actual mutation, we need to mock the query method
+      // to return proper block data
+
+      const blockId1 = '01ARZ3NDEKTSV4RRFFQ69G5FA1';
+      const blockId2 = '01ARZ3NDEKTSV4RRFFQ69G5FA2';
+
+      // Create a custom mock for this test
+      const mockQuery = vi.spyOn(db, 'query');
+      mockQuery.mockResolvedValueOnce({
+        headers: [
+          'block_id',
+          'page_id',
+          'parent_id',
+          'content',
+          'content_type',
+          'order',
+          'is_collapsed',
+          'is_deleted',
+          'created_at',
+          'updated_at',
+        ],
+        rows: [
+          [
+            blockId1,
+            pageId,
+            null,
+            'Block 1',
+            'text',
+            'oldorder1',
+            false,
+            false,
+            1700000000,
+            1700000000,
+          ],
+          [
+            blockId2,
+            pageId,
+            null,
+            'Block 2',
+            'text',
+            'oldorder2',
+            false,
+            false,
+            1700000000,
+            1700000000,
+          ],
+        ],
+      });
+
+      const newOrders = new Map<string, string>([
+        [blockId1, 'a0'],
+        [blockId2, 'a1'],
+      ]);
+
+      await repo.rebalanceSiblings(parentKey, newOrders);
+
+      // Verify the mutation script structure
+      expect(db.lastMutation.script).toContain(':put blocks {');
+      expect(db.lastMutation.script).toContain(blockId1);
+      expect(db.lastMutation.script).toContain(blockId2);
+      expect(db.lastMutation.script).toContain('"a0"');
+      expect(db.lastMutation.script).toContain('"a1"');
+
+      mockQuery.mockRestore();
+    });
+
+    it('should escape special characters in content', async () => {
+      const blockId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
+      const contentWithQuotes = 'Content with "quotes" and \\backslashes\\';
+
+      const mockQuery = vi.spyOn(db, 'query');
+      mockQuery.mockResolvedValueOnce({
+        headers: [
+          'block_id',
+          'page_id',
+          'parent_id',
+          'content',
+          'content_type',
+          'order',
+          'is_collapsed',
+          'is_deleted',
+          'created_at',
+          'updated_at',
+        ],
+        rows: [
+          [
+            blockId,
+            pageId,
+            null,
+            contentWithQuotes,
+            'text',
+            'oldorder',
+            false,
+            false,
+            1700000000,
+            1700000000,
+          ],
+        ],
+      });
+
+      const newOrders = new Map<string, string>([[blockId, 'a0']]);
+
+      await repo.rebalanceSiblings(parentKey, newOrders);
+
+      // The mutation should contain escaped content
+      expect(db.lastMutation.script).toContain('\\"quotes\\"');
+      expect(db.lastMutation.script).toContain('\\\\backslashes\\\\');
+
+      mockQuery.mockRestore();
+    });
+
+    it('should handle blocks with non-null parent_id', async () => {
+      const blockId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
+      const actualParentId = '01ARZ3NDEKTSV4RRFFQ69G5PAR';
+
+      const mockQuery = vi.spyOn(db, 'query');
+      mockQuery.mockResolvedValueOnce({
+        headers: [
+          'block_id',
+          'page_id',
+          'parent_id',
+          'content',
+          'content_type',
+          'order',
+          'is_collapsed',
+          'is_deleted',
+          'created_at',
+          'updated_at',
+        ],
+        rows: [
+          [
+            blockId,
+            pageId,
+            actualParentId,
+            'Block content',
+            'text',
+            'oldorder',
+            false,
+            false,
+            1700000000,
+            1700000000,
+          ],
+        ],
+      });
+
+      const newOrders = new Map<string, string>([[blockId, 'a0']]);
+
+      await repo.rebalanceSiblings(actualParentId, newOrders);
+
+      // Verify parent_id is preserved in the update
+      expect(db.lastMutation.script).toContain(`"${actualParentId}"`);
+
+      mockQuery.mockRestore();
+    });
+
+    it('should preserve all block fields except order and updated_at', async () => {
+      const blockId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
+      const timestamp = 1700000000;
+
+      const mockQuery = vi.spyOn(db, 'query');
+      mockQuery.mockResolvedValueOnce({
+        headers: [
+          'block_id',
+          'page_id',
+          'parent_id',
+          'content',
+          'content_type',
+          'order',
+          'is_collapsed',
+          'is_deleted',
+          'created_at',
+          'updated_at',
+        ],
+        rows: [
+          [
+            blockId,
+            pageId,
+            null,
+            'Test content',
+            'code',
+            'oldorder',
+            true,
+            false,
+            timestamp,
+            timestamp,
+          ],
+        ],
+      });
+
+      const newOrders = new Map<string, string>([[blockId, 'a0']]);
+
+      await repo.rebalanceSiblings(parentKey, newOrders);
+
+      const script = db.lastMutation.script;
+      expect(script).toContain(`"${blockId}"`);
+      expect(script).toContain(`"${pageId}"`);
+      expect(script).toContain('"Test content"');
+      expect(script).toContain('"code"');
+      expect(script).toContain('"a0"'); // New order
+      expect(script).toContain('true'); // is_collapsed
+      expect(script).toContain('false'); // is_deleted
+      expect(script).toContain(String(timestamp)); // created_at preserved
+
+      mockQuery.mockRestore();
+    });
+
+    it('should only update blocks in newOrders map', async () => {
+      const blockId1 = '01ARZ3NDEKTSV4RRFFQ69G5FA1';
+      const blockId2 = '01ARZ3NDEKTSV4RRFFQ69G5FA2';
+
+      const mockQuery = vi.spyOn(db, 'query');
+      mockQuery.mockResolvedValueOnce({
+        headers: [
+          'block_id',
+          'page_id',
+          'parent_id',
+          'content',
+          'content_type',
+          'order',
+          'is_collapsed',
+          'is_deleted',
+          'created_at',
+          'updated_at',
+        ],
+        rows: [
+          [blockId1, pageId, null, 'Block 1', 'text', 'a0', false, false, 1700000000, 1700000000],
+          [blockId2, pageId, null, 'Block 2', 'text', 'a1', false, false, 1700000000, 1700000000],
+        ],
+      });
+
+      // Only update block1
+      const newOrders = new Map<string, string>([[blockId1, 'b0']]);
+
+      await repo.rebalanceSiblings(parentKey, newOrders);
+
+      // Only block1's update should be in the script with new order
+      expect(db.lastMutation.script).toContain(blockId1);
+      expect(db.lastMutation.script).toContain('"b0"');
+      // block2 should not have its order updated (it's not in newOrders)
+      expect(db.lastMutation.script).not.toContain(blockId2);
+
+      mockQuery.mockRestore();
+    });
+
+    it('should skip mutation if no blocks match the newOrders map', async () => {
+      const mockQuery = vi.spyOn(db, 'query');
+      mockQuery.mockResolvedValueOnce({
+        headers: [
+          'block_id',
+          'page_id',
+          'parent_id',
+          'content',
+          'content_type',
+          'order',
+          'is_collapsed',
+          'is_deleted',
+          'created_at',
+          'updated_at',
+        ],
+        rows: [
+          [
+            'other_block_id',
+            pageId,
+            null,
+            'Block',
+            'text',
+            'a0',
+            false,
+            false,
+            1700000000,
+            1700000000,
+          ],
+        ],
+      });
+
+      // newOrders has a different block ID
+      const newOrders = new Map<string, string>([['nonexistent_id', 'b0']]);
+
+      await repo.rebalanceSiblings(parentKey, newOrders);
+
+      // No mutation should have been made since no blocks matched
+      expect(db.mutations.length).toBe(0);
+
+      mockQuery.mockRestore();
     });
   });
 });
