@@ -1,17 +1,17 @@
 /**
- * Serialization utilities for converting between plain text (stored in CozoDB)
+ * Serialization utilities for converting between plain text
  * and ProseMirror document format.
  *
- * Text Format Markers:
- * - [[Page Title]] -> pageLink node
- * - ((block-id)) -> blockRef node
- * - **text** -> bold mark
- * - *text* or _text_ -> italic mark
- * - `code` -> code mark
- * - ==text== -> highlight mark
- * - ~~text~~ -> strikethrough mark
+ * These utilities support simple text-to-document conversion
+ * using the outliner schema (paragraph, heading, code_block, etc.).
  *
- * Round-trip fidelity: docToText(textToDoc(text)) preserves original text content.
+ * Text Format:
+ * - Multiple lines create multiple paragraphs
+ * - **text** for bold
+ * - *text* or _text_ for italic
+ * - `code` for inline code
+ * - ==text== for highlight
+ * - ~~text~~ for strikethrough
  *
  * @see docs/frontend/prosemirror.md for specification
  */
@@ -24,14 +24,11 @@ import { schema as defaultSchema } from './schema.js';
  */
 type TokenType =
   | 'text'
-  | 'pageLink'
-  | 'blockRef'
   | 'bold'
   | 'italic'
   | 'code'
   | 'highlight'
-  | 'strikethrough'
-  | 'newline';
+  | 'strikethrough';
 
 /**
  * Parsed token from text content.
@@ -39,42 +36,26 @@ type TokenType =
 interface Token {
   type: TokenType;
   content: string;
-  attrs?: Record<string, string>;
 }
-
-// Regex patterns are documented inline in COMBINED_PATTERN below.
-// Individual patterns for reference:
-// - Page link: [[Page Title]] -> \[\[([^\]]+)\]\]
-// - Block reference: ((block-id)) -> \(\(([^)]+)\)\)
-// - Bold: **text** -> \*\*([^*]+)\*\*
-// - Italic: *text* -> (?<!\*)\*([^*]+)\*(?!\*)
-// - Italic: _text_ -> _([^_]+)_
-// - Code: `code` -> `([^`]+)`
-// - Highlight: ==text== -> ==([^=]+)==
-// - Strikethrough: ~~text~~ -> ~~([^~]+)~~
 
 /**
  * Combined regex for tokenization.
- * Named groups are used to identify which pattern matched.
+ * Named groups identify which pattern matched.
  */
 const COMBINED_PATTERN = new RegExp(
   [
-    `(?<pageLink>\\[\\[[^\\]]+\\]\\])`,
-    `(?<blockRef>\\(\\([^)]+\\)\\))`,
     `(?<bold>\\*\\*[^*]+\\*\\*)`,
     `(?<code>\`[^\`]+\`)`,
     `(?<highlight>==[^=]+==)`,
     `(?<strikethrough>~~[^~]+~~)`,
     `(?<italicAsterisk>(?<!\\*)\\*[^*]+\\*(?!\\*))`,
     `(?<italicUnderscore>_[^_]+_)`,
-    `(?<newline>\\n)`,
   ].join('|'),
   'g'
 );
 
 /**
  * Tokenizes text content into a sequence of tokens.
- * This is the first pass of parsing - splitting text into recognizable parts.
  */
 function tokenize(text: string): Token[] {
   const tokens: Token[] = [];
@@ -95,21 +76,7 @@ function tokenize(text: string): Token[] {
 
     // Determine which pattern matched
     const groups = match.groups!;
-    if (groups.pageLink) {
-      const title = groups.pageLink.slice(2, -2); // Remove [[ and ]]
-      tokens.push({
-        type: 'pageLink',
-        content: groups.pageLink,
-        attrs: { title, pageId: title }, // pageId defaults to title for now
-      });
-    } else if (groups.blockRef) {
-      const blockId = groups.blockRef.slice(2, -2); // Remove (( and ))
-      tokens.push({
-        type: 'blockRef',
-        content: groups.blockRef,
-        attrs: { blockId, preview: '' },
-      });
-    } else if (groups.bold) {
+    if (groups.bold) {
       const innerText = groups.bold.slice(2, -2); // Remove ** and **
       tokens.push({
         type: 'bold',
@@ -145,11 +112,6 @@ function tokenize(text: string): Token[] {
         type: 'italic',
         content: innerText,
       });
-    } else if (groups.newline) {
-      tokens.push({
-        type: 'newline',
-        content: '\n',
-      });
     }
 
     lastIndex = COMBINED_PATTERN.lastIndex;
@@ -167,8 +129,7 @@ function tokenize(text: string): Token[] {
 }
 
 /**
- * Converts tokens to ProseMirror nodes.
- * Uses non-null assertions since we control the schema and know these types exist.
+ * Converts tokens to ProseMirror inline nodes with marks.
  */
 function tokensToNodes(tokens: Token[], pmSchema: Schema): Node[] {
   const nodes: Node[] = [];
@@ -179,24 +140,6 @@ function tokensToNodes(tokens: Token[], pmSchema: Schema): Node[] {
         if (token.content) {
           nodes.push(pmSchema.text(token.content));
         }
-        break;
-
-      case 'pageLink':
-        nodes.push(
-          pmSchema.nodes.pageLink!.create({
-            pageId: token.attrs!.pageId,
-            title: token.attrs!.title,
-          })
-        );
-        break;
-
-      case 'blockRef':
-        nodes.push(
-          pmSchema.nodes.blockRef!.create({
-            blockId: token.attrs!.blockId,
-            preview: token.attrs!.preview,
-          })
-        );
         break;
 
       case 'bold':
@@ -233,10 +176,6 @@ function tokensToNodes(tokens: Token[], pmSchema: Schema): Node[] {
           nodes.push(pmSchema.text(token.content, [mark]));
         }
         break;
-
-      case 'newline':
-        nodes.push(pmSchema.nodes.hardBreak!.create());
-        break;
     }
   }
 
@@ -246,29 +185,21 @@ function tokensToNodes(tokens: Token[], pmSchema: Schema): Node[] {
 /**
  * Converts plain text content to a ProseMirror document node.
  *
- * The text format uses markers:
- * - [[Page Title]] for page links
- * - ((block-id)) for block references
- * - **text** for bold
- * - *text* or _text_ for italic
- * - `code` for inline code
- * - ==text== for highlight
- * - ~~text~~ for strikethrough
+ * Creates a document with a single paragraph containing the text.
+ * Inline formatting marks are preserved (**bold**, *italic*, `code`, etc.).
  *
- * Multi-line content (Shift+Enter newlines) is preserved using hardBreak nodes.
- *
- * @param text - Plain text content with markers
- * @param pmSchema - ProseMirror schema to use (defaults to Double Bind schema)
+ * @param text - Plain text content with optional markdown formatting
+ * @param pmSchema - ProseMirror schema to use (defaults to outliner schema)
  * @returns ProseMirror document node
  *
  * @example
  * const doc = textToDoc('Hello **world**', schema);
- * // Creates: doc > block > [text("Hello "), text("world", [bold])]
+ * // Creates: doc > paragraph > [text("Hello "), text("world", [bold])]
  */
 export function textToDoc(text: string, pmSchema: Schema = defaultSchema): Node {
   // Handle empty text
   if (!text) {
-    return pmSchema.nodes.doc!.create(null, pmSchema.nodes.block!.create(null, []));
+    return pmSchema.nodes.doc!.create(null, pmSchema.nodes.paragraph!.create(null, []));
   }
 
   // Tokenize the text
@@ -277,11 +208,11 @@ export function textToDoc(text: string, pmSchema: Schema = defaultSchema): Node 
   // Convert tokens to nodes
   const inlineNodes = tokensToNodes(tokens, pmSchema);
 
-  // Create a single block containing all inline content
-  const block = pmSchema.nodes.block!.create(null, inlineNodes);
+  // Create a paragraph containing all inline content
+  const paragraph = pmSchema.nodes.paragraph!.create(null, inlineNodes);
 
   // Wrap in doc
-  return pmSchema.nodes.doc!.create(null, [block]);
+  return pmSchema.nodes.doc!.create(null, [paragraph]);
 }
 
 /**
@@ -294,11 +225,11 @@ function getMarkName(mark: Mark): string {
 /**
  * Converts a ProseMirror document node back to plain text.
  *
- * This function serializes the document structure back to the
- * text format used in CozoDB storage, preserving all markers.
+ * This function serializes the document structure back to plain text,
+ * preserving inline formatting marks.
  *
  * @param doc - ProseMirror document node
- * @returns Plain text content with markers
+ * @returns Plain text content with markdown formatting
  *
  * @example
  * const text = docToText(doc);
@@ -310,20 +241,24 @@ export function docToText(doc: Node): string {
   // Walk the document tree
   doc.descendants((node, _pos, _parent) => {
     // Handle block nodes - just process their children
-    if (node.type.name === 'block') {
+    if (
+      node.type.name === 'paragraph' ||
+      node.type.name === 'heading' ||
+      node.type.name === 'todo_item'
+    ) {
       return true; // Continue to children
     }
 
     // Handle code blocks
-    if (node.type.name === 'codeBlock') {
-      const language = node.attrs.language || '';
-      const code = node.textContent;
-      if (language) {
-        parts.push('```' + language + '\n' + code + '\n```');
-      } else {
-        parts.push('```\n' + code + '\n```');
-      }
+    if (node.type.name === 'code_block') {
+      parts.push(node.textContent);
       return false; // Don't process children
+    }
+
+    // Handle query embeds
+    if (node.type.name === 'query_embed') {
+      parts.push(node.attrs.query || '');
+      return false;
     }
 
     // Handle text nodes
@@ -357,24 +292,6 @@ export function docToText(doc: Node): string {
       return false;
     }
 
-    // Handle page links
-    if (node.type.name === 'pageLink') {
-      parts.push('[[' + node.attrs.title + ']]');
-      return false;
-    }
-
-    // Handle block references
-    if (node.type.name === 'blockRef') {
-      parts.push('((' + node.attrs.blockId + '))');
-      return false;
-    }
-
-    // Handle hard breaks (Shift+Enter newlines)
-    if (node.type.name === 'hardBreak') {
-      parts.push('\n');
-      return false;
-    }
-
     // For doc node, continue to children
     if (node.type.name === 'doc') {
       return true;
@@ -400,30 +317,6 @@ export function validateRoundTrip(text: string, pmSchema: Schema = defaultSchema
   const doc = textToDoc(text, pmSchema);
   const result = docToText(doc);
   return result === text;
-}
-
-/**
- * Creates a ProseMirror document with a single block from text.
- * This is a convenience function for creating editor state.
- *
- * @param text - Plain text content with markers
- * @param blockId - Optional block ID attribute
- * @param indentLevel - Optional indent level
- * @param pmSchema - ProseMirror schema to use
- * @returns ProseMirror document node
- */
-export function createBlockDoc(
-  text: string,
-  blockId: string | null = null,
-  indentLevel: number = 0,
-  pmSchema: Schema = defaultSchema
-): Node {
-  const tokens = tokenize(text);
-  const inlineNodes = tokensToNodes(tokens, pmSchema);
-
-  const block = pmSchema.nodes.block!.create({ blockId, indentLevel }, inlineNodes);
-
-  return pmSchema.nodes.doc!.create(null, [block]);
 }
 
 // Re-export schema for convenience
