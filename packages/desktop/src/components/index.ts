@@ -18,12 +18,14 @@ export {
   BulletHandle,
   BlockEditor,
   StaticBlockContent,
+  STATIC_BLOCK_CONTENT_CSS_CLASSES,
   useBlock,
   useBlockChildren,
   type BlockNodeProps,
   type BulletHandleProps,
   type BlockEditorProps,
   type StaticBlockContentProps,
+  type ContentSegment,
 } from './BlockNode.js';
 
 export { PageList, PageListItem } from './PageList.js';

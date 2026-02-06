@@ -16,6 +16,7 @@
 
 import { memo, useCallback } from 'react';
 import type { Block, BlockId } from '@double-bind/types';
+import { parseContent } from '@double-bind/core';
 import { useCozoQuery } from '../hooks/useCozoQuery.js';
 import { useAppStore } from '../stores/ui-store.js';
 
@@ -72,10 +73,56 @@ export interface StaticBlockContentProps {
   content: string;
 
   /**
+   * Content type for special rendering (e.g., 'todo' for checkboxes)
+   * @default 'text'
+   */
+  contentType?: Block['contentType'];
+
+  /**
    * Callback when the content area is clicked (to activate editing)
    */
   onClick?: () => void;
 }
+
+/**
+ * Represents a parsed segment of content for rendering
+ */
+export interface ContentSegment {
+  type:
+    | 'text'
+    | 'bold'
+    | 'italic'
+    | 'code'
+    | 'highlight'
+    | 'strikethrough'
+    | 'page-link'
+    | 'block-ref'
+    | 'tag';
+  content: string;
+  /** Start index in original content */
+  start: number;
+  /** End index in original content */
+  end: number;
+}
+
+/**
+ * CSS class names for StaticBlockContent (BEM-style)
+ */
+export const STATIC_BLOCK_CONTENT_CSS_CLASSES = {
+  container: 'static-block-content',
+  todo: 'static-block-content--todo',
+  checkbox: 'static-block-content__checkbox',
+  checkboxChecked: 'static-block-content__checkbox--checked',
+  text: 'static-block-content__text',
+  bold: 'static-block-content__bold',
+  italic: 'static-block-content__italic',
+  code: 'static-block-content__code',
+  highlight: 'static-block-content__highlight',
+  strikethrough: 'static-block-content__strikethrough',
+  pageLink: 'static-block-content__page-link',
+  blockRef: 'static-block-content__block-ref',
+  tag: 'static-block-content__tag',
+} as const;
 
 // ============================================================================
 // Mock Hooks (to be replaced with real implementations)
@@ -172,13 +219,359 @@ export function BlockEditor({ blockId, initialContent }: BlockEditorProps) {
   );
 }
 
+// ============================================================================
+// Content Parsing Helpers
+// ============================================================================
+
+/**
+ * Parse content into segments for rendering.
+ * Handles page links, block refs, tags, and inline formatting.
+ *
+ * @param content - Raw block content string
+ * @returns Array of segments with type and position info
+ */
+function parseContentToSegments(content: string): ContentSegment[] {
+  const segments: ContentSegment[] = [];
+  const parsed = parseContent(content);
+
+  // Collect all special segments (links, refs, tags)
+  const specialSegments: ContentSegment[] = [];
+
+  // Add page links
+  for (const link of parsed.pageLinks) {
+    specialSegments.push({
+      type: 'page-link',
+      content: link.title,
+      start: link.startIndex,
+      end: link.endIndex,
+    });
+  }
+
+  // Add block references
+  for (const ref of parsed.blockRefs) {
+    specialSegments.push({
+      type: 'block-ref',
+      content: ref.blockId,
+      start: ref.startIndex,
+      end: ref.endIndex,
+    });
+  }
+
+  // Add tags - need to find positions in content
+  const tagPattern = /#(?:\[\[([^\]]+)\]\]|([\w][\w-]*))/g;
+  let tagMatch: RegExpExecArray | null;
+  while ((tagMatch = tagPattern.exec(content)) !== null) {
+    const tagContent = tagMatch[1] || tagMatch[2];
+    if (tagContent) {
+      specialSegments.push({
+        type: 'tag',
+        content: tagContent,
+        start: tagMatch.index,
+        end: tagMatch.index + tagMatch[0].length,
+      });
+    }
+  }
+
+  // Sort special segments by start position
+  specialSegments.sort((a, b) => a.start - b.start);
+
+  // Process content, splitting around special segments
+  let currentIndex = 0;
+
+  for (const special of specialSegments) {
+    // Add text before this special segment (with inline formatting)
+    if (special.start > currentIndex) {
+      const textBefore = content.slice(currentIndex, special.start);
+      segments.push(...parseInlineFormatting(textBefore, currentIndex));
+    }
+
+    // Add the special segment
+    segments.push(special);
+    currentIndex = special.end;
+  }
+
+  // Add remaining text after last special segment
+  if (currentIndex < content.length) {
+    const textAfter = content.slice(currentIndex);
+    segments.push(...parseInlineFormatting(textAfter, currentIndex));
+  }
+
+  // If no segments were added, return the whole content as text
+  if (segments.length === 0 && content.length > 0) {
+    segments.push(...parseInlineFormatting(content, 0));
+  }
+
+  return segments;
+}
+
+/**
+ * Parse inline formatting in a text segment.
+ * Handles bold, italic, code, highlight, and strikethrough.
+ *
+ * @param text - Text to parse for inline formatting
+ * @param offset - Offset in original content for position tracking
+ * @returns Array of segments
+ */
+function parseInlineFormatting(text: string, offset: number): ContentSegment[] {
+  const segments: ContentSegment[] = [];
+
+  // Find all inline formatting matches
+  interface FormattingMatch {
+    type: ContentSegment['type'];
+    content: string;
+    start: number;
+    end: number;
+  }
+
+  const matches: FormattingMatch[] = [];
+
+  // Bold: **text**
+  const boldRegex = /\*\*([^*]+)\*\*/g;
+  let match: RegExpExecArray | null;
+  while ((match = boldRegex.exec(text)) !== null) {
+    if (match[1]) {
+      matches.push({
+        type: 'bold',
+        content: match[1],
+        start: match.index,
+        end: match.index + match[0].length,
+      });
+    }
+  }
+
+  // Italic: *text* or _text_ (single asterisks, not part of bold)
+  const italicRegex = /(?<!\*)\*(?!\*)([^*\n]+?)\*(?!\*)|(?<!_)_([^_\n]+?)_(?!_)/g;
+  while ((match = italicRegex.exec(text)) !== null) {
+    const italicContent = match[1] || match[2];
+    if (italicContent) {
+      matches.push({
+        type: 'italic',
+        content: italicContent,
+        start: match.index,
+        end: match.index + match[0].length,
+      });
+    }
+  }
+
+  // Code: `text`
+  const codeRegex = /`([^`]+)`/g;
+  while ((match = codeRegex.exec(text)) !== null) {
+    if (match[1]) {
+      matches.push({
+        type: 'code',
+        content: match[1],
+        start: match.index,
+        end: match.index + match[0].length,
+      });
+    }
+  }
+
+  // Highlight: ^^text^^
+  const highlightRegex = /\^\^([^^]+)\^\^/g;
+  while ((match = highlightRegex.exec(text)) !== null) {
+    if (match[1]) {
+      matches.push({
+        type: 'highlight',
+        content: match[1],
+        start: match.index,
+        end: match.index + match[0].length,
+      });
+    }
+  }
+
+  // Strikethrough: ~~text~~
+  const strikethroughRegex = /~~([^~]+)~~/g;
+  while ((match = strikethroughRegex.exec(text)) !== null) {
+    if (match[1]) {
+      matches.push({
+        type: 'strikethrough',
+        content: match[1],
+        start: match.index,
+        end: match.index + match[0].length,
+      });
+    }
+  }
+
+  // Sort matches by start position
+  matches.sort((a, b) => a.start - b.start);
+
+  // Filter out overlapping matches (keep first one)
+  const filteredMatches: FormattingMatch[] = [];
+  let lastEnd = 0;
+  for (const m of matches) {
+    if (m.start >= lastEnd) {
+      filteredMatches.push(m);
+      lastEnd = m.end;
+    }
+  }
+
+  // Build segments from matches
+  let currentIndex = 0;
+
+  for (const m of filteredMatches) {
+    // Add plain text before this match
+    if (m.start > currentIndex) {
+      const plainText = text.slice(currentIndex, m.start);
+      if (plainText) {
+        segments.push({
+          type: 'text',
+          content: plainText,
+          start: offset + currentIndex,
+          end: offset + m.start,
+        });
+      }
+    }
+
+    // Add the formatted segment
+    segments.push({
+      type: m.type,
+      content: m.content,
+      start: offset + m.start,
+      end: offset + m.end,
+    });
+
+    currentIndex = m.end;
+  }
+
+  // Add remaining plain text
+  if (currentIndex < text.length) {
+    const remaining = text.slice(currentIndex);
+    if (remaining) {
+      segments.push({
+        type: 'text',
+        content: remaining,
+        start: offset + currentIndex,
+        end: offset + text.length,
+      });
+    }
+  }
+
+  // If no matches, return whole text as single segment
+  if (segments.length === 0 && text) {
+    segments.push({
+      type: 'text',
+      content: text,
+      start: offset,
+      end: offset + text.length,
+    });
+  }
+
+  return segments;
+}
+
+/**
+ * Check if a todo block is checked.
+ * Supports formats: [x], [X], [done], [DONE]
+ */
+function isTodoChecked(content: string): boolean {
+  const todoPattern = /^\s*\[([xX]|done|DONE)\]/;
+  return todoPattern.test(content);
+}
+
+/**
+ * Remove todo checkbox syntax from content.
+ * Removes: [ ], [x], [X], [done], [DONE]
+ */
+function removeTodoSyntax(content: string): string {
+  return content.replace(/^\s*\[[ xXdone]*\]\s*/, '');
+}
+
+/**
+ * Render a single content segment with appropriate styling.
+ */
+function renderSegment(segment: ContentSegment, index: number): React.ReactNode {
+  const key = `${segment.type}-${segment.start}-${index}`;
+  const CSS = STATIC_BLOCK_CONTENT_CSS_CLASSES;
+
+  switch (segment.type) {
+    case 'text':
+      return <span key={key}>{segment.content}</span>;
+
+    case 'bold':
+      return (
+        <strong key={key} className={CSS.bold}>
+          {segment.content}
+        </strong>
+      );
+
+    case 'italic':
+      return (
+        <em key={key} className={CSS.italic}>
+          {segment.content}
+        </em>
+      );
+
+    case 'code':
+      return (
+        <code key={key} className={CSS.code}>
+          {segment.content}
+        </code>
+      );
+
+    case 'highlight':
+      return (
+        <mark key={key} className={CSS.highlight}>
+          {segment.content}
+        </mark>
+      );
+
+    case 'strikethrough':
+      return (
+        <del key={key} className={CSS.strikethrough}>
+          {segment.content}
+        </del>
+      );
+
+    case 'page-link':
+      return (
+        <span key={key} className={CSS.pageLink} data-link-title={segment.content}>
+          [[{segment.content}]]
+        </span>
+      );
+
+    case 'block-ref':
+      return (
+        <span key={key} className={CSS.blockRef} data-block-id={segment.content}>
+          (({segment.content}))
+        </span>
+      );
+
+    case 'tag':
+      return (
+        <span key={key} className={CSS.tag} data-tag={segment.content}>
+          #{segment.content}
+        </span>
+      );
+
+    default:
+      return <span key={key}>{segment.content}</span>;
+  }
+}
+
+// ============================================================================
+// StaticBlockContent Component
+// ============================================================================
+
 /**
  * StaticBlockContent - Read-only block content display
  *
  * Rendered when a block is not focused. Displays formatted content
- * with markdown rendering, [[links]], etc.
+ * with inline formatting, [[page links]], ((block refs)), #tags, and
+ * todo checkbox rendering.
+ *
+ * Features:
+ * - Inline formatting: **bold**, *italic*, `code`, ^^highlight^^, ~~strikethrough~~
+ * - Visual highlighting for [[page links]], ((block refs)), and #tags
+ * - Checkbox visual for todo blocks
+ * - Accessible click and keyboard handling
+ *
+ * @see docs/frontend/react-architecture.md for component hierarchy
  */
-export function StaticBlockContent({ content, onClick }: StaticBlockContentProps) {
+export const StaticBlockContent = memo(function StaticBlockContent({
+  content,
+  contentType = 'text',
+  onClick,
+}: StaticBlockContentProps) {
   const handleClick = useCallback(() => {
     onClick?.();
   }, [onClick]);
@@ -193,19 +586,36 @@ export function StaticBlockContent({ content, onClick }: StaticBlockContentProps
     [onClick]
   );
 
+  const isTodo = contentType === 'todo';
+  const isChecked = isTodo && isTodoChecked(content);
+  const displayContent = isTodo ? removeTodoSyntax(content) : content;
+  const segments = parseContentToSegments(displayContent);
+
+  const CSS = STATIC_BLOCK_CONTENT_CSS_CLASSES;
+  const containerClasses = [CSS.container, isTodo && CSS.todo].filter(Boolean).join(' ');
+
   return (
     <div
-      className="static-block-content"
+      className={containerClasses}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
       role="button"
       tabIndex={0}
       data-testid="static-block-content"
+      aria-label={isTodo ? `Todo: ${displayContent}` : displayContent}
     >
-      {content}
+      {isTodo && (
+        <span
+          className={`${CSS.checkbox} ${isChecked ? CSS.checkboxChecked : ''}`}
+          aria-hidden="true"
+        >
+          {isChecked ? '\u2611' : '\u2610'}
+        </span>
+      )}
+      <span className={CSS.text}>{segments.map((segment, index) => renderSegment(segment, index))}</span>
     </div>
   );
-}
+});
 
 // ============================================================================
 // BlockNode Component
@@ -301,7 +711,7 @@ function BlockNodeComponent({ blockId, depth = 0 }: BlockNodeProps) {
           {isEditing ? (
             <BlockEditor blockId={blockId} initialContent={block.content} />
           ) : (
-            <StaticBlockContent content={block.content} onClick={handleActivate} />
+            <StaticBlockContent content={block.content} contentType={block.contentType} onClick={handleActivate} />
           )}
         </div>
       </div>
