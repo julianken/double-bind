@@ -83,4 +83,6 @@ export {
   type PageWithBlocks,
   BlockService,
   type BlockBacklinkResult,
+  createServices,
+  type Services,
 } from './services/index.js';
