@@ -3,13 +3,8 @@
   "references": [
     { "path": "packages/types" },
     { "path": "packages/test-utils" },
-    { "path": "packages/query-lang" },
-    { "path": "packages/graph-algorithms" },
     { "path": "packages/migrations" },
     { "path": "packages/core" },
-    { "path": "packages/ui-primitives" },
-    { "path": "packages/cli" },
-    { "path": "packages/desktop" },
-    { "path": "packages/tui" }
+    { "path": "packages/desktop" }
   ]
 }

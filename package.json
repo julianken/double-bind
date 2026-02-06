@@ -2,21 +2,24 @@
   "name": "double-bind",
   "private": true,
   "scripts": {
-    "build": "pnpm -r --filter='!@double-bind/desktop' build",
+    "build": "pnpm -r --sort build",
     "build:desktop": "pnpm --filter=@double-bind/desktop build",
     "dev": "pnpm --filter=@double-bind/desktop dev",
     "dev:desktop": "pnpm --filter=@double-bind/desktop tauri:dev",
-    "test": "pnpm -r test",
+    "test": "vitest run --workspace",
+    "test:watch": "vitest --workspace",
     "test:unit": "pnpm -r test:unit",
+    "test:integration": "vitest run --workspace --project core-integration",
     "test:e2e": "pnpm --filter=@double-bind/desktop test:e2e",
     "test:e2e:full": "pnpm --filter=@double-bind/desktop test:e2e:full",
     "test:e2e:summary": "node scripts/test-summary.js",
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck",
-    "clean": "pnpm -r clean"
+    "clean": "pnpm -r exec rm -rf dist node_modules"
   },
   "devDependencies": {
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "vitest": "^2.0.0"
   },
   "packageManager": "pnpm@9.15.0",
   "engines": {
