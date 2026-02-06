@@ -12,6 +12,7 @@
 import { useContext } from 'react';
 import { useGlobalShortcuts } from './hooks/useGlobalShortcuts.js';
 import { Router, type Route } from './components/Router.js';
+import { CommandPalette } from './components/CommandPalette.js';
 import { useAppStore } from './stores/ui-store.js';
 import { useServicesOptional, ServiceContext } from './providers/ServiceProvider.js';
 import { PageView as RealPageView } from './screens/PageView.js';
@@ -179,30 +180,6 @@ function GraphView() {
   );
 }
 
-function CommandPalette() {
-  const toggleCommandPalette = useAppStore((s) => s.toggleCommandPalette);
-
-  return (
-    <div
-      className="command-palette"
-      data-testid="command-palette"
-      role="dialog"
-      aria-label="Command palette"
-    >
-      <div className="command-palette-backdrop" onClick={toggleCommandPalette} />
-      <div className="command-palette-content">
-        <input
-          type="text"
-          placeholder="Search or type a command..."
-          autoFocus
-          aria-label="Command input"
-        />
-        <p>Command palette will be implemented here.</p>
-      </div>
-    </div>
-  );
-}
-
 // ============================================================================
 // Routes Configuration
 // ============================================================================
@@ -212,7 +189,6 @@ const routes: Route[] = [
   { id: 'graph', path: '/graph', component: GraphView },
   { id: 'search', path: '/search', component: SearchView },
   { id: 'query', path: '/query', component: QueryView },
-  { id: 'command-palette', path: '/command-palette', component: CommandPalette },
 ];
 
 // ============================================================================
@@ -270,8 +246,11 @@ export function App() {
   useGlobalShortcuts();
 
   return (
-    <AppShell>
-      <Router routes={routes} defaultComponent={DailyNotesView} />
-    </AppShell>
+    <>
+      <AppShell>
+        <Router routes={routes} defaultComponent={DailyNotesView} />
+      </AppShell>
+      <CommandPalette />
+    </>
   );
 }
