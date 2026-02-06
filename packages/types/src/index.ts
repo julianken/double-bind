@@ -14,6 +14,15 @@ export type {
   BlockVersion,
 } from './domain.js';
 
+// Saved Query types
+export type {
+  SavedQueryId,
+  SavedQuery,
+  CreateSavedQueryInput,
+  UpdateSavedQueryInput,
+} from './saved-query.js';
+export { SavedQueryType } from './saved-query.js';
+
 // Type utilities
 export type { DeepPartial } from './utils.js';
 

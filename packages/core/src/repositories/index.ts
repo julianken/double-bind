@@ -47,6 +47,14 @@ export {
   type PropertyRow,
 } from './property-repository.schemas.js';
 
+// Saved query repository
+export {
+  SavedQueryRowSchema,
+  SavedQuerySchema,
+  parseSavedQueryRow,
+  type SavedQueryRow,
+} from './saved-query-repository.schemas.js';
+
 // Repositories - Datalog query construction for domain entities
 export { PageRepository, type GetAllOptions } from './page-repository.js';
 export { TagRepository, type TagWithCount } from './tag-repository.js';
@@ -60,3 +68,7 @@ export {
 } from './link-repository.js';
 export { BlockRepository, computeParentKey, type BlockSearchResult } from './block-repository.js';
 export { PropertyRepository, type PropertyValueType } from './property-repository.js';
+export {
+  SavedQueryRepository,
+  type GetAllSavedQueriesOptions,
+} from './saved-query-repository.js';
