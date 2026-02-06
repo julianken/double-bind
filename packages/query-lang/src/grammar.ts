@@ -513,7 +513,7 @@ export const KEYWORDS: Record<string, TokenType> = {
   tags: 'TAGS',
   tag: 'TAGS',
   properties: 'PROPERTIES',
-  property: 'PROPERTIES',
+  // Note: 'property' is used for 'has property' keyword, see below
   block_refs: 'BLOCK_REFS',
   blockrefs: 'BLOCK_REFS',
   daily_notes: 'DAILY_NOTES',
@@ -533,6 +533,8 @@ export const KEYWORDS: Record<string, TokenType> = {
   'less than': 'LESS_THAN',
   gte: 'GTE',
   lte: 'LTE',
+  'is null': 'IS_NULL',
+  'is not null': 'IS_NOT_NULL',
 
   // Special
   tagged: 'TAGGED',
@@ -540,6 +542,7 @@ export const KEYWORDS: Record<string, TokenType> = {
   from: 'FROM',
   to: 'TO',
   has: 'HAS',
+  property: 'PROPERTY',
 
   // Boolean
   true: 'TRUE',
