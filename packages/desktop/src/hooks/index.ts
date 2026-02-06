@@ -11,3 +11,10 @@ export {
 } from './useCozoQuery.js';
 
 export { useGlobalShortcuts } from './useGlobalShortcuts.js';
+
+export {
+  useKeyboardShortcuts,
+  useAppKeyboardShortcuts,
+  type KeyboardShortcut,
+  type UseKeyboardShortcutsOptions,
+} from './useKeyboardShortcuts.js';
