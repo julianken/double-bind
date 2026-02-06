@@ -15,6 +15,7 @@
   "dependencies": {
     "@double-bind/types": "workspace:*",
     "@double-bind/migrations": "workspace:*",
+    "ulid": "^2.3.0",
     "zod": "^3.24.0"
   },
   "devDependencies": {
