@@ -65,3 +65,6 @@ export {
 
 // Client implementations
 export { tauriGraphDB } from './client/index.js';
+
+// Services - orchestrate repositories with cross-cutting concerns
+export { PageService, type PageWithBlocks } from './services/index.js';
