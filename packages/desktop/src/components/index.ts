@@ -56,3 +56,11 @@ export {
   type SortState,
   type NavigationTarget,
 } from './QueryResultTable.js';
+
+export {
+  QueryHistoryPanel,
+  QueryHistoryItem,
+  QUERY_HISTORY_CSS_CLASSES,
+  type QueryHistoryPanelProps,
+  type QueryHistoryItemProps,
+} from './QueryHistoryPanel.js';
