@@ -18,3 +18,13 @@ export {
   DEFAULT_DEBOUNCE_MS,
   type PersistencePluginOptions,
 } from './persistence.js';
+
+export {
+  outlinerPlugins,
+  createOutlinerPlugin,
+  createOutlinerKeymap,
+  outlinerPluginKey,
+  getContentBeforeCursor,
+  getContentAfterCursor,
+  type OutlinerContext,
+} from './outliner.js';

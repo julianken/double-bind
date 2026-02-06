@@ -43,6 +43,17 @@ export {
   type PersistencePluginOptions,
 } from './editor/index.js';
 
+// Editor plugins - outliner
+export {
+  outlinerPlugins,
+  createOutlinerPlugin,
+  createOutlinerKeymap,
+  outlinerPluginKey,
+  getContentBeforeCursor,
+  getContentAfterCursor,
+  type OutlinerContext,
+} from './editor/index.js';
+
 // Layout
 export { AppShell, type AppShellProps } from './layout/index.js';
 export {
