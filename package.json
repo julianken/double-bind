@@ -4,10 +4,12 @@
   "type": "module",
   "scripts": {
     "build": "pnpm -r --sort build",
-    "build:desktop": "pnpm --filter=@double-bind/desktop build",
+    "build:desktop": "pnpm build:migrations && pnpm extract-migrations && pnpm --filter @double-bind/desktop build",
+    "build:migrations": "pnpm --filter @double-bind/migrations build",
+    "extract-migrations": "tsx scripts/extract-migrations.ts",
     "dev": "pnpm --filter=@double-bind/desktop dev",
     "dev:desktop": "pnpm --filter=@double-bind/desktop tauri:dev",
-    "test": "vitest run --project types --project test-utils --project migrations --project core",
+    "test": "vitest run --project types --project test-utils --project migrations --project core --project scripts",
     "test:watch": "vitest",
     "test:unit": "pnpm -r test:unit",
     "test:integration": "vitest run --project core-integration",
@@ -35,6 +37,7 @@
     "prettier": "^3.3.0",
     "typescript": "^5.7.0",
     "typescript-eslint": "^8.54.0",
+    "tsx": "^4.19.0",
     "vitest": "^2.0.0"
   },
   "packageManager": "pnpm@9.15.0",
