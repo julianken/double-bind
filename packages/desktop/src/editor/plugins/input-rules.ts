@@ -8,11 +8,17 @@
  * - `[x] ` -> todo items (checked)
  * - ``` -> code blocks
  *
- * Rules only trigger at the start of an empty or new block.
+ * And inline mark transformations:
+ * - `**text**` -> bold
+ * - `*text*` or `_text_` -> italic
+ * - `` `text` `` -> inline code
+ *
+ * Block rules only trigger at the start of an empty or new block.
+ * Inline mark rules trigger anywhere in text content.
  */
 
 import { InputRule, inputRules, textblockTypeInputRule } from 'prosemirror-inputrules';
-import type { Schema, NodeType } from 'prosemirror-model';
+import type { Schema, NodeType, MarkType } from 'prosemirror-model';
 import type { Plugin } from 'prosemirror-state';
 
 /**
@@ -84,6 +90,96 @@ export function codeBlockRule(nodeType: NodeType): InputRule {
   }));
 }
 
+// ============================================================================
+// Inline Mark Rules
+// ============================================================================
+
+/**
+ * Creates an input rule that applies a mark to text wrapped in delimiters.
+ *
+ * When the user types closing delimiter(s), the text between the opening
+ * and closing delimiters is marked with the specified mark type, and the
+ * delimiters are removed.
+ *
+ * @param pattern - Regex pattern that captures: (1) the content to be marked
+ * @param markType - The mark type to apply
+ * @returns An InputRule that wraps matched text with the mark
+ *
+ * @example
+ * ```typescript
+ * // Match **bold** and apply bold mark
+ * const boldRule = markInputRule(/\*\*([^*]+)\*\*$/, schema.marks.bold);
+ * ```
+ */
+export function markInputRule(pattern: RegExp, markType: MarkType): InputRule {
+  return new InputRule(pattern, (state, match, start, end) => {
+    const { tr } = state;
+    const content = match[1];
+
+    if (!content) {
+      return null;
+    }
+
+    // Create a text node with the mark applied
+    const textNode = state.schema.text(content, [markType.create()]);
+
+    // Replace the matched text (including delimiters) with marked text
+    tr.replaceWith(start, end, textNode);
+
+    return tr;
+  });
+}
+
+/**
+ * Creates an input rule that converts `**text**` to bold.
+ *
+ * The rule matches text wrapped in double asterisks and applies
+ * the bold mark while removing the asterisks.
+ */
+export function boldRule(markType: MarkType): InputRule {
+  // Match **text** where text is one or more non-asterisk characters
+  // The pattern requires at least one character between the asterisks
+  return markInputRule(/\*\*([^*]+)\*\*$/, markType);
+}
+
+/**
+ * Creates an input rule that converts `*text*` to italic.
+ *
+ * The rule matches text wrapped in single asterisks and applies
+ * the italic mark while removing the asterisks.
+ *
+ * Note: Uses a lookbehind to avoid matching `**` (bold) patterns.
+ * The pattern requires the opening `*` to not be preceded by another `*`.
+ */
+export function italicRule(markType: MarkType): InputRule {
+  // Match *text* where text doesn't contain asterisks
+  // Use (?<!\*) lookbehind to avoid matching when preceded by *
+  // This prevents **bold** from also triggering italic
+  return markInputRule(/(?<!\*)\*([^*]+)\*$/, markType);
+}
+
+/**
+ * Creates an input rule that converts `_text_` to italic.
+ *
+ * The rule matches text wrapped in underscores and applies
+ * the italic mark while removing the underscores.
+ */
+export function underscoreItalicRule(markType: MarkType): InputRule {
+  // Match _text_ where text doesn't contain underscores
+  return markInputRule(/_([^_]+)_$/, markType);
+}
+
+/**
+ * Creates an input rule that converts `` `text` `` to inline code.
+ *
+ * The rule matches text wrapped in backticks and applies
+ * the code mark while removing the backticks.
+ */
+export function inlineCodeRule(markType: MarkType): InputRule {
+  // Match `text` where text is one or more non-backtick characters
+  return markInputRule(/`([^`]+)`$/, markType);
+}
+
 /**
  * Configuration for which input rules to enable.
  * All rules are enabled by default.
@@ -99,6 +195,8 @@ export interface InputRulesConfig {
   todos?: boolean;
   /** Enable code block conversion (```) */
   codeBlocks?: boolean;
+  /** Enable inline mark conversion (**bold**, *italic*, `code`) */
+  inlineMarks?: boolean;
 }
 
 const defaultConfig: Required<InputRulesConfig> = {
@@ -107,6 +205,7 @@ const defaultConfig: Required<InputRulesConfig> = {
   bullets: true,
   todos: true,
   codeBlocks: true,
+  inlineMarks: true,
 };
 
 /**
@@ -151,6 +250,25 @@ export function createInputRulesPlugin(schema: Schema, config: InputRulesConfig 
   // Add code block rules if enabled and codeBlock node type exists
   if (mergedConfig.codeBlocks && schema.nodes.codeBlock) {
     rules.push(codeBlockRule(schema.nodes.codeBlock));
+  }
+
+  // Add inline mark rules if enabled
+  if (mergedConfig.inlineMarks) {
+    // Bold (**text**)
+    if (schema.marks.bold) {
+      rules.push(boldRule(schema.marks.bold));
+    }
+
+    // Italic (*text* and _text_) - must come after bold to avoid conflicts
+    if (schema.marks.italic) {
+      rules.push(italicRule(schema.marks.italic));
+      rules.push(underscoreItalicRule(schema.marks.italic));
+    }
+
+    // Inline code (`text`)
+    if (schema.marks.code) {
+      rules.push(inlineCodeRule(schema.marks.code));
+    }
   }
 
   return inputRules({ rules });

@@ -9,10 +9,15 @@ import {
   todoUncheckedRule,
   todoCheckedRule,
   codeBlockRule,
+  markInputRule,
+  boldRule,
+  italicRule,
+  underscoreItalicRule,
+  inlineCodeRule,
 } from '../../../../src/editor/plugins/input-rules.js';
 
 /**
- * Test schema that includes all the node types needed for input rules.
+ * Test schema that includes all the node types and marks needed for input rules.
  * This is a minimal schema for testing purposes.
  */
 const testSchema = new Schema({
@@ -83,6 +88,29 @@ const testSchema = new Schema({
     },
 
     text: { group: 'inline' },
+  },
+
+  marks: {
+    bold: {
+      parseDOM: [{ tag: 'strong' }, { tag: 'b' }],
+      toDOM() {
+        return ['strong', 0];
+      },
+    },
+
+    italic: {
+      parseDOM: [{ tag: 'em' }, { tag: 'i' }],
+      toDOM() {
+        return ['em', 0];
+      },
+    },
+
+    code: {
+      parseDOM: [{ tag: 'code' }],
+      toDOM() {
+        return ['code', 0];
+      },
+    },
   },
 });
 
@@ -540,5 +568,216 @@ describe('Edge Cases', () => {
 
     expect(dashHeadingResult).toBeNull();
     expect(dashBulletResult).not.toBeNull();
+  });
+});
+
+// ============================================================================
+// Inline Mark Rule Tests
+// ============================================================================
+
+describe('markInputRule', () => {
+  it('creates an input rule that applies a mark', () => {
+    const rule = markInputRule(/\*\*([^*]+)\*\*$/, testSchema.marks.bold);
+    expect(rule).toBeDefined();
+    expect(rule.match).toBeInstanceOf(RegExp);
+    expect(typeof rule.handler).toBe('function');
+  });
+});
+
+describe('boldRule', () => {
+  const rule = boldRule(testSchema.marks.bold);
+
+  it('converts "**text**" to bold text', () => {
+    const state = createStateWithText('**hello*');
+    const result = applyInputRule(rule, state, '*');
+
+    expect(result).not.toBeNull();
+    const firstNode = result!.doc.firstChild;
+    expect(firstNode?.textContent).toBe('hello');
+    // Check that the text has the bold mark
+    const textNode = firstNode?.firstChild;
+    expect(textNode?.marks.some((m) => m.type.name === 'bold')).toBe(true);
+  });
+
+  it('converts "**multiple words**" to bold', () => {
+    const state = createStateWithText('**hello world*');
+    const result = applyInputRule(rule, state, '*');
+
+    expect(result).not.toBeNull();
+    const firstNode = result!.doc.firstChild;
+    expect(firstNode?.textContent).toBe('hello world');
+    const textNode = firstNode?.firstChild;
+    expect(textNode?.marks.some((m) => m.type.name === 'bold')).toBe(true);
+  });
+
+  it('does not match single asterisks', () => {
+    const state = createStateWithText('*hello');
+    const result = applyInputRule(rule, state, '*');
+
+    expect(result).toBeNull();
+  });
+
+  it('requires content between asterisks', () => {
+    const state = createStateWithText('***');
+    const result = applyInputRule(rule, state, '*');
+
+    // **** has no content between the pairs
+    expect(result).toBeNull();
+  });
+
+  it('rule pattern matches correctly', () => {
+    expect(rule.match.test('**bold**')).toBe(true);
+    expect(rule.match.test('**multiple words**')).toBe(true);
+    expect(rule.match.test('*italic*')).toBe(false);
+    expect(rule.match.test('****')).toBe(false);
+  });
+});
+
+describe('italicRule', () => {
+  const rule = italicRule(testSchema.marks.italic);
+
+  it('converts "*text*" to italic text', () => {
+    const state = createStateWithText('*hello');
+    const result = applyInputRule(rule, state, '*');
+
+    expect(result).not.toBeNull();
+    const firstNode = result!.doc.firstChild;
+    expect(firstNode?.textContent).toBe('hello');
+    const textNode = firstNode?.firstChild;
+    expect(textNode?.marks.some((m) => m.type.name === 'italic')).toBe(true);
+  });
+
+  it('converts "*multiple words*" to italic', () => {
+    const state = createStateWithText('*hello world');
+    const result = applyInputRule(rule, state, '*');
+
+    expect(result).not.toBeNull();
+    const firstNode = result!.doc.firstChild;
+    expect(firstNode?.textContent).toBe('hello world');
+    const textNode = firstNode?.firstChild;
+    expect(textNode?.marks.some((m) => m.type.name === 'italic')).toBe(true);
+  });
+
+  it('does not match double asterisks (bold pattern)', () => {
+    // The italic rule has a negative lookbehind to avoid matching **
+    const state = createStateWithText('**bold*');
+    const result = applyInputRule(rule, state, '*');
+
+    // This should not match because it starts with **
+    expect(result).toBeNull();
+  });
+
+  it('rule pattern matches correctly', () => {
+    expect(rule.match.test('*italic*')).toBe(true);
+    expect(rule.match.test('*multiple words*')).toBe(true);
+    // Should not match bold pattern
+    expect(rule.match.test('**bold**')).toBe(false);
+  });
+});
+
+describe('underscoreItalicRule', () => {
+  const rule = underscoreItalicRule(testSchema.marks.italic);
+
+  it('converts "_text_" to italic text', () => {
+    const state = createStateWithText('_hello');
+    const result = applyInputRule(rule, state, '_');
+
+    expect(result).not.toBeNull();
+    const firstNode = result!.doc.firstChild;
+    expect(firstNode?.textContent).toBe('hello');
+    const textNode = firstNode?.firstChild;
+    expect(textNode?.marks.some((m) => m.type.name === 'italic')).toBe(true);
+  });
+
+  it('converts "_multiple words_" to italic', () => {
+    const state = createStateWithText('_hello world');
+    const result = applyInputRule(rule, state, '_');
+
+    expect(result).not.toBeNull();
+    const firstNode = result!.doc.firstChild;
+    expect(firstNode?.textContent).toBe('hello world');
+    const textNode = firstNode?.firstChild;
+    expect(textNode?.marks.some((m) => m.type.name === 'italic')).toBe(true);
+  });
+
+  it('requires content between underscores', () => {
+    const state = createStateWithText('_');
+    const result = applyInputRule(rule, state, '_');
+
+    expect(result).toBeNull();
+  });
+
+  it('rule pattern matches correctly', () => {
+    expect(rule.match.test('_italic_')).toBe(true);
+    expect(rule.match.test('_multiple words_')).toBe(true);
+    expect(rule.match.test('__')).toBe(false);
+  });
+});
+
+describe('inlineCodeRule', () => {
+  const rule = inlineCodeRule(testSchema.marks.code);
+
+  it('converts "`text`" to code text', () => {
+    const state = createStateWithText('`hello');
+    const result = applyInputRule(rule, state, '`');
+
+    expect(result).not.toBeNull();
+    const firstNode = result!.doc.firstChild;
+    expect(firstNode?.textContent).toBe('hello');
+    const textNode = firstNode?.firstChild;
+    expect(textNode?.marks.some((m) => m.type.name === 'code')).toBe(true);
+  });
+
+  it('converts "`code with spaces`" to code', () => {
+    const state = createStateWithText('`const x = 1');
+    const result = applyInputRule(rule, state, '`');
+
+    expect(result).not.toBeNull();
+    const firstNode = result!.doc.firstChild;
+    expect(firstNode?.textContent).toBe('const x = 1');
+    const textNode = firstNode?.firstChild;
+    expect(textNode?.marks.some((m) => m.type.name === 'code')).toBe(true);
+  });
+
+  it('requires content between backticks', () => {
+    const state = createStateWithText('`');
+    const result = applyInputRule(rule, state, '`');
+
+    expect(result).toBeNull();
+  });
+
+  it('rule pattern matches correctly', () => {
+    expect(rule.match.test('`code`')).toBe(true);
+    expect(rule.match.test('`const x = 1`')).toBe(true);
+    expect(rule.match.test('``')).toBe(false);
+  });
+});
+
+// ============================================================================
+// Inline Mark Configuration Tests
+// ============================================================================
+
+describe('createInputRulesPlugin with inline marks', () => {
+  it('includes inline mark rules by default', () => {
+    const plugin = createInputRulesPlugin(testSchema);
+    expect(plugin).toBeDefined();
+  });
+
+  it('can disable inline mark rules', () => {
+    const plugin = createInputRulesPlugin(testSchema, { inlineMarks: false });
+    expect(plugin).toBeDefined();
+  });
+
+  it('handles schema without marks gracefully', () => {
+    const schemaWithoutMarks = new Schema({
+      nodes: {
+        doc: { content: 'text*' },
+        text: {},
+      },
+    });
+
+    // Should not throw even when marks are missing
+    const plugin = createInputRulesPlugin(schemaWithoutMarks, { inlineMarks: true });
+    expect(plugin).toBeDefined();
   });
 });
