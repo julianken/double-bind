@@ -93,6 +93,8 @@ function createMockServices(overrides?: Partial<Services>): Services {
       createBlock: vi.fn(),
       deleteBlock: vi.fn(),
       moveBlock: vi.fn(),
+      moveBlockUp: vi.fn(),
+      moveBlockDown: vi.fn(),
       indentBlock: vi.fn(),
       outdentBlock: vi.fn(),
       toggleCollapse: vi.fn(),
@@ -911,6 +913,177 @@ describe('PageView', () => {
 
       // Should still toggle (implementation uses toLowerCase())
       expect(screen.queryByTestId('backlinks-content')).toBeNull();
+    });
+  });
+
+  // ==========================================================================
+  // Multi-Block Move (Alt+Up/Down)
+  // ==========================================================================
+
+  describe('Multi-Block Move', () => {
+    it('Alt+Up moves all selected blocks up when multiple blocks are selected', async () => {
+      const services = createMockServices();
+      const moveBlockUpMock = vi.fn().mockResolvedValue(undefined);
+      (services.blockService.moveBlockUp as ReturnType<typeof vi.fn>) = moveBlockUpMock;
+
+      // Set up selected blocks in the store
+      const { useAppStore } = await import('../../../src/stores/ui-store.js');
+      useAppStore.setState({
+        selectedBlockIds: new Set(['block-1', 'block-2']),
+      });
+
+      render(
+        <TestWrapper services={services}>
+          <PageView pageId="page-1" />
+        </TestWrapper>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('page-view')).toBeDefined();
+      });
+
+      // Press Alt+Up to move selected blocks up
+      fireEvent.keyDown(window, { key: 'ArrowUp', altKey: true });
+
+      await waitFor(() => {
+        expect(moveBlockUpMock).toHaveBeenCalledTimes(2);
+      });
+
+      expect(moveBlockUpMock).toHaveBeenCalledWith('block-1');
+      expect(moveBlockUpMock).toHaveBeenCalledWith('block-2');
+
+      // Clean up
+      useAppStore.setState({ selectedBlockIds: new Set() });
+    });
+
+    it('Alt+Down moves all selected blocks down when multiple blocks are selected', async () => {
+      const services = createMockServices();
+      const moveBlockDownMock = vi.fn().mockResolvedValue(undefined);
+      (services.blockService.moveBlockDown as ReturnType<typeof vi.fn>) = moveBlockDownMock;
+
+      // Set up selected blocks in the store
+      const { useAppStore } = await import('../../../src/stores/ui-store.js');
+      useAppStore.setState({
+        selectedBlockIds: new Set(['block-3', 'block-4']),
+      });
+
+      render(
+        <TestWrapper services={services}>
+          <PageView pageId="page-1" />
+        </TestWrapper>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('page-view')).toBeDefined();
+      });
+
+      // Press Alt+Down to move selected blocks down
+      fireEvent.keyDown(window, { key: 'ArrowDown', altKey: true });
+
+      await waitFor(() => {
+        expect(moveBlockDownMock).toHaveBeenCalledTimes(2);
+      });
+
+      expect(moveBlockDownMock).toHaveBeenCalledWith('block-4');
+      expect(moveBlockDownMock).toHaveBeenCalledWith('block-3');
+
+      // Clean up
+      useAppStore.setState({ selectedBlockIds: new Set() });
+    });
+
+    it('does not trigger multi-block move when only one block is selected', async () => {
+      const services = createMockServices();
+      const moveBlockUpMock = vi.fn().mockResolvedValue(undefined);
+      (services.blockService.moveBlockUp as ReturnType<typeof vi.fn>) = moveBlockUpMock;
+
+      // Set up single selected block in the store
+      const { useAppStore } = await import('../../../src/stores/ui-store.js');
+      useAppStore.setState({
+        selectedBlockIds: new Set(['block-1']),
+      });
+
+      render(
+        <TestWrapper services={services}>
+          <PageView pageId="page-1" />
+        </TestWrapper>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('page-view')).toBeDefined();
+      });
+
+      // Press Alt+Up - should not trigger multi-block move (handled by BlockNode)
+      fireEvent.keyDown(window, { key: 'ArrowUp', altKey: true });
+
+      // Small delay to ensure async handler would have run
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // Should not call moveBlockUp since only 1 block is selected
+      expect(moveBlockUpMock).not.toHaveBeenCalled();
+
+      // Clean up
+      useAppStore.setState({ selectedBlockIds: new Set() });
+    });
+
+    it('does not trigger multi-block move when no blocks are selected', async () => {
+      const services = createMockServices();
+      const moveBlockUpMock = vi.fn().mockResolvedValue(undefined);
+      (services.blockService.moveBlockUp as ReturnType<typeof vi.fn>) = moveBlockUpMock;
+
+      // Ensure no blocks are selected
+      const { useAppStore } = await import('../../../src/stores/ui-store.js');
+      useAppStore.setState({
+        selectedBlockIds: new Set(),
+      });
+
+      render(
+        <TestWrapper services={services}>
+          <PageView pageId="page-1" />
+        </TestWrapper>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('page-view')).toBeDefined();
+      });
+
+      // Press Alt+Up
+      fireEvent.keyDown(window, { key: 'ArrowUp', altKey: true });
+
+      // Small delay to ensure async handler would have run
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // Should not call moveBlockUp
+      expect(moveBlockUpMock).not.toHaveBeenCalled();
+    });
+
+    it('handles move errors gracefully', async () => {
+      const services = createMockServices();
+      const moveBlockUpMock = vi.fn().mockRejectedValue(new Error('Cannot move'));
+      (services.blockService.moveBlockUp as ReturnType<typeof vi.fn>) = moveBlockUpMock;
+
+      // Set up selected blocks in the store
+      const { useAppStore } = await import('../../../src/stores/ui-store.js');
+      useAppStore.setState({
+        selectedBlockIds: new Set(['block-1', 'block-2']),
+      });
+
+      render(
+        <TestWrapper services={services}>
+          <PageView pageId="page-1" />
+        </TestWrapper>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('page-view')).toBeDefined();
+      });
+
+      // Press Alt+Up - should not throw
+      expect(() => {
+        fireEvent.keyDown(window, { key: 'ArrowUp', altKey: true });
+      }).not.toThrow();
+
+      // Clean up
+      useAppStore.setState({ selectedBlockIds: new Set() });
     });
   });
 });

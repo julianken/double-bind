@@ -19,7 +19,7 @@ import { useCallback, useMemo, useState, useEffect } from 'react';
 import type { BlockId, PageId } from '@double-bind/types';
 import type { PageWithBlocks } from '@double-bind/core';
 import { BacklinksPanel } from '@double-bind/ui-primitives';
-import { useCozoQuery } from '../hooks/useCozoQuery.js';
+import { useCozoQuery, invalidateQueries } from '../hooks/useCozoQuery.js';
 import { useBacklinks } from '../hooks/useBacklinks.js';
 import { useServices } from '../providers/ServiceProvider.js';
 import { useAppStore } from '../stores/ui-store.js';
@@ -232,8 +232,9 @@ function BacklinksSectionHeader({
  * ```
  */
 export function PageView({ pageId }: PageViewProps) {
-  const { pageService } = useServices();
+  const { pageService, blockService } = useServices();
   const navigateToPage = useAppStore((state) => state.navigateToPage);
+  const selectedBlockIds = useAppStore((state) => state.selectedBlockIds);
 
   // Backlinks panel expanded state (persisted in component state)
   const [backlinksExpanded, setBacklinksExpanded] = useState(true);
@@ -300,6 +301,62 @@ export function PageView({ pageId }: PageViewProps) {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [toggleBacklinks]);
+
+  // Multi-block move: Alt+Up/Down when multiple blocks are selected
+  // This handles the case where multiple blocks are selected (via Shift+Up/Down)
+  // and the user presses Alt+Up or Alt+Down to move all selected blocks together.
+  useEffect(() => {
+    const handleMultiBlockMove = async (event: KeyboardEvent) => {
+      // Only handle Alt+Up/Down when multiple blocks are selected
+      if (!event.altKey || (event.key !== 'ArrowUp' && event.key !== 'ArrowDown')) {
+        return;
+      }
+
+      if (selectedBlockIds.size < 2) {
+        return;
+      }
+
+      // Don't handle if focus is in an editor (single-block move is handled by ProseMirror/BlockNode)
+      const target = event.target as HTMLElement;
+      const isContentEditable =
+        target.isContentEditable === true || target.getAttribute?.('contenteditable') === 'true';
+
+      if (isContentEditable) {
+        return;
+      }
+
+      event.preventDefault();
+
+      // Convert Set to array for sequential processing
+      const blockIds = Array.from(selectedBlockIds) as BlockId[];
+
+      try {
+        if (event.key === 'ArrowUp') {
+          // Move all selected blocks up (preserving relative order)
+          for (const blockId of blockIds) {
+            await blockService.moveBlockUp(blockId);
+          }
+        } else {
+          // Move all selected blocks down (preserving relative order)
+          // Process in reverse order to maintain relative positions
+          for (const blockId of blockIds.reverse()) {
+            await blockService.moveBlockDown(blockId);
+          }
+        }
+
+        // Invalidate queries to refresh the UI
+        invalidateQueries(['blocks']);
+        invalidateQueries(['block']);
+        invalidateQueries(['page', 'withBlocks']);
+      } catch {
+        // Silently ignore errors (e.g., can't move first block up)
+        // Individual blocks may fail but others will succeed
+      }
+    };
+
+    window.addEventListener('keydown', handleMultiBlockMove);
+    return () => window.removeEventListener('keydown', handleMultiBlockMove);
+  }, [selectedBlockIds, blockService]);
 
   // Loading state
   if (isLoading) {

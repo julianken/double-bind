@@ -30,6 +30,7 @@ import {
   createPersistencePlugin,
   outlinerPlugins,
   type OutlinerContext,
+  type BlockService as KeymapBlockService,
 } from './plugins/index.js';
 
 /**
@@ -353,12 +354,50 @@ export function BlockEditor({
     // Create initial document from content
     const doc = textToDoc(initialContent);
 
+    // Create adapter for keymap block operations
+    // This wraps the core BlockService to provide the interface expected by keymap
+    const keymapBlockService: KeymapBlockService | undefined = useServiceMode
+      ? {
+          moveBlockUp: async (id: string) => {
+            await blockService!.moveBlockUp(id);
+            onBlocksChanged!();
+          },
+          moveBlockDown: async (id: string) => {
+            await blockService!.moveBlockDown(id);
+            onBlocksChanged!();
+          },
+          collapseBlock: async (id: string) => {
+            await blockService!.toggleCollapse(id);
+            onBlocksChanged!();
+          },
+          expandBlock: async (id: string) => {
+            await blockService!.toggleCollapse(id);
+            onBlocksChanged!();
+          },
+          toggleTodo: async (_id: string) => {
+            // TODO: Implement toggle TODO (DBB-XXX)
+          },
+          focusPreviousBlock: () => {
+            // Block navigation is handled at a higher level (PageView)
+            // This is a no-op in the editor context
+          },
+          focusNextBlock: () => {
+            // Block navigation is handled at a higher level (PageView)
+            // This is a no-op in the editor context
+          },
+        }
+      : undefined;
+
     // Assemble plugins based on mode
     const plugins = [
       // History for undo/redo
       history(),
-      // Custom keymap for formatting
-      createKeymapPlugin({ schema }),
+      // Custom keymap for formatting and block operations
+      createKeymapPlugin({
+        schema,
+        blockService: keymapBlockService,
+        getBlockId: () => blockId,
+      }),
       // Input rules for Markdown shortcuts
       createInputRulesPlugin(schema),
     ];
