@@ -145,9 +145,11 @@ export function useCozoQuery<T>(
   const serializedKey = JSON.stringify(key);
   const enabled = options?.enabled ?? true;
 
-  // Stable reference: queryFn identity must not change on every render.
-  // Callers must wrap queryFn with useCallback if it captures changing deps.
-  const stableQueryFn = useCallback(queryFn, [serializedKey]);
+  // Use the queryFn directly. Callers must wrap queryFn with useCallback
+  // to ensure stability when their dependencies change.
+  // Note: Previously this used useCallback(queryFn, [serializedKey]) which
+  // caused bugs when queryFn's closure variables changed but serializedKey didn't.
+  const stableQueryFn = queryFn;
 
   const entry = useQueryStore(useCallback((s) => s.entries.get(serializedKey), [serializedKey]));
   const invalidationCount = entry?.invalidationCount ?? 0;

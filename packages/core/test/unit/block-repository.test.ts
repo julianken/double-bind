@@ -176,7 +176,8 @@ describe('BlockRepository', () => {
       await repo.getChildren(parentKey);
 
       expect(db.lastQuery.script).toContain('*blocks_by_parent{');
-      expect(db.lastQuery.script).toContain('parent_id == $parent_key');
+      // Uses idx_parent alias to avoid CozoDB binding conflicts with blocks.parent_id
+      expect(db.lastQuery.script).toContain('idx_parent == $parent_key');
       expect(db.lastQuery.script).toContain('*blocks{');
       expect(db.lastQuery.script).toContain('is_deleted == false');
       expect(db.lastQuery.script).toContain(':order order');
@@ -429,7 +430,7 @@ describe('BlockRepository', () => {
   });
 
   describe('move', () => {
-    it('should construct atomic transaction with index update', async () => {
+    it('should execute three separate mutations for block and index updates', async () => {
       const blockId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
       const pageId = '01ARZ3NDEKTSV4RRFFQ69G5PAG';
       db.seed('blocks', [createBlockRow({ block_id: blockId, page_id: pageId })]);
@@ -437,16 +438,19 @@ describe('BlockRepository', () => {
       const newParentId = '01ARZ3NDEKTSV4RRFFQ69G5PAR';
       await repo.move(blockId, newParentId, 'b');
 
-      const script = db.lastMutation.script;
-      // Should be an atomic transaction
-      expect(script).toContain('{');
-      expect(script).toContain('}');
-      // Should update blocks relation
-      expect(script).toContain(':put blocks {');
-      // Should remove from old parent index
-      expect(script).toContain(':rm blocks_by_parent {');
-      // Should add to new parent index
-      expect(script).toContain(':put blocks_by_parent {');
+      // CozoDB doesn't support multiple ? rules with system commands in one block,
+      // so move() uses 3 separate mutations:
+      // 1. Update the block itself (:put blocks)
+      // 2. Remove from old parent index (:rm blocks_by_parent)
+      // 3. Add to new parent index (:put blocks_by_parent)
+      expect(db.mutations).toHaveLength(3);
+
+      // First mutation: update blocks
+      expect(db.mutations[0].script).toContain(':put blocks {');
+      // Second mutation: remove from old parent index
+      expect(db.mutations[1].script).toContain(':rm blocks_by_parent {');
+      // Third mutation: add to new parent index
+      expect(db.mutations[2].script).toContain(':put blocks_by_parent {');
     });
 
     it('should throw BLOCK_NOT_FOUND if block does not exist', async () => {
@@ -470,9 +474,10 @@ describe('BlockRepository', () => {
 
       await repo.move(blockId, newParentId, 'b');
 
-      // move() uses an atomic transaction - single mutation with all params
-      expect(db.lastMutation.params.old_parent_key).toBe(oldParentId);
-      expect(db.lastMutation.params.new_parent_key).toBe(newParentId);
+      // move() uses 3 separate mutations
+      // Mutation 2 removes from old parent, mutation 3 adds to new parent
+      expect(db.mutations[1].params.old_parent_key).toBe(oldParentId);
+      expect(db.mutations[2].params.new_parent_key).toBe(newParentId);
     });
 
     it('should use page sentinel for root-level move', async () => {
@@ -486,10 +491,11 @@ describe('BlockRepository', () => {
 
       await repo.move(blockId, null, 'b');
 
-      // move() uses an atomic transaction - single mutation with all params
-      expect(db.lastMutation.params.old_parent_key).toBe(oldParentId);
-      expect(db.lastMutation.params.new_parent_key).toBe(`__page:${pageId}`);
-      expect(db.lastMutation.params.new_parent_id).toBeNull();
+      // move() uses 3 separate mutations
+      expect(db.mutations[1].params.old_parent_key).toBe(oldParentId);
+      expect(db.mutations[2].params.new_parent_key).toBe(`__page:${pageId}`);
+      // First mutation updates the block with null parent_id
+      expect(db.mutations[0].params.new_parent_id).toBeNull();
     });
 
     it('should update order', async () => {
@@ -498,8 +504,8 @@ describe('BlockRepository', () => {
 
       await repo.move(blockId, null, 'xyz');
 
-      // move() uses an atomic transaction - single mutation with all params
-      expect(db.lastMutation.params.new_order).toBe('xyz');
+      // First mutation updates the block with new order
+      expect(db.mutations[0].params.new_order).toBe('xyz');
     });
 
     it('should preserve content and other fields', async () => {
@@ -515,10 +521,10 @@ describe('BlockRepository', () => {
 
       await repo.move(blockId, null, 'b');
 
-      // move() uses an atomic transaction - single mutation with all params
-      expect(db.lastMutation.params.content).toBe('Preserved content');
-      expect(db.lastMutation.params.content_type).toBe('heading');
-      expect(db.lastMutation.params.is_collapsed).toBe(true);
+      // First mutation updates the block, preserving content and other fields
+      expect(db.mutations[0].params.content).toBe('Preserved content');
+      expect(db.mutations[0].params.content_type).toBe('heading');
+      expect(db.mutations[0].params.is_collapsed).toBe(true);
     });
   });
 
@@ -791,11 +797,14 @@ describe('BlockRepository', () => {
 
       await repo.move(blockId, parentId, 'z');
 
-      // move() uses an atomic transaction - single mutation with all params
-      expect(db.lastMutation.params.new_parent_id).toBe(parentId);
-      expect(db.lastMutation.params.old_parent_key).toBe(parentId);
-      expect(db.lastMutation.params.new_parent_key).toBe(parentId);
-      expect(db.lastMutation.params.new_order).toBe('z');
+      // move() uses 3 separate mutations
+      // First mutation updates the block
+      expect(db.mutations[0].params.new_parent_id).toBe(parentId);
+      expect(db.mutations[0].params.new_order).toBe('z');
+      // Second mutation removes from old parent (same as new)
+      expect(db.mutations[1].params.old_parent_key).toBe(parentId);
+      // Third mutation adds to new parent (same as old)
+      expect(db.mutations[2].params.new_parent_key).toBe(parentId);
     });
   });
 
