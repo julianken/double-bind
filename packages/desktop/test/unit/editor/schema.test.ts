@@ -58,9 +58,16 @@ describe('ProseMirror Schema', () => {
       }
     });
 
-    it('should have all required mark types', () => {
+    it('should have all required formatting mark types', () => {
       const requiredMarks = ['bold', 'italic', 'code', 'highlight', 'strikethrough'];
       for (const markName of requiredMarks) {
+        expect(schema.marks[markName]).toBeDefined();
+      }
+    });
+
+    it('should have all required reference mark types', () => {
+      const referenceMarks = ['pageLink', 'blockRef', 'tag'];
+      for (const markName of referenceMarks) {
         expect(schema.marks[markName]).toBeDefined();
       }
     });
@@ -273,10 +280,21 @@ describe('ProseMirror Schema', () => {
       expect(queryEmbed.attrs.query).toBe('');
     });
 
+    it('should have results attribute with default empty string', () => {
+      const queryEmbed = schema.nodes.query_embed.create();
+      expect(queryEmbed.attrs.results).toBe('');
+    });
+
     it('should accept query string', () => {
       const query = '?[name] := *page{name}';
       const queryEmbed = schema.nodes.query_embed.create({ query });
       expect(queryEmbed.attrs.query).toBe(query);
+    });
+
+    it('should accept results string', () => {
+      const results = JSON.stringify([{ name: 'Page 1' }, { name: 'Page 2' }]);
+      const queryEmbed = schema.nodes.query_embed.create({ query: 'test', results });
+      expect(queryEmbed.attrs.results).toBe(results);
     });
 
     it('should be an atom node', () => {
@@ -300,12 +318,32 @@ describe('ProseMirror Schema', () => {
       expect(html).toContain('class="query-embed"');
     });
 
+    it('should serialize with results data attribute', () => {
+      const query = '?[title] := *page{title}';
+      const results = JSON.stringify([{ title: 'Test' }]);
+      const queryEmbed = schema.nodes.query_embed.create({ query, results });
+      const doc = schema.nodes.doc.create(null, [queryEmbed]);
+      const html = serializeToHTML(doc);
+      expect(html).toContain('data-results');
+    });
+
     it('should parse from query div element', () => {
       const query = '?[x] := *block{x}';
       const html = `<div data-type="query" data-query="${query}"></div>`;
       const doc = parseHTML(html);
       expect(doc.firstChild?.type.name).toBe('query_embed');
       expect(doc.firstChild?.attrs.query).toBe(query);
+    });
+
+    it('should parse results from query div element', () => {
+      const query = '?[x] := *block{x}';
+      // Use HTML entities for quotes in the attribute value
+      const resultsForHtml = '[{&quot;x&quot;:&quot;test&quot;}]';
+      const expectedResults = '[{"x":"test"}]';
+      const html = `<div data-type="query" data-query="${query}" data-results="${resultsForHtml}"></div>`;
+      const doc = parseHTML(html);
+      expect(doc.firstChild?.type.name).toBe('query_embed');
+      expect(doc.firstChild?.attrs.results).toBe(expectedResults);
     });
   });
 
@@ -469,6 +507,187 @@ describe('ProseMirror Schema', () => {
     });
   });
 
+  describe('Page Link Mark', () => {
+    it('should be defined in schema', () => {
+      expect(schema.marks.pageLink).toBeDefined();
+    });
+
+    it('should have pageId attribute with default empty string', () => {
+      const pageLinkMark = schema.marks.pageLink.create();
+      expect(pageLinkMark.attrs.pageId).toBe('');
+    });
+
+    it('should have title attribute with default empty string', () => {
+      const pageLinkMark = schema.marks.pageLink.create();
+      expect(pageLinkMark.attrs.title).toBe('');
+    });
+
+    it('should accept pageId attribute', () => {
+      const pageId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
+      const pageLinkMark = schema.marks.pageLink.create({ pageId });
+      expect(pageLinkMark.attrs.pageId).toBe(pageId);
+    });
+
+    it('should accept title attribute', () => {
+      const pageLinkMark = schema.marks.pageLink.create({ title: 'My Page' });
+      expect(pageLinkMark.attrs.title).toBe('My Page');
+    });
+
+    it('should accept both pageId and title attributes', () => {
+      const pageId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
+      const title = 'My Page';
+      const pageLinkMark = schema.marks.pageLink.create({ pageId, title });
+      expect(pageLinkMark.attrs.pageId).toBe(pageId);
+      expect(pageLinkMark.attrs.title).toBe(title);
+    });
+
+    it('should apply to text', () => {
+      const pageLinkMark = schema.marks.pageLink.create({ pageId: '01ARZ3NDEKTSV4RRFFQ69G5FAV', title: 'Test Page' });
+      const textNode = schema.text('Test Page', [pageLinkMark]);
+      expect(textNode.marks).toHaveLength(1);
+      expect(textNode.marks[0].type.name).toBe('pageLink');
+    });
+
+    it('should be non-inclusive', () => {
+      const spec = schema.marks.pageLink.spec;
+      expect(spec.inclusive).toBe(false);
+    });
+
+    it('should serialize to anchor element with data-type and data-page-id', () => {
+      const pageId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
+      const pageLinkMark = schema.marks.pageLink.create({ pageId, title: 'Linked Page' });
+      const textNode = schema.text('Linked Page', [pageLinkMark]);
+      const paragraph = schema.nodes.paragraph.create(null, [textNode]);
+      const doc = schema.nodes.doc.create(null, [paragraph]);
+      const html = serializeToHTML(doc);
+      expect(html).toContain('data-type="page-link"');
+      expect(html).toContain(`data-page-id="${pageId}"`);
+      expect(html).toContain('data-title="Linked Page"');
+      expect(html).toContain('class="page-link"');
+    });
+
+    it('should parse from page-link anchor element with pageId', () => {
+      const pageId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
+      const doc = parseHTML(`<p><a data-type="page-link" data-page-id="${pageId}" data-title="My Page">My Page</a></p>`);
+      const textNode = doc.firstChild?.firstChild;
+      expect(textNode?.marks.some((m) => m.type.name === 'pageLink')).toBe(true);
+      const pageLinkMark = textNode?.marks.find((m) => m.type.name === 'pageLink');
+      expect(pageLinkMark?.attrs.pageId).toBe(pageId);
+      expect(pageLinkMark?.attrs.title).toBe('My Page');
+    });
+
+    it('should parse pageId as empty string when not present in DOM', () => {
+      const doc = parseHTML('<p><a data-type="page-link" data-title="My Page">My Page</a></p>');
+      const textNode = doc.firstChild?.firstChild;
+      const pageLinkMark = textNode?.marks.find((m) => m.type.name === 'pageLink');
+      expect(pageLinkMark?.attrs.pageId).toBe('');
+      expect(pageLinkMark?.attrs.title).toBe('My Page');
+    });
+  });
+
+  describe('Block Ref Mark', () => {
+    it('should be defined in schema', () => {
+      expect(schema.marks.blockRef).toBeDefined();
+    });
+
+    it('should have blockId attribute with default empty string', () => {
+      const blockRefMark = schema.marks.blockRef.create();
+      expect(blockRefMark.attrs.blockId).toBe('');
+    });
+
+    it('should accept blockId attribute', () => {
+      const blockId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
+      const blockRefMark = schema.marks.blockRef.create({ blockId });
+      expect(blockRefMark.attrs.blockId).toBe(blockId);
+    });
+
+    it('should apply to text', () => {
+      const blockRefMark = schema.marks.blockRef.create({ blockId: '01ARZ3NDEKTSV4RRFFQ69G5FAV' });
+      const textNode = schema.text('Referenced block', [blockRefMark]);
+      expect(textNode.marks).toHaveLength(1);
+      expect(textNode.marks[0].type.name).toBe('blockRef');
+    });
+
+    it('should be non-inclusive', () => {
+      const spec = schema.marks.blockRef.spec;
+      expect(spec.inclusive).toBe(false);
+    });
+
+    it('should serialize to anchor element with data-type', () => {
+      const blockId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
+      const blockRefMark = schema.marks.blockRef.create({ blockId });
+      const textNode = schema.text('Block content', [blockRefMark]);
+      const paragraph = schema.nodes.paragraph.create(null, [textNode]);
+      const doc = schema.nodes.doc.create(null, [paragraph]);
+      const html = serializeToHTML(doc);
+      expect(html).toContain('data-type="block-ref"');
+      expect(html).toContain(`data-block-id="${blockId}"`);
+      expect(html).toContain('class="block-ref"');
+    });
+
+    it('should parse from block-ref anchor element', () => {
+      const blockId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
+      const doc = parseHTML(`<p><a data-type="block-ref" data-block-id="${blockId}">Referenced</a></p>`);
+      const textNode = doc.firstChild?.firstChild;
+      expect(textNode?.marks.some((m) => m.type.name === 'blockRef')).toBe(true);
+      const blockRefMark = textNode?.marks.find((m) => m.type.name === 'blockRef');
+      expect(blockRefMark?.attrs.blockId).toBe(blockId);
+    });
+  });
+
+  describe('Tag Mark', () => {
+    it('should be defined in schema', () => {
+      expect(schema.marks.tag).toBeDefined();
+    });
+
+    it('should have tag attribute with default empty string', () => {
+      const tagMark = schema.marks.tag.create();
+      expect(tagMark.attrs.tag).toBe('');
+    });
+
+    it('should accept tag attribute', () => {
+      const tagMark = schema.marks.tag.create({ tag: 'important' });
+      expect(tagMark.attrs.tag).toBe('important');
+    });
+
+    it('should apply to text', () => {
+      const tagMark = schema.marks.tag.create({ tag: 'project' });
+      const textNode = schema.text('#project', [tagMark]);
+      expect(textNode.marks).toHaveLength(1);
+      expect(textNode.marks[0].type.name).toBe('tag');
+    });
+
+    it('should be non-inclusive', () => {
+      const spec = schema.marks.tag.spec;
+      expect(spec.inclusive).toBe(false);
+    });
+
+    it('should serialize to anchor element with data-type', () => {
+      const tagMark = schema.marks.tag.create({ tag: 'todo' });
+      const textNode = schema.text('#todo', [tagMark]);
+      const paragraph = schema.nodes.paragraph.create(null, [textNode]);
+      const doc = schema.nodes.doc.create(null, [paragraph]);
+      const html = serializeToHTML(doc);
+      expect(html).toContain('data-type="tag"');
+      expect(html).toContain('data-tag="todo"');
+      expect(html).toContain('class="tag"');
+    });
+
+    it('should parse from tag anchor element', () => {
+      const doc = parseHTML('<p><a data-type="tag" data-tag="important">#important</a></p>');
+      const textNode = doc.firstChild?.firstChild;
+      expect(textNode?.marks.some((m) => m.type.name === 'tag')).toBe(true);
+      const tagMark = textNode?.marks.find((m) => m.type.name === 'tag');
+      expect(tagMark?.attrs.tag).toBe('important');
+    });
+
+    it('should support multi-word tags', () => {
+      const tagMark = schema.marks.tag.create({ tag: 'multi word tag' });
+      const textNode = schema.text('#[[multi word tag]]', [tagMark]);
+      expect(textNode.marks[0].attrs.tag).toBe('multi word tag');
+    });
+  });
+
   describe('Multiple Marks', () => {
     it('should support combining bold and italic', () => {
       const boldMark = schema.marks.bold.create();
@@ -507,6 +726,34 @@ describe('ProseMirror Schema', () => {
       const textNode = doc.firstChild?.firstChild;
       expect(textNode?.marks.some((m) => m.type.name === 'bold')).toBe(true);
       expect(textNode?.marks.some((m) => m.type.name === 'italic')).toBe(true);
+    });
+
+    it('should support combining pageLink with formatting marks', () => {
+      const boldMark = schema.marks.bold.create();
+      const pageLinkMark = schema.marks.pageLink.create({ pageId: '01ARZ3NDEKTSV4RRFFQ69G5FAV', title: 'Bold Link' });
+      const textNode = schema.text('Bold Link', [boldMark, pageLinkMark]);
+      expect(textNode.marks).toHaveLength(2);
+      expect(textNode.marks.some((m) => m.type.name === 'bold')).toBe(true);
+      expect(textNode.marks.some((m) => m.type.name === 'pageLink')).toBe(true);
+    });
+
+    it('should support combining tag with formatting marks', () => {
+      const italicMark = schema.marks.italic.create();
+      const tagMark = schema.marks.tag.create({ tag: 'styled-tag' });
+      const textNode = schema.text('#styled-tag', [italicMark, tagMark]);
+      expect(textNode.marks).toHaveLength(2);
+      expect(textNode.marks.some((m) => m.type.name === 'italic')).toBe(true);
+      expect(textNode.marks.some((m) => m.type.name === 'tag')).toBe(true);
+    });
+
+    it('should support combining all reference marks', () => {
+      const pageLinkMark = schema.marks.pageLink.create({ pageId: '01ARZ3NDEKTSV4RRFFQ69G5FAV', title: 'Page' });
+      const blockRefMark = schema.marks.blockRef.create({ blockId: '01ARZ3NDEKTSV4RRFFQ69G5FAV' });
+      const tagMark = schema.marks.tag.create({ tag: 'test' });
+      // Note: In practice, these wouldn't all apply to the same text,
+      // but the schema allows it for flexibility
+      const textNode = schema.text('reference', [pageLinkMark, blockRefMark, tagMark]);
+      expect(textNode.marks).toHaveLength(3);
     });
   });
 
