@@ -12,6 +12,7 @@ import {
   markInputRule,
   boldRule,
   italicRule,
+  underscoreItalicRule,
   inlineCodeRule,
 } from '../../../../src/editor/plugins/input-rules.js';
 
@@ -671,6 +672,45 @@ describe('italicRule', () => {
     expect(rule.match.test('*multiple words*')).toBe(true);
     // Should not match bold pattern
     expect(rule.match.test('**bold**')).toBe(false);
+  });
+});
+
+describe('underscoreItalicRule', () => {
+  const rule = underscoreItalicRule(testSchema.marks.italic);
+
+  it('converts "_text_" to italic text', () => {
+    const state = createStateWithText('_hello');
+    const result = applyInputRule(rule, state, '_');
+
+    expect(result).not.toBeNull();
+    const firstNode = result!.doc.firstChild;
+    expect(firstNode?.textContent).toBe('hello');
+    const textNode = firstNode?.firstChild;
+    expect(textNode?.marks.some((m) => m.type.name === 'italic')).toBe(true);
+  });
+
+  it('converts "_multiple words_" to italic', () => {
+    const state = createStateWithText('_hello world');
+    const result = applyInputRule(rule, state, '_');
+
+    expect(result).not.toBeNull();
+    const firstNode = result!.doc.firstChild;
+    expect(firstNode?.textContent).toBe('hello world');
+    const textNode = firstNode?.firstChild;
+    expect(textNode?.marks.some((m) => m.type.name === 'italic')).toBe(true);
+  });
+
+  it('requires content between underscores', () => {
+    const state = createStateWithText('_');
+    const result = applyInputRule(rule, state, '_');
+
+    expect(result).toBeNull();
+  });
+
+  it('rule pattern matches correctly', () => {
+    expect(rule.match.test('_italic_')).toBe(true);
+    expect(rule.match.test('_multiple words_')).toBe(true);
+    expect(rule.match.test('__')).toBe(false);
   });
 });
 

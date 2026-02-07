@@ -10,7 +10,7 @@
  *
  * And inline mark transformations:
  * - `**text**` -> bold
- * - `*text*` -> italic
+ * - `*text*` or `_text_` -> italic
  * - `` `text` `` -> inline code
  *
  * Block rules only trigger at the start of an empty or new block.
@@ -159,6 +159,17 @@ export function italicRule(markType: MarkType): InputRule {
 }
 
 /**
+ * Creates an input rule that converts `_text_` to italic.
+ *
+ * The rule matches text wrapped in underscores and applies
+ * the italic mark while removing the underscores.
+ */
+export function underscoreItalicRule(markType: MarkType): InputRule {
+  // Match _text_ where text doesn't contain underscores
+  return markInputRule(/_([^_]+)_$/, markType);
+}
+
+/**
  * Creates an input rule that converts `` `text` `` to inline code.
  *
  * The rule matches text wrapped in backticks and applies
@@ -248,9 +259,10 @@ export function createInputRulesPlugin(schema: Schema, config: InputRulesConfig 
       rules.push(boldRule(schema.marks.bold));
     }
 
-    // Italic (*text*) - must come after bold to avoid conflicts
+    // Italic (*text* and _text_) - must come after bold to avoid conflicts
     if (schema.marks.italic) {
       rules.push(italicRule(schema.marks.italic));
+      rules.push(underscoreItalicRule(schema.marks.italic));
     }
 
     // Inline code (`text`)
