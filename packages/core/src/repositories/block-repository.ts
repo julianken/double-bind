@@ -109,10 +109,13 @@ export class BlockRepository {
    * @returns Array of child blocks sorted by order
    */
   async getChildren(parentKey: string): Promise<Block[]> {
+    // NOTE: Use distinct variable names to avoid CozoDB binding conflicts:
+    // - `idx_parent` for the blocks_by_parent index key (may be sentinel like __page:X)
+    // - `parent_id` for the actual block's parent_id field (may be null for root blocks)
     const script = `
 ?[block_id, page_id, parent_id, content, content_type, order, is_collapsed, is_deleted, created_at, updated_at] :=
-    *blocks_by_parent{ parent_id, block_id },
-    parent_id == $parent_key,
+    *blocks_by_parent{ parent_id: idx_parent, block_id },
+    idx_parent == $parent_key,
     *blocks{ block_id, page_id, parent_id, content, content_type, order, is_collapsed, is_deleted, created_at, updated_at },
     is_deleted == false
 :order order
@@ -278,22 +281,22 @@ export class BlockRepository {
     const oldParentKey = computeParentKey(existing.parentId, existing.pageId);
     const newParentKey = computeParentKey(newParentId, existing.pageId);
 
-    const script = `
-{
-    ?[block_id, page_id, parent_id, content, content_type, order, is_collapsed, is_deleted, created_at, updated_at] <- [
-        [$id, $page_id, $new_parent_id, $content, $content_type, $new_order, $is_collapsed, $is_deleted, $created_at, $now]
-    ]
-    :put blocks { block_id, page_id, parent_id, content, content_type, order, is_collapsed, is_deleted, created_at, updated_at }
+    // CozoDB limitation: Multiple `?` rules with system commands (:put, :rm) cannot be
+    // combined in a single block. Error: "The rule '?' cannot have multiple definitions
+    // since it contains non-Horn clauses". Therefore, we run as separate mutations.
+    // Note: This means the operation is NOT atomic. If a failure occurs mid-sequence,
+    // the database may be left in an inconsistent state. For a local-first app, this is
+    // acceptable as the user can retry the operation.
 
-    ?[parent_id, block_id] <- [[$old_parent_key, $id]]
-    :rm blocks_by_parent { parent_id, block_id }
-
-    ?[parent_id, block_id] <- [[$new_parent_key, $id]]
-    :put blocks_by_parent { parent_id, block_id }
-}
+    // 1. Update the block itself
+    const updateBlockScript = `
+?[block_id, page_id, parent_id, content, content_type, order, is_collapsed, is_deleted, created_at, updated_at] <- [
+    [$id, $page_id, $new_parent_id, $content, $content_type, $new_order, $is_collapsed, $is_deleted, $created_at, $now]
+]
+:put blocks { block_id, page_id, parent_id, content, content_type, order, is_collapsed, is_deleted, created_at, updated_at }
 `.trim();
 
-    await this.db.mutate(script, {
+    await this.db.mutate(updateBlockScript, {
       id: blockId,
       page_id: existing.pageId,
       new_parent_id: newParentId,
@@ -304,8 +307,28 @@ export class BlockRepository {
       is_deleted: existing.isDeleted,
       created_at: existing.createdAt,
       now,
+    });
+
+    // 2. Remove from old parent index
+    const removeFromIndexScript = `
+?[parent_id, block_id] <- [[$old_parent_key, $id]]
+:rm blocks_by_parent { parent_id, block_id }
+`.trim();
+
+    await this.db.mutate(removeFromIndexScript, {
       old_parent_key: oldParentKey,
+      id: blockId,
+    });
+
+    // 3. Add to new parent index
+    const addToIndexScript = `
+?[parent_id, block_id] <- [[$new_parent_key, $id]]
+:put blocks_by_parent { parent_id, block_id }
+`.trim();
+
+    await this.db.mutate(addToIndexScript, {
       new_parent_key: newParentKey,
+      id: blockId,
     });
   }
 

@@ -125,10 +125,12 @@ export class GraphService {
       }
 
       // Verify the center page exists
-      // Note: We must bind is_deleted explicitly before filtering, otherwise it's unbound in head
+      // Note: We must bind variables explicitly in body before using in head
+      // Using page_id: $center_id does pattern matching but doesn't bind the variable
       const centerPageScript = `
 ?[page_id, title, created_at, updated_at, is_deleted, daily_note_date] :=
-    *pages{ page_id: $center_id, title, created_at, updated_at, is_deleted, daily_note_date },
+    *pages{ page_id, title, created_at, updated_at, is_deleted, daily_note_date },
+    page_id == $center_id,
     is_deleted = false
 `.trim();
 
@@ -324,8 +326,9 @@ community[page_id, group] <~ CommunityDetectionLouvain(*links[source_id, target_
   async getSuggestedLinks(pageId: PageId): Promise<SuggestedLink[]> {
     try {
       // First verify the page exists
+      // Note: Use page_id == $page_id rather than page_id: $page_id to bind the variable
       const verifyScript = `
-?[page_id] := *pages{ page_id: $page_id, is_deleted: false }
+?[page_id] := *pages{ page_id, is_deleted }, page_id == $page_id, is_deleted == false
 `.trim();
 
       const verifyResult = await this.db.query(verifyScript, { page_id: pageId });

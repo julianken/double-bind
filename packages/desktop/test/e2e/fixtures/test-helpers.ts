@@ -93,7 +93,20 @@ export async function seedPage(data: {
 }
 
 /**
+ * Compute the parent key for blocks_by_parent index.
+ * When parentId is null (root-level block), uses sentinel "__page:<pageId>".
+ * Otherwise uses the parentId directly.
+ */
+function computeParentKey(parentId: string | null, pageId: string): string {
+  if (parentId === null) {
+    return `__page:${pageId}`;
+  }
+  return parentId;
+}
+
+/**
  * Seed a block in the test database.
+ * Also populates the blocks_by_page and blocks_by_parent index relations.
  */
 export async function seedBlock(data: {
   blockId: string;
@@ -103,21 +116,47 @@ export async function seedBlock(data: {
   order?: string;
 }): Promise<void> {
   const now = Date.now();
-  // Note: 'order' is a reserved word in CozoDB, so we use the column name as-is
-  const script = `
-    ?[block_id, page_id, content, parent_id, order, is_collapsed, is_deleted, created_at, updated_at] <- [[
-      $block_id, $page_id, $content, $parent_id, $order, false, false, $now, $now
+  const parentId = data.parentId ?? null;
+
+  // 1. Insert block into blocks relation (include content_type)
+  const blockScript = `
+    ?[block_id, page_id, content, content_type, parent_id, order, is_collapsed, is_deleted, created_at, updated_at] <- [[
+      $block_id, $page_id, $content, $content_type, $parent_id, $order, false, false, $now, $now
     ]]
-    :put blocks { block_id, page_id, content, parent_id, order, is_collapsed, is_deleted, created_at, updated_at }
+    :put blocks { block_id, page_id, content, content_type, parent_id, order, is_collapsed, is_deleted, created_at, updated_at }
   `;
 
-  await executeMutation(script, {
+  await executeMutation(blockScript, {
     block_id: data.blockId,
     page_id: data.pageId,
     content: data.content,
-    parent_id: data.parentId ?? null,
+    content_type: 'text',
+    parent_id: parentId,
     order: data.order ?? 'a0',
     now,
+  });
+
+  // 2. Index by page
+  const byPageScript = `
+    ?[page_id, block_id] <- [[$page_id, $block_id]]
+    :put blocks_by_page { page_id, block_id }
+  `;
+
+  await executeMutation(byPageScript, {
+    page_id: data.pageId,
+    block_id: data.blockId,
+  });
+
+  // 3. Index by parent (using sentinel for root-level blocks)
+  const parentKey = computeParentKey(parentId, data.pageId);
+  const byParentScript = `
+    ?[parent_id, block_id] <- [[$parent_key, $block_id]]
+    :put blocks_by_parent { parent_id, block_id }
+  `;
+
+  await executeMutation(byParentScript, {
+    parent_key: parentKey,
+    block_id: data.blockId,
   });
 }
 

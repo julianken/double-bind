@@ -35,6 +35,9 @@ async function initializeApp() {
   // Create services from the GraphDB
   const services = createServices(graphDB);
 
+  // Expose services on window for E2E testing/debugging
+  (window as unknown as { __SERVICES__: typeof services }).__SERVICES__ = services;
+
   createRoot(root).render(
     <StrictMode>
       <ServiceProvider services={services}>
