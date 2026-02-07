@@ -16,7 +16,6 @@ export {
 export {
   BlockNode,
   BulletHandle,
-  BlockEditor,
   StaticBlockContent,
   STATIC_BLOCK_CONTENT_CSS_CLASSES,
   useBlock,
@@ -27,6 +26,9 @@ export {
   type StaticBlockContentProps,
   type ContentSegment,
 } from './BlockNode.js';
+
+// BlockEditor is the real ProseMirror-based editor
+export { BlockEditor } from '../editor/BlockEditor.js';
 
 export { PageList, PageListItem } from './PageList.js';
 export type { PageListProps, PageListItemProps } from './PageList.js';

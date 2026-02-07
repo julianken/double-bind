@@ -87,7 +87,7 @@ export function useCreatePage(): UseCreatePageResult {
         invalidateQueries(['pages']);
 
         // 3. Navigate to the new page
-        navigateToPage(page.pageId);
+        navigateToPage('page/' + page.pageId);
 
         return { page, error: null };
       } catch (err) {

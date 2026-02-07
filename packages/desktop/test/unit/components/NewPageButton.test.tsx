@@ -135,7 +135,8 @@ describe('NewPageButton', () => {
 
       await waitFor(() => {
         const storeState = useAppStore.getState();
-        expect(storeState.currentPageId).toBe(mockPage.pageId);
+        // currentPageId stores the full route path, not just the ID
+        expect(storeState.currentPageId).toBe(`page/${mockPage.pageId}`);
       });
     });
   });

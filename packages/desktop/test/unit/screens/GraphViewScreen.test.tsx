@@ -306,8 +306,8 @@ describe('GraphViewScreen', () => {
       const node = screen.getByTestId('node-page-1');
       fireEvent.click(node);
 
-      // Should navigate to the page
-      expect(useAppStore.getState().currentPageId).toBe('page-1');
+      // Should navigate to the page (currentPageId stores the full route path)
+      expect(useAppStore.getState().currentPageId).toBe('page/page-1');
     });
   });
 

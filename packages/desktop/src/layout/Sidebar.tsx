@@ -14,6 +14,7 @@ import { MiniGraph } from '@double-bind/ui-primitives';
 import type { PageId } from '@double-bind/types';
 import { ErrorBoundary } from '../components/ErrorBoundary.js';
 import { SearchBar } from '../components/SearchBar.js';
+import { PageList } from '../components/PageList.js';
 import { useAppStore } from '../stores/ui-store.js';
 import { useNeighborhood } from '../hooks/useNeighborhood.js';
 
@@ -42,19 +43,7 @@ export function QuickCapture() {
   );
 }
 
-/**
- * PageList placeholder - displays all pages.
- * TODO: Implement full page list with virtual scrolling in separate issue.
- */
-export function PageList() {
-  return (
-    <nav className="sidebar-page-list" aria-label="Page navigation">
-      <ul role="list">
-        <li>No pages yet</li>
-      </ul>
-    </nav>
-  );
-}
+// PageList imported from components/PageList.tsx
 
 /**
  * SidebarFooter placeholder - displays app info and settings link.
@@ -422,7 +411,7 @@ function SidebarContent({ onNewPage }: SidebarProps) {
 
   const handleGraphNavigate = useCallback(
     (pageId: PageId) => {
-      navigateToPage(pageId);
+      navigateToPage('page/' + pageId);
     },
     [navigateToPage]
   );

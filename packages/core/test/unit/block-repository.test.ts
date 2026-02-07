@@ -206,21 +206,20 @@ describe('BlockRepository', () => {
   });
 
   describe('create', () => {
-    it('should construct atomic transaction with index maintenance', async () => {
+    it('should execute three separate mutations for index maintenance', async () => {
       const pageId = '01ARZ3NDEKTSV4RRFFQ69G5PAG';
 
       await repo.create({ pageId, content: 'New block' });
 
-      const script = db.lastMutation.script;
-      // Should be an atomic transaction with braces
-      expect(script).toContain('{');
-      expect(script).toContain('}');
-      // Should put to blocks relation
-      expect(script).toContain(':put blocks {');
-      // Should put to blocks_by_page index
-      expect(script).toContain(':put blocks_by_page {');
-      // Should put to blocks_by_parent index
-      expect(script).toContain(':put blocks_by_parent {');
+      // Should have 3 separate mutations (CozoDB v0.7 doesn't allow multiple ? rules with :put)
+      expect(db.mutations).toHaveLength(3);
+
+      // First mutation: put to blocks relation
+      expect(db.mutations[0]?.script).toContain(':put blocks {');
+      // Second mutation: put to blocks_by_page index
+      expect(db.mutations[1]?.script).toContain(':put blocks_by_page {');
+      // Third mutation: put to blocks_by_parent index
+      expect(db.mutations[2]?.script).toContain(':put blocks_by_parent {');
     });
 
     it('should generate ULID for block ID', async () => {
@@ -230,7 +229,8 @@ describe('BlockRepository', () => {
 
       // Verify ULID format (26 chars, valid ULID chars)
       expect(blockId).toMatch(/^[0-9A-HJKMNP-TV-Z]{26}$/);
-      expect(db.lastMutation.params.id).toBe(blockId);
+      // The first mutation (blocks insert) should have the id parameter
+      expect(db.mutations[0]?.params.id).toBe(blockId);
     });
 
     it('should pass correct parameters', async () => {
@@ -239,10 +239,12 @@ describe('BlockRepository', () => {
 
       await repo.create({ pageId, content });
 
-      expect(db.lastMutation.params.page_id).toBe(pageId);
-      expect(db.lastMutation.params.content).toBe(content);
-      expect(db.lastMutation.params.content_type).toBe('text');
-      expect(db.lastMutation.params.parent_id).toBeNull();
+      // Check the first mutation (blocks insert) for all parameters
+      const blocksMutation = db.mutations[0];
+      expect(blocksMutation?.params.page_id).toBe(pageId);
+      expect(blocksMutation?.params.content).toBe(content);
+      expect(blocksMutation?.params.content_type).toBe('text');
+      expect(blocksMutation?.params.parent_id).toBeNull();
     });
 
     it('should compute parent key for root blocks', async () => {
@@ -250,7 +252,8 @@ describe('BlockRepository', () => {
 
       await repo.create({ pageId, content: 'Root block' });
 
-      expect(db.lastMutation.params.parent_key).toBe(`__page:${pageId}`);
+      // The third mutation (blocks_by_parent insert) has the parent_key
+      expect(db.mutations[2]?.params.parent_key).toBe(`__page:${pageId}`);
     });
 
     it('should use parent ID as parent key when provided', async () => {
@@ -259,8 +262,9 @@ describe('BlockRepository', () => {
 
       await repo.create({ pageId, parentId, content: 'Child block' });
 
-      expect(db.lastMutation.params.parent_id).toBe(parentId);
-      expect(db.lastMutation.params.parent_key).toBe(parentId);
+      // First mutation (blocks) has parent_id, third mutation (blocks_by_parent) has parent_key
+      expect(db.mutations[0]?.params.parent_id).toBe(parentId);
+      expect(db.mutations[2]?.params.parent_key).toBe(parentId);
     });
 
     it('should use provided content type', async () => {
@@ -268,7 +272,7 @@ describe('BlockRepository', () => {
 
       await repo.create({ pageId, content: '# Heading', contentType: 'heading' });
 
-      expect(db.lastMutation.params.content_type).toBe('heading');
+      expect(db.mutations[0]?.params.content_type).toBe('heading');
     });
 
     it('should use provided order', async () => {
@@ -276,7 +280,7 @@ describe('BlockRepository', () => {
 
       await repo.create({ pageId, content: 'Block', order: 'abc' });
 
-      expect(db.lastMutation.params.order).toBe('abc');
+      expect(db.mutations[0]?.params.order).toBe('abc');
     });
 
     it('should set timestamps', async () => {
@@ -286,7 +290,7 @@ describe('BlockRepository', () => {
       await repo.create({ pageId, content: 'New block' });
 
       const after = Date.now();
-      const timestamp = db.lastMutation.params.now as number;
+      const timestamp = db.mutations[0]?.params.now as number;
       expect(timestamp).toBeGreaterThanOrEqual(before);
       expect(timestamp).toBeLessThanOrEqual(after);
     });
@@ -666,7 +670,7 @@ describe('BlockRepository', () => {
 
       await repo.create({ pageId, content: '# Heading', contentType: 'heading' });
 
-      expect(db.lastMutation.params.content_type).toBe('heading');
+      expect(db.mutations[0]?.params.content_type).toBe('heading');
     });
 
     it('should handle code content type', async () => {
@@ -674,7 +678,7 @@ describe('BlockRepository', () => {
 
       await repo.create({ pageId, content: 'console.log()', contentType: 'code' });
 
-      expect(db.lastMutation.params.content_type).toBe('code');
+      expect(db.mutations[0]?.params.content_type).toBe('code');
     });
 
     it('should default to text content type', async () => {
@@ -682,7 +686,7 @@ describe('BlockRepository', () => {
 
       await repo.create({ pageId, content: 'Plain text' });
 
-      expect(db.lastMutation.params.content_type).toBe('text');
+      expect(db.mutations[0]?.params.content_type).toBe('text');
     });
   });
 
@@ -692,7 +696,7 @@ describe('BlockRepository', () => {
 
       await repo.create({ pageId, content: '' });
 
-      expect(db.lastMutation.params.content).toBe('');
+      expect(db.mutations[0]?.params.content).toBe('');
     });
 
     it('should handle whitespace-only content', async () => {
@@ -700,7 +704,7 @@ describe('BlockRepository', () => {
 
       await repo.create({ pageId, content: '   \n   ' });
 
-      expect(db.lastMutation.params.content).toBe('   \n   ');
+      expect(db.mutations[0]?.params.content).toBe('   \n   ');
     });
   });
 
@@ -752,8 +756,8 @@ describe('BlockRepository', () => {
 
       await repo.create({ pageId, content: 'Block', order: 'z' });
 
-      // create() uses an atomic transaction - single mutation with all params
-      expect(db.lastMutation.params.order).toBe('z');
+      // create() uses 3 separate mutations - first one (blocks) has the order
+      expect(db.mutations[0]?.params.order).toBe('z');
     });
 
     it('should handle multi-character order strings', async () => {
@@ -761,8 +765,8 @@ describe('BlockRepository', () => {
 
       await repo.create({ pageId, content: 'Block', order: 'abc123xyz' });
 
-      // create() uses an atomic transaction - single mutation with all params
-      expect(db.lastMutation.params.order).toBe('abc123xyz');
+      // create() uses 3 separate mutations - first one (blocks) has the order
+      expect(db.mutations[0]?.params.order).toBe('abc123xyz');
     });
 
     it('should handle fractional order strings', async () => {
@@ -770,8 +774,8 @@ describe('BlockRepository', () => {
 
       await repo.create({ pageId, content: 'Block', order: 'a0.5' });
 
-      // create() uses an atomic transaction - single mutation with all params
-      expect(db.lastMutation.params.order).toBe('a0.5');
+      // create() uses 3 separate mutations - first one (blocks) has the order
+      expect(db.mutations[0]?.params.order).toBe('a0.5');
     });
   });
 
@@ -865,9 +869,9 @@ describe('BlockRepository', () => {
 
       await repo.create({ pageId, content: 'Root block' });
 
-      // create() uses an atomic transaction - single mutation with all params
-      expect(db.lastMutation.params.parent_id).toBeNull();
-      expect(db.lastMutation.params.parent_key).toBe(`__page:${pageId}`);
+      // create() uses 3 separate mutations
+      expect(db.mutations[0]?.params.parent_id).toBeNull();
+      expect(db.mutations[2]?.params.parent_key).toBe(`__page:${pageId}`);
     });
 
     it('should create child block with parentId', async () => {
@@ -876,9 +880,9 @@ describe('BlockRepository', () => {
 
       await repo.create({ pageId, content: 'Child block', parentId });
 
-      // create() uses an atomic transaction - single mutation with all params
-      expect(db.lastMutation.params.parent_id).toBe(parentId);
-      expect(db.lastMutation.params.parent_key).toBe(parentId);
+      // create() uses 3 separate mutations
+      expect(db.mutations[0]?.params.parent_id).toBe(parentId);
+      expect(db.mutations[2]?.params.parent_key).toBe(parentId);
     });
 
     it('should maintain all indexes on create', async () => {
@@ -886,10 +890,11 @@ describe('BlockRepository', () => {
 
       await repo.create({ pageId, content: 'Block' });
 
-      const script = db.lastMutation.script;
-      expect(script).toContain(':put blocks {');
-      expect(script).toContain(':put blocks_by_page {');
-      expect(script).toContain(':put blocks_by_parent {');
+      // create() uses 3 separate mutations for each index
+      expect(db.mutations).toHaveLength(3);
+      expect(db.mutations[0]?.script).toContain(':put blocks {');
+      expect(db.mutations[1]?.script).toContain(':put blocks_by_page {');
+      expect(db.mutations[2]?.script).toContain(':put blocks_by_parent {');
     });
   });
 

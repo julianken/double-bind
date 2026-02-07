@@ -134,8 +134,9 @@ describe('useCreatePage', () => {
       });
 
       const storeState = useAppStore.getState();
-      expect(storeState.currentPageId).toBe(mockPage.pageId);
-      expect(storeState.pageHistory).toContain(mockPage.pageId);
+      // currentPageId stores the full route path, not just the ID
+      expect(storeState.currentPageId).toBe(`page/${mockPage.pageId}`);
+      expect(storeState.pageHistory).toContain(`page/${mockPage.pageId}`);
     });
 
     it('sets isCreating to true during creation', async () => {
@@ -357,7 +358,8 @@ describe('useCreatePage', () => {
         await result.current.createPage('Page 1');
       });
 
-      expect(useAppStore.getState().currentPageId).toBe('page-1');
+      // currentPageId stores the full route path
+      expect(useAppStore.getState().currentPageId).toBe('page/page-1');
 
       // Create second page
       mockPageService.createPage.mockResolvedValueOnce({
@@ -369,7 +371,7 @@ describe('useCreatePage', () => {
         await result.current.createPage('Page 2');
       });
 
-      expect(useAppStore.getState().currentPageId).toBe('page-2');
+      expect(useAppStore.getState().currentPageId).toBe('page/page-2');
       expect(mockPageService.createPage).toHaveBeenCalledTimes(2);
     });
   });

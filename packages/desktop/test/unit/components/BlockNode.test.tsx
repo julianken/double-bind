@@ -5,15 +5,77 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { act } from 'react';
+import type { Block, PageService, BlockService } from '@double-bind/core';
 import {
   BlockNode,
   BulletHandle,
-  BlockEditor,
   StaticBlockContent,
   STATIC_BLOCK_CONTENT_CSS_CLASSES,
 } from '../../../src/components/BlockNode.js';
+import { ServiceProvider } from '../../../src/providers/ServiceProvider.js';
 import { useAppStore } from '../../../src/stores/ui-store.js';
 import { clearQueryCache } from '../../../src/hooks/useCozoQuery.js';
+
+// ============================================================================
+// Mock Data
+// ============================================================================
+
+const createMockBlock = (overrides: Partial<Block> = {}): Block => ({
+  blockId: 'test-block-id',
+  pageId: 'test-page-id',
+  parentId: null,
+  content: 'Test block content',
+  contentType: 'text',
+  order: 'a',
+  isCollapsed: false,
+  isDeleted: false,
+  createdAt: Date.now(),
+  updatedAt: Date.now(),
+  ...overrides,
+});
+
+// ============================================================================
+// Mock Services
+// ============================================================================
+
+function createMockBlockService(block: Block | null = createMockBlock()): BlockService {
+  return {
+    getById: vi.fn().mockResolvedValue(block),
+    getChildren: vi.fn().mockResolvedValue([]),
+    createBlock: vi.fn(),
+    updateBlockContent: vi.fn(),
+    moveBlock: vi.fn(),
+    deleteBlock: vi.fn(),
+    getBlockBacklinks: vi.fn(),
+  } as unknown as BlockService;
+}
+
+function createMockPageService(): PageService {
+  return {
+    createPage: vi.fn(),
+    getPageWithBlocks: vi.fn(),
+    deletePage: vi.fn(),
+    getTodaysDailyNote: vi.fn(),
+    searchPages: vi.fn(),
+    getAllPages: vi.fn(),
+  } as unknown as PageService;
+}
+
+// ============================================================================
+// Test Wrapper
+// ============================================================================
+
+function TestWrapper({
+  children,
+  blockService = createMockBlockService(),
+  pageService = createMockPageService(),
+}: {
+  children: React.ReactNode;
+  blockService?: BlockService;
+  pageService?: PageService;
+}) {
+  return <ServiceProvider services={{ blockService, pageService }}>{children}</ServiceProvider>;
+}
 
 // ============================================================================
 // Test Setup
@@ -122,33 +184,9 @@ describe('BulletHandle', () => {
 // BlockEditor Tests
 // ============================================================================
 
-describe('BlockEditor', () => {
-  describe('Rendering', () => {
-    it('renders without crashing', () => {
-      render(<BlockEditor blockId="test-block-id" initialContent="Hello world" />);
-      expect(screen.getByTestId('block-editor')).toBeDefined();
-    });
-
-    it('displays initial content', () => {
-      render(<BlockEditor blockId="test-block-id" initialContent="Test content" />);
-      const textarea = screen.getByRole('textbox') as HTMLTextAreaElement;
-      expect(textarea.value).toBe('Test content');
-    });
-
-    it('sets data-block-id attribute', () => {
-      render(<BlockEditor blockId="my-block-123" initialContent="" />);
-      const editor = screen.getByTestId('block-editor');
-      expect(editor.getAttribute('data-block-id')).toBe('my-block-123');
-    });
-  });
-
-  describe('Accessibility', () => {
-    it('has accessible label', () => {
-      render(<BlockEditor blockId="test-id" initialContent="" />);
-      expect(screen.getByLabelText('Block editor')).toBeDefined();
-    });
-  });
-});
+// Note: BlockEditor is now a full ProseMirror implementation at src/editor/BlockEditor.tsx
+// It requires complex service setup and is tested via integration tests and E2E tests.
+// The old stub tests have been removed since the stub was replaced with the real editor.
 
 // ============================================================================
 // StaticBlockContent Tests
@@ -509,7 +547,12 @@ describe('StaticBlockContent', () => {
 describe('BlockNode', () => {
   describe('Basic Rendering', () => {
     it('renders without crashing', async () => {
-      render(<BlockNode blockId="test-block-id" />);
+      const blockService = createMockBlockService(createMockBlock({ blockId: 'test-block-id' }));
+      render(
+        <TestWrapper blockService={blockService}>
+          <BlockNode blockId="test-block-id" />
+        </TestWrapper>
+      );
 
       await waitFor(() => {
         expect(screen.getByTestId('block-node')).toBeDefined();
@@ -517,7 +560,12 @@ describe('BlockNode', () => {
     });
 
     it('renders with role="treeitem"', async () => {
-      render(<BlockNode blockId="test-block-id" />);
+      const blockService = createMockBlockService(createMockBlock({ blockId: 'test-block-id' }));
+      render(
+        <TestWrapper blockService={blockService}>
+          <BlockNode blockId="test-block-id" />
+        </TestWrapper>
+      );
 
       await waitFor(() => {
         expect(screen.getByRole('treeitem')).toBeDefined();
@@ -525,7 +573,12 @@ describe('BlockNode', () => {
     });
 
     it('sets data-block-id attribute', async () => {
-      render(<BlockNode blockId="my-unique-id" />);
+      const blockService = createMockBlockService(createMockBlock({ blockId: 'my-unique-id' }));
+      render(
+        <TestWrapper blockService={blockService}>
+          <BlockNode blockId="my-unique-id" />
+        </TestWrapper>
+      );
 
       await waitFor(() => {
         const node = screen.getByTestId('block-node');
@@ -534,20 +587,31 @@ describe('BlockNode', () => {
     });
 
     it('renders loading state initially', () => {
-      render(<BlockNode blockId="test-id" />);
+      // Make the service return a pending promise so we see loading state
+      const blockService = createMockBlockService();
+      blockService.getById = vi.fn().mockImplementation(() => new Promise(() => {}));
 
-      // Loading state may flash briefly
-      expect(
-        screen.queryByTestId('block-node-loading') || screen.queryByTestId('block-node')
-      ).toBeDefined();
+      render(
+        <TestWrapper blockService={blockService}>
+          <BlockNode blockId="test-id" />
+        </TestWrapper>
+      );
+
+      // Loading state should be shown
+      expect(screen.getByTestId('block-node-loading')).toBeDefined();
     });
   });
 
   describe('Focus State', () => {
     it('renders StaticBlockContent when not focused', async () => {
       useAppStore.setState({ focusedBlockId: null });
+      const blockService = createMockBlockService(createMockBlock({ blockId: 'test-block' }));
 
-      render(<BlockNode blockId="test-block" />);
+      render(
+        <TestWrapper blockService={blockService}>
+          <BlockNode blockId="test-block" />
+        </TestWrapper>
+      );
 
       await waitFor(() => {
         expect(screen.getByTestId('static-block-content')).toBeDefined();
@@ -556,18 +620,29 @@ describe('BlockNode', () => {
 
     it('renders BlockEditor when focused', async () => {
       useAppStore.setState({ focusedBlockId: 'test-block' });
+      const blockService = createMockBlockService(createMockBlock({ blockId: 'test-block' }));
 
-      render(<BlockNode blockId="test-block" />);
+      render(
+        <TestWrapper blockService={blockService}>
+          <BlockNode blockId="test-block" />
+        </TestWrapper>
+      );
 
       await waitFor(() => {
-        expect(screen.getByTestId('block-editor')).toBeDefined();
+        // Real BlockEditor uses data-testid="block-editor-{blockId}"
+        expect(screen.getByTestId('block-editor-test-block')).toBeDefined();
       });
     });
 
     it('activates block on click', async () => {
       useAppStore.setState({ focusedBlockId: null });
+      const blockService = createMockBlockService(createMockBlock({ blockId: 'clickable-block' }));
 
-      render(<BlockNode blockId="clickable-block" />);
+      render(
+        <TestWrapper blockService={blockService}>
+          <BlockNode blockId="clickable-block" />
+        </TestWrapper>
+      );
 
       await waitFor(() => {
         expect(screen.getByTestId('static-block-content')).toBeDefined();
@@ -581,7 +656,13 @@ describe('BlockNode', () => {
 
   describe('Accessibility', () => {
     it('has aria-level based on depth', async () => {
-      render(<BlockNode blockId="test-block" depth={2} />);
+      const blockService = createMockBlockService(createMockBlock({ blockId: 'test-block' }));
+
+      render(
+        <TestWrapper blockService={blockService}>
+          <BlockNode blockId="test-block" depth={2} />
+        </TestWrapper>
+      );
 
       await waitFor(() => {
         const node = screen.getByRole('treeitem');
@@ -590,7 +671,13 @@ describe('BlockNode', () => {
     });
 
     it('has aria-level of 1 for root depth', async () => {
-      render(<BlockNode blockId="root-block" depth={0} />);
+      const blockService = createMockBlockService(createMockBlock({ blockId: 'root-block' }));
+
+      render(
+        <TestWrapper blockService={blockService}>
+          <BlockNode blockId="root-block" depth={0} />
+        </TestWrapper>
+      );
 
       await waitFor(() => {
         const node = screen.getByRole('treeitem');
@@ -601,7 +688,13 @@ describe('BlockNode', () => {
 
   describe('Performance Styles', () => {
     it('applies contentVisibility: auto', async () => {
-      render(<BlockNode blockId="test-block" />);
+      const blockService = createMockBlockService(createMockBlock({ blockId: 'test-block' }));
+
+      render(
+        <TestWrapper blockService={blockService}>
+          <BlockNode blockId="test-block" />
+        </TestWrapper>
+      );
 
       await waitFor(() => {
         const node = screen.getByTestId('block-node');
@@ -610,7 +703,13 @@ describe('BlockNode', () => {
     });
 
     it('applies indentation based on depth', async () => {
-      render(<BlockNode blockId="nested-block" depth={3} />);
+      const blockService = createMockBlockService(createMockBlock({ blockId: 'nested-block' }));
+
+      render(
+        <TestWrapper blockService={blockService}>
+          <BlockNode blockId="nested-block" depth={3} />
+        </TestWrapper>
+      );
 
       await waitFor(() => {
         const node = screen.getByTestId('block-node');
@@ -619,7 +718,13 @@ describe('BlockNode', () => {
     });
 
     it('has no indentation at depth 0', async () => {
-      render(<BlockNode blockId="root-block" depth={0} />);
+      const blockService = createMockBlockService(createMockBlock({ blockId: 'root-block' }));
+
+      render(
+        <TestWrapper blockService={blockService}>
+          <BlockNode blockId="root-block" depth={0} />
+        </TestWrapper>
+      );
 
       await waitFor(() => {
         const node = screen.getByTestId('block-node');
@@ -630,7 +735,13 @@ describe('BlockNode', () => {
 
   describe('Children Rendering', () => {
     it('does not render block-children when there are no children', async () => {
-      render(<BlockNode blockId="leaf-block" />);
+      const blockService = createMockBlockService(createMockBlock({ blockId: 'leaf-block' }));
+
+      render(
+        <TestWrapper blockService={blockService}>
+          <BlockNode blockId="leaf-block" />
+        </TestWrapper>
+      );
 
       await waitFor(() => {
         expect(screen.queryByTestId('block-children')).toBeNull();
@@ -649,7 +760,13 @@ describe('BlockNode', () => {
 
   describe('Default Props', () => {
     it('defaults depth to 0', async () => {
-      render(<BlockNode blockId="no-depth-prop" />);
+      const blockService = createMockBlockService(createMockBlock({ blockId: 'no-depth-prop' }));
+
+      render(
+        <TestWrapper blockService={blockService}>
+          <BlockNode blockId="no-depth-prop" />
+        </TestWrapper>
+      );
 
       await waitFor(() => {
         const node = screen.getByTestId('block-node');
@@ -667,7 +784,13 @@ describe('BlockNode', () => {
 describe('BlockNode Integration', () => {
   describe('Store Integration', () => {
     it('subscribes to focusedBlockId changes', async () => {
-      render(<BlockNode blockId="reactive-block" />);
+      const blockService = createMockBlockService(createMockBlock({ blockId: 'reactive-block' }));
+
+      render(
+        <TestWrapper blockService={blockService}>
+          <BlockNode blockId="reactive-block" />
+        </TestWrapper>
+      );
 
       await waitFor(() => {
         expect(screen.getByTestId('static-block-content')).toBeDefined();
@@ -679,7 +802,8 @@ describe('BlockNode Integration', () => {
       });
 
       await waitFor(() => {
-        expect(screen.getByTestId('block-editor')).toBeDefined();
+        // Real BlockEditor uses block-editor-{blockId} format
+        expect(screen.getByTestId('block-editor-reactive-block')).toBeDefined();
       });
 
       // Remove focus
@@ -693,7 +817,13 @@ describe('BlockNode Integration', () => {
     });
 
     it('updates correctly when focus moves to another block', async () => {
-      render(<BlockNode blockId="block-a" />);
+      const blockService = createMockBlockService(createMockBlock({ blockId: 'block-a' }));
+
+      render(
+        <TestWrapper blockService={blockService}>
+          <BlockNode blockId="block-a" />
+        </TestWrapper>
+      );
 
       await waitFor(() => {
         expect(screen.getByTestId('static-block-content')).toBeDefined();
@@ -705,7 +835,8 @@ describe('BlockNode Integration', () => {
       });
 
       await waitFor(() => {
-        expect(screen.getByTestId('block-editor')).toBeDefined();
+        // Real BlockEditor uses block-editor-{blockId} format
+        expect(screen.getByTestId('block-editor-block-a')).toBeDefined();
       });
 
       // Focus a different block
@@ -721,7 +852,13 @@ describe('BlockNode Integration', () => {
 
   describe('Component Composition', () => {
     it('renders BulletHandle inside BlockNode', async () => {
-      render(<BlockNode blockId="with-bullet" />);
+      const blockService = createMockBlockService(createMockBlock({ blockId: 'with-bullet' }));
+
+      render(
+        <TestWrapper blockService={blockService}>
+          <BlockNode blockId="with-bullet" />
+        </TestWrapper>
+      );
 
       await waitFor(() => {
         expect(screen.getByRole('button', { name: /bullet/i })).toBeDefined();
@@ -729,7 +866,13 @@ describe('BlockNode Integration', () => {
     });
 
     it('renders content area inside BlockNode', async () => {
-      render(<BlockNode blockId="with-content" />);
+      const blockService = createMockBlockService(createMockBlock({ blockId: 'with-content' }));
+
+      render(
+        <TestWrapper blockService={blockService}>
+          <BlockNode blockId="with-content" />
+        </TestWrapper>
+      );
 
       await waitFor(() => {
         expect(

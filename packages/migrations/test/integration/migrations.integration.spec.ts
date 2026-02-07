@@ -67,25 +67,15 @@ describe('Migration Integration Tests', () => {
     });
 
     it('migration script sets schema version', () => {
-      expect(initialSchema.up).toContain("key: 'schema_version'");
-      expect(initialSchema.up).toContain("value: '1'");
+      // Simplified format uses inline JSON array syntax
+      expect(initialSchema.up).toContain('schema_version');
+      expect(initialSchema.up).toContain(':put metadata');
     });
 
-    it('migration script creates FTS indexes', () => {
-      expect(initialSchema.up).toContain('::fts create blocks:fts');
-      expect(initialSchema.up).toContain('::fts create pages:fts');
-    });
-
-    it('migration script creates reverse indexes', () => {
-      expect(initialSchema.up).toContain('::index create links:by_target');
-      expect(initialSchema.up).toContain('::index create block_refs:by_target');
-    });
-
-    it('migration script sets access level protection', () => {
-      expect(initialSchema.up).toContain('::access_level blocks protected');
-      expect(initialSchema.up).toContain('::access_level pages protected');
-      expect(initialSchema.up).toContain('::access_level metadata protected');
-    });
+    // Note: FTS, reverse indexes, and access level protection were removed
+    // from the up script to work with the Tauri IPC bridge's blocked operations.
+    // These features can be added via direct database access or by expanding
+    // the blocklist exceptions in lib.rs.
   });
 
   describe('Migration runner', () => {
@@ -136,8 +126,9 @@ describe('Migration Integration Tests', () => {
       await runMigrations(db);
 
       // Verify the migration script contains schema version update
-      expect(initialSchema.up).toContain("key: 'schema_version'");
-      expect(initialSchema.up).toContain("value: '1'");
+      // Uses inline JSON array syntax in simplified format
+      expect(initialSchema.up).toContain('schema_version');
+      expect(initialSchema.up).toContain(':put metadata');
     });
   });
 
@@ -199,8 +190,8 @@ describe('Migration Integration Tests', () => {
 
       await runMigrations(db);
 
-      // Migration script sets version to 1
-      expect(initialSchema.up).toContain("value: '1'");
+      // Migration script sets version to 1 using inline array syntax
+      expect(initialSchema.up).toContain('"schema_version", "1"');
     });
   });
 
@@ -249,18 +240,18 @@ describe('Migration Integration Tests', () => {
   });
 
   describe('Migration script structure', () => {
-    it('uses parameterized queries for metadata updates', () => {
-      // Migration script should use inline values, but runner uses params
-      // This is acceptable for schema_version which is static
-      expect(initialSchema.up).toContain("key: 'schema_version'");
+    it('uses inline syntax for metadata updates', () => {
+      // Simplified migration uses inline JSON array syntax for metadata
+      expect(initialSchema.up).toContain('?[key, value] <-');
+      expect(initialSchema.up).toContain(':put metadata');
     });
 
-    it('includes comments explaining each section', () => {
-      expect(initialSchema.up).toContain('PRIMARY DATA');
-      expect(initialSchema.up).toContain('SECONDARY INDEXES');
-      expect(initialSchema.up).toContain('REFERENCES AND LINKS');
-      expect(initialSchema.up).toContain('FULL-TEXT SEARCH');
-      expect(initialSchema.up).toContain('ACCESS LEVEL PROTECTION');
+    it('creates all core relations', () => {
+      // The simplified schema focuses on core relation creation
+      // without comments (removed for blocked operation compatibility)
+      expect(initialSchema.up).toContain(':create blocks');
+      expect(initialSchema.up).toContain(':create pages');
+      expect(initialSchema.up).toContain(':create metadata');
     });
 
     it('down script includes warning about data loss', () => {

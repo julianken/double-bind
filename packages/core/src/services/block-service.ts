@@ -427,6 +427,30 @@ export class BlockService {
   }
 
   /**
+   * Get children of a block, ordered by their position.
+   *
+   * @param blockId - The parent block ID
+   * @param pageId - The page ID (needed to construct parent key for root blocks)
+   * @returns Array of child blocks sorted by order
+   * @throws DoubleBindError with context on repository failure
+   */
+  async getChildren(blockId: BlockId, pageId: PageId): Promise<Block[]> {
+    try {
+      const parentKey = computeParentKey(blockId, pageId);
+      return await this.blockRepo.getChildren(parentKey);
+    } catch (error) {
+      if (error instanceof DoubleBindError) {
+        throw error;
+      }
+      throw new DoubleBindError(
+        `Failed to get children for block "${blockId}": ${error instanceof Error ? error.message : String(error)}`,
+        ErrorCode.DB_QUERY_FAILED,
+        error instanceof Error ? error : undefined
+      );
+    }
+  }
+
+  /**
    * Get all blocks that reference this block (backlinks).
    *
    * Returns blocks with their page context. The page info is populated

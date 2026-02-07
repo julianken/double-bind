@@ -187,7 +187,7 @@ export function PageList({ limit = 100, className }: PageListProps) {
   // Handle page click
   const handlePageClick = useCallback(
     (pageId: string) => {
-      navigateToPage(pageId);
+      navigateToPage('page/' + pageId);
     },
     [navigateToPage]
   );
