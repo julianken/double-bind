@@ -235,6 +235,7 @@ export function PageView({ pageId }: PageViewProps) {
   const { pageService, blockService } = useServices();
   const navigateToPage = useAppStore((state) => state.navigateToPage);
   const selectedBlockIds = useAppStore((state) => state.selectedBlockIds);
+  const clearSelection = useAppStore((state) => state.clearSelection);
 
   // Backlinks panel expanded state (persisted in component state)
   const [backlinksExpanded, setBacklinksExpanded] = useState(true);
@@ -412,6 +413,63 @@ export function PageView({ pageId }: PageViewProps) {
     window.addEventListener('keydown', handleMultiBlockIndent);
     return () => window.removeEventListener('keydown', handleMultiBlockIndent);
   }, [selectedBlockIds, blockService]);
+
+  // Multi-block delete: Delete/Backspace when multiple blocks are selected
+  // This handles the case where multiple blocks are selected (via Shift+Up/Down)
+  // and the user presses Delete or Backspace to delete all selected blocks.
+  useEffect(() => {
+    const handleMultiBlockDelete = async (event: KeyboardEvent) => {
+      // Only handle Delete/Backspace when multiple blocks are selected
+      if (event.key !== 'Delete' && event.key !== 'Backspace') {
+        return;
+      }
+
+      if (selectedBlockIds.size < 2) {
+        return;
+      }
+
+      // Don't handle if focus is in an editor (single-block operations handled by ProseMirror)
+      const target = event.target as HTMLElement;
+      const isContentEditable =
+        target.isContentEditable === true || target.getAttribute?.('contenteditable') === 'true';
+
+      if (isContentEditable) {
+        return;
+      }
+
+      event.preventDefault();
+
+      // Convert Set to array for processing
+      const blockIds = Array.from(selectedBlockIds) as BlockId[];
+
+      // Don't delete all blocks - keep at least one
+      // Remove the last block from the deletion list
+      if (blockIds.length === rootBlocks.length && rootBlocks.length > 0) {
+        blockIds.pop();
+      }
+
+      try {
+        // Delete all selected blocks
+        for (const blockId of blockIds) {
+          await blockService.deleteBlock(blockId);
+        }
+
+        // Clear selection after deletion
+        clearSelection();
+
+        // Invalidate queries to refresh the UI
+        invalidateQueries(['blocks']);
+        invalidateQueries(['block']);
+        invalidateQueries(['page', 'withBlocks']);
+      } catch {
+        // Silently ignore errors
+        // Individual blocks may fail but others will succeed
+      }
+    };
+
+    window.addEventListener('keydown', handleMultiBlockDelete);
+    return () => window.removeEventListener('keydown', handleMultiBlockDelete);
+  }, [selectedBlockIds, blockService, rootBlocks.length, clearSelection]);
 
   // Loading state
   if (isLoading) {
