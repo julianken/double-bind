@@ -12,8 +12,13 @@
  * - todo_item: Checkbox item with checked state
  * - query_embed: Embedded Datalog query result
  *
- * Marks:
+ * Formatting Marks:
  * - bold, italic, code, highlight, strikethrough
+ *
+ * Reference Marks:
+ * - pageLink: Link to another page ([[Page Name]])
+ * - blockRef: Reference to another block (((block_id)))
+ * - tag: Hashtag reference (#tag or #[[multi word tag]])
  */
 
 import { Schema } from 'prosemirror-model';
@@ -144,11 +149,16 @@ const todo_item: NodeSpec = {
 
 /**
  * Query embed node - embedded Datalog query result.
- * Stores the query string and displays results inline.
+ * Stores the query string and cached results for display.
+ *
+ * Attributes:
+ * - query: The Datalog query string
+ * - results: JSON-stringified query results (cached for display)
  */
 const query_embed: NodeSpec = {
   attrs: {
     query: { default: '', validate: 'string' },
+    results: { default: '', validate: 'string' },
   },
   group: 'block',
   atom: true, // Treated as a single unit, not editable inline
@@ -157,19 +167,24 @@ const query_embed: NodeSpec = {
   parseDOM: [
     {
       tag: 'div[data-type="query"]',
-      getAttrs(dom): { query: string } | false {
+      getAttrs(dom): { query: string; results: string } | false {
         if (!(dom instanceof HTMLElement)) return false;
-        return { query: dom.dataset.query || '' };
+        return {
+          query: dom.dataset.query || '',
+          results: dom.dataset.results || '',
+        };
       },
     },
   ],
   toDOM(node): DOMOutputSpec {
     const query = node.attrs.query as string;
+    const results = node.attrs.results as string;
     return [
       'div',
       {
         'data-type': 'query',
         'data-query': query,
+        'data-results': results,
         class: 'query-embed',
       },
       ['code', { class: 'query-source' }, query],
@@ -278,6 +293,109 @@ const strikethrough: MarkSpec = {
 };
 
 // ============================================================================
+// Reference Marks
+// ============================================================================
+
+/**
+ * Page link mark - reference to another page via [[Page Name]] syntax.
+ * Stores the page title for display and linking.
+ */
+const pageLink: MarkSpec = {
+  attrs: {
+    title: { default: '', validate: 'string' },
+  },
+  inclusive: false,
+  parseDOM: [
+    {
+      tag: 'a[data-type="page-link"]',
+      getAttrs(dom): { title: string } | false {
+        if (!(dom instanceof HTMLElement)) return false;
+        return { title: dom.dataset.title || dom.textContent || '' };
+      },
+    },
+  ],
+  toDOM(mark): DOMOutputSpec {
+    const title = mark.attrs.title as string;
+    return [
+      'a',
+      {
+        'data-type': 'page-link',
+        'data-title': title,
+        class: 'page-link',
+        href: '#',
+      },
+      0,
+    ];
+  },
+};
+
+/**
+ * Block reference mark - reference to another block via ((block_id)) syntax.
+ * Stores the block ID (ULID format) for transclusion.
+ */
+const blockRef: MarkSpec = {
+  attrs: {
+    blockId: { default: '', validate: 'string' },
+  },
+  inclusive: false,
+  parseDOM: [
+    {
+      tag: 'a[data-type="block-ref"]',
+      getAttrs(dom): { blockId: string } | false {
+        if (!(dom instanceof HTMLElement)) return false;
+        return { blockId: dom.dataset.blockId || '' };
+      },
+    },
+  ],
+  toDOM(mark): DOMOutputSpec {
+    const blockId = mark.attrs.blockId as string;
+    return [
+      'a',
+      {
+        'data-type': 'block-ref',
+        'data-block-id': blockId,
+        class: 'block-ref',
+        href: '#',
+      },
+      0,
+    ];
+  },
+};
+
+/**
+ * Tag mark - hashtag reference via #tag or #[[multi word tag]] syntax.
+ * Stores the tag name for filtering and linking.
+ */
+const tag: MarkSpec = {
+  attrs: {
+    tag: { default: '', validate: 'string' },
+  },
+  inclusive: false,
+  parseDOM: [
+    {
+      tag: 'a[data-type="tag"]',
+      getAttrs(dom): { tag: string } | false {
+        if (!(dom instanceof HTMLElement)) return false;
+        return { tag: dom.dataset.tag || '' };
+      },
+    },
+  ],
+  toDOM(mark): DOMOutputSpec {
+    const tagName = mark.attrs.tag as string;
+    return [
+      'a',
+      {
+        'data-type': 'tag',
+        'data-tag': tagName,
+        class: 'tag',
+        href: '#',
+      },
+      0,
+    ];
+  },
+};
+
+// ============================================================================
 // Schema Definition
 // ============================================================================
 
@@ -298,11 +416,16 @@ export const nodes = {
  * Mark specifications for the outliner schema.
  */
 export const marks = {
+  // Formatting marks
   bold,
   italic,
   code,
   highlight,
   strikethrough,
+  // Reference marks
+  pageLink,
+  blockRef,
+  tag,
 };
 
 /**
