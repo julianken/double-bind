@@ -58,10 +58,12 @@ function createMockContext(overrides: Partial<OutlinerContext> = {}): OutlinerCo
     blockId: 'block-1' as BlockId,
     pageId: 'page-1' as PageId,
     previousBlockId: 'block-0' as BlockId,
+    nextBlockId: 'block-2' as BlockId,
     getContentBeforeCursor: vi.fn().mockReturnValue('before'),
     getContentAfterCursor: vi.fn().mockReturnValue('after'),
     focusBlock: vi.fn(),
     onBlocksChanged: vi.fn(),
+    getBlockContent: vi.fn().mockReturnValue(' next content'),
     ...overrides,
   };
 }
@@ -411,6 +413,117 @@ describe('Outliner Plugin', () => {
       await new Promise((resolve) => setTimeout(resolve, 10));
 
       expect(mockBlockService.deleteBlock).not.toHaveBeenCalled();
+
+      view.destroy();
+    });
+  });
+
+  // ============================================================================
+  // Delete Key (Merge with Next)
+  // ============================================================================
+
+  describe('Delete Key (Merge with Next)', () => {
+    it('merges with next block on Delete at end', async () => {
+      const plugins = [createOutlinerKeymap(mockBlockService, getContext)];
+      const state = createEditorState('test', plugins);
+      const view = createEditorView(state);
+
+      // Move cursor to end
+      const docSize = view.state.doc.content.size;
+      const tr = view.state.tr.setSelection(
+        view.state.selection.constructor.near(view.state.doc.resolve(docSize))
+      );
+      view.dispatch(tr);
+
+      // Simulate Delete key
+      const event = new KeyboardEvent('keydown', { key: 'Delete', bubbles: true });
+      view.dom.dispatchEvent(event);
+
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      // Should update current block with merged content
+      expect(mockBlockService.updateContent).toHaveBeenCalledWith('block-1', 'test next content');
+      // Should delete the next block
+      expect(mockBlockService.deleteBlock).toHaveBeenCalledWith('block-2');
+      expect(mockContext.onBlocksChanged).toHaveBeenCalled();
+      expect(mockContext.focusBlock).toHaveBeenCalledWith('block-1', 'end');
+
+      view.destroy();
+    });
+
+    it('does not merge when cursor is not at end', async () => {
+      const plugins = [createOutlinerKeymap(mockBlockService, getContext)];
+      const state = createEditorState('test content', plugins);
+      const view = createEditorView(state);
+
+      // Move cursor to middle of text (not at end)
+      const tr = view.state.tr.setSelection(
+        view.state.selection.constructor.near(view.state.doc.resolve(5))
+      );
+      view.dispatch(tr);
+
+      // Delete at non-end position should not merge
+      const event = new KeyboardEvent('keydown', { key: 'Delete', bubbles: true });
+      view.dom.dispatchEvent(event);
+
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      // When not at end, merge should not happen
+      expect(mockBlockService.deleteBlock).not.toHaveBeenCalled();
+
+      view.destroy();
+    });
+
+    it('does not merge when there is no next block', async () => {
+      const contextWithNoNext = createMockContext({ nextBlockId: null });
+      const getCtx = () => contextWithNoNext;
+
+      const plugins = [createOutlinerKeymap(mockBlockService, getCtx)];
+      const state = createEditorState('test', plugins);
+      const view = createEditorView(state);
+
+      // Move cursor to end
+      const docSize = view.state.doc.content.size;
+      const tr = view.state.tr.setSelection(
+        view.state.selection.constructor.near(view.state.doc.resolve(docSize))
+      );
+      view.dispatch(tr);
+
+      const event = new KeyboardEvent('keydown', { key: 'Delete', bubbles: true });
+      view.dom.dispatchEvent(event);
+
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(mockBlockService.deleteBlock).not.toHaveBeenCalled();
+
+      view.destroy();
+    });
+
+    it('handles merge with next when getBlockContent is not provided', async () => {
+      const contextWithoutGetBlockContent = createMockContext({
+        getBlockContent: undefined,
+      });
+      const getCtx = () => contextWithoutGetBlockContent;
+
+      const plugins = [createOutlinerKeymap(mockBlockService, getCtx)];
+      const state = createEditorState('test', plugins);
+      const view = createEditorView(state);
+
+      // Move cursor to end
+      const docSize = view.state.doc.content.size;
+      const tr = view.state.tr.setSelection(
+        view.state.selection.constructor.near(view.state.doc.resolve(docSize))
+      );
+      view.dispatch(tr);
+
+      const event = new KeyboardEvent('keydown', { key: 'Delete', bubbles: true });
+      view.dom.dispatchEvent(event);
+
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      // Should still work, just without next block content
+      expect(mockBlockService.updateContent).toHaveBeenCalledWith('block-1', 'test');
+      expect(mockBlockService.deleteBlock).toHaveBeenCalledWith('block-2');
 
       view.destroy();
     });

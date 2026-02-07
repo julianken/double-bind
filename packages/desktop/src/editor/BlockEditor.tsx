@@ -78,6 +78,18 @@ export interface BlockEditorProps {
   previousBlockId?: BlockId | null;
 
   /**
+   * Next sibling block ID (for merge operations with Delete key).
+   * Pass null if this is the last block.
+   */
+  nextBlockId?: BlockId | null;
+
+  /**
+   * Callback to get content of a specific block by ID.
+   * Required for Delete-at-end merge operations.
+   */
+  getBlockContent?: (blockId: BlockId) => string;
+
+  /**
    * Callback to focus a specific block by ID.
    * Required when blockService is provided.
    */
@@ -266,6 +278,8 @@ export function BlockEditor({
   blockService,
   pageId,
   previousBlockId,
+  nextBlockId,
+  getBlockContent,
   focusBlock,
   onBlocksChanged,
   onContentChange,
@@ -299,6 +313,7 @@ export function BlockEditor({
         blockId,
         pageId: pageId!,
         previousBlockId: previousBlockId ?? null,
+        nextBlockId: nextBlockId ?? null,
         getContentBeforeCursor: (view: EditorView) => {
           const { from } = view.state.selection;
           return view.state.doc.textBetween(0, from);
@@ -310,6 +325,7 @@ export function BlockEditor({
         },
         focusBlock: focusBlock!,
         onBlocksChanged: onBlocksChanged!,
+        getBlockContent,
       };
     }
   });
