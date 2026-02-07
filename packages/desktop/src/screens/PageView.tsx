@@ -358,6 +358,61 @@ export function PageView({ pageId }: PageViewProps) {
     return () => window.removeEventListener('keydown', handleMultiBlockMove);
   }, [selectedBlockIds, blockService]);
 
+  // Multi-block indent/outdent: Tab/Shift+Tab when multiple blocks are selected
+  // This handles the case where multiple blocks are selected (via Shift+Up/Down)
+  // and the user presses Tab or Shift+Tab to indent/outdent all selected blocks together.
+  useEffect(() => {
+    const handleMultiBlockIndent = async (event: KeyboardEvent) => {
+      // Only handle Tab when multiple blocks are selected
+      if (event.key !== 'Tab') {
+        return;
+      }
+
+      if (selectedBlockIds.size < 2) {
+        return;
+      }
+
+      // Don't handle if focus is in an editor (single-block indent is handled by ProseMirror/BlockNode)
+      const target = event.target as HTMLElement;
+      const isContentEditable =
+        target.isContentEditable === true || target.getAttribute?.('contenteditable') === 'true';
+
+      if (isContentEditable) {
+        return;
+      }
+
+      event.preventDefault();
+
+      // Convert Set to array for sequential processing
+      const blockIds = Array.from(selectedBlockIds) as BlockId[];
+
+      try {
+        if (event.shiftKey) {
+          // Outdent all selected blocks (Shift+Tab)
+          for (const blockId of blockIds) {
+            await blockService.outdentBlock(blockId);
+          }
+        } else {
+          // Indent all selected blocks (Tab)
+          for (const blockId of blockIds) {
+            await blockService.indentBlock(blockId);
+          }
+        }
+
+        // Invalidate queries to refresh the UI
+        invalidateQueries(['blocks']);
+        invalidateQueries(['block']);
+        invalidateQueries(['page', 'withBlocks']);
+      } catch {
+        // Silently ignore errors (e.g., can't indent first block)
+        // Individual blocks may fail but others will succeed
+      }
+    };
+
+    window.addEventListener('keydown', handleMultiBlockIndent);
+    return () => window.removeEventListener('keydown', handleMultiBlockIndent);
+  }, [selectedBlockIds, blockService]);
+
   // Loading state
   if (isLoading) {
     return <LoadingState />;

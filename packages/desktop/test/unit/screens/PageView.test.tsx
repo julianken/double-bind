@@ -1086,6 +1086,207 @@ describe('PageView', () => {
       useAppStore.setState({ selectedBlockIds: new Set() });
     });
   });
+
+  // ==========================================================================
+  // Multi-Block Indent/Outdent (Tab/Shift+Tab)
+  // ==========================================================================
+
+  describe('Multi-Block Indent/Outdent', () => {
+    it('Tab indents all selected blocks when multiple blocks are selected', async () => {
+      const services = createMockServices();
+      const indentBlockMock = vi.fn().mockResolvedValue(undefined);
+      (services.blockService.indentBlock as ReturnType<typeof vi.fn>) = indentBlockMock;
+
+      // Set up selected blocks in the store
+      const { useAppStore } = await import('../../../src/stores/ui-store.js');
+      useAppStore.setState({
+        selectedBlockIds: new Set(['block-1', 'block-2']),
+      });
+
+      render(
+        <TestWrapper services={services}>
+          <PageView pageId="page-1" />
+        </TestWrapper>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('page-view')).toBeDefined();
+      });
+
+      // Press Tab to indent selected blocks
+      fireEvent.keyDown(window, { key: 'Tab' });
+
+      await waitFor(() => {
+        expect(indentBlockMock).toHaveBeenCalledTimes(2);
+      });
+
+      expect(indentBlockMock).toHaveBeenCalledWith('block-1');
+      expect(indentBlockMock).toHaveBeenCalledWith('block-2');
+
+      // Clean up
+      useAppStore.setState({ selectedBlockIds: new Set() });
+    });
+
+    it('Shift+Tab outdents all selected blocks when multiple blocks are selected', async () => {
+      const services = createMockServices();
+      const outdentBlockMock = vi.fn().mockResolvedValue(undefined);
+      (services.blockService.outdentBlock as ReturnType<typeof vi.fn>) = outdentBlockMock;
+
+      // Set up selected blocks in the store
+      const { useAppStore } = await import('../../../src/stores/ui-store.js');
+      useAppStore.setState({
+        selectedBlockIds: new Set(['block-3', 'block-4']),
+      });
+
+      render(
+        <TestWrapper services={services}>
+          <PageView pageId="page-1" />
+        </TestWrapper>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('page-view')).toBeDefined();
+      });
+
+      // Press Shift+Tab to outdent selected blocks
+      fireEvent.keyDown(window, { key: 'Tab', shiftKey: true });
+
+      await waitFor(() => {
+        expect(outdentBlockMock).toHaveBeenCalledTimes(2);
+      });
+
+      expect(outdentBlockMock).toHaveBeenCalledWith('block-3');
+      expect(outdentBlockMock).toHaveBeenCalledWith('block-4');
+
+      // Clean up
+      useAppStore.setState({ selectedBlockIds: new Set() });
+    });
+
+    it('does not trigger multi-block indent when only one block is selected', async () => {
+      const services = createMockServices();
+      const indentBlockMock = vi.fn().mockResolvedValue(undefined);
+      (services.blockService.indentBlock as ReturnType<typeof vi.fn>) = indentBlockMock;
+
+      // Set up single selected block in the store
+      const { useAppStore } = await import('../../../src/stores/ui-store.js');
+      useAppStore.setState({
+        selectedBlockIds: new Set(['block-1']),
+      });
+
+      render(
+        <TestWrapper services={services}>
+          <PageView pageId="page-1" />
+        </TestWrapper>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('page-view')).toBeDefined();
+      });
+
+      // Press Tab - should not trigger multi-block indent (handled by BlockNode)
+      fireEvent.keyDown(window, { key: 'Tab' });
+
+      // Small delay to ensure async handler would have run
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // Should not call indentBlock since only 1 block is selected
+      expect(indentBlockMock).not.toHaveBeenCalled();
+
+      // Clean up
+      useAppStore.setState({ selectedBlockIds: new Set() });
+    });
+
+    it('does not trigger multi-block indent when no blocks are selected', async () => {
+      const services = createMockServices();
+      const indentBlockMock = vi.fn().mockResolvedValue(undefined);
+      (services.blockService.indentBlock as ReturnType<typeof vi.fn>) = indentBlockMock;
+
+      // Ensure no blocks are selected
+      const { useAppStore } = await import('../../../src/stores/ui-store.js');
+      useAppStore.setState({
+        selectedBlockIds: new Set(),
+      });
+
+      render(
+        <TestWrapper services={services}>
+          <PageView pageId="page-1" />
+        </TestWrapper>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('page-view')).toBeDefined();
+      });
+
+      // Press Tab
+      fireEvent.keyDown(window, { key: 'Tab' });
+
+      // Small delay to ensure async handler would have run
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // Should not call indentBlock
+      expect(indentBlockMock).not.toHaveBeenCalled();
+    });
+
+    it('handles indent errors gracefully', async () => {
+      const services = createMockServices();
+      const indentBlockMock = vi.fn().mockRejectedValue(new Error('Cannot indent'));
+      (services.blockService.indentBlock as ReturnType<typeof vi.fn>) = indentBlockMock;
+
+      // Set up selected blocks in the store
+      const { useAppStore } = await import('../../../src/stores/ui-store.js');
+      useAppStore.setState({
+        selectedBlockIds: new Set(['block-1', 'block-2']),
+      });
+
+      render(
+        <TestWrapper services={services}>
+          <PageView pageId="page-1" />
+        </TestWrapper>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('page-view')).toBeDefined();
+      });
+
+      // Press Tab - should not throw
+      expect(() => {
+        fireEvent.keyDown(window, { key: 'Tab' });
+      }).not.toThrow();
+
+      // Clean up
+      useAppStore.setState({ selectedBlockIds: new Set() });
+    });
+
+    it('handles outdent errors gracefully', async () => {
+      const services = createMockServices();
+      const outdentBlockMock = vi.fn().mockRejectedValue(new Error('Cannot outdent'));
+      (services.blockService.outdentBlock as ReturnType<typeof vi.fn>) = outdentBlockMock;
+
+      // Set up selected blocks in the store
+      const { useAppStore } = await import('../../../src/stores/ui-store.js');
+      useAppStore.setState({
+        selectedBlockIds: new Set(['block-1', 'block-2']),
+      });
+
+      render(
+        <TestWrapper services={services}>
+          <PageView pageId="page-1" />
+        </TestWrapper>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('page-view')).toBeDefined();
+      });
+
+      // Press Shift+Tab - should not throw
+      expect(() => {
+        fireEvent.keyDown(window, { key: 'Tab', shiftKey: true });
+      }).not.toThrow();
+
+      // Clean up
+      useAppStore.setState({ selectedBlockIds: new Set() });
+    });
+  });
 });
 
 // ============================================================================
