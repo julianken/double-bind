@@ -12,10 +12,13 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: './test/e2e',
-  fullyParallel: true,
+  // CRITICAL: Never run E2E tests in parallel - causes severe resource exhaustion
+  // See CLAUDE.md for details
+  fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  // CRITICAL: Always use single worker - parallel E2E causes severe resource exhaustion
+  workers: 1,
   timeout: 30000,
 
   // Global setup/teardown to start HTTP bridge server for mock Tauri IPC
@@ -50,10 +53,14 @@ export default defineConfig({
   ],
 
   // Start the Vite dev server before running tests
+  // E2E_TEST=true enables Tauri mock module aliasing in vite.config.ts
   webServer: {
-    command: 'pnpm dev',
+    command: 'E2E_TEST=true pnpm dev',
     port: 5173,
     reuseExistingServer: !process.env.CI,
     timeout: 120000,
+    env: {
+      E2E_TEST: 'true',
+    },
   },
 });

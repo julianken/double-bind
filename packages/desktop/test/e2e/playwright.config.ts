@@ -12,8 +12,9 @@ import { defineConfig, devices } from '@playwright/test';
 export default defineConfig({
   testDir: './tests',
 
-  // Run tests in parallel
-  fullyParallel: true,
+  // CRITICAL: Never run E2E tests in parallel - causes severe resource exhaustion
+  // See CLAUDE.md for details
+  fullyParallel: false,
 
   // Fail the build on CI if you accidentally left test.only in the source code
   forbidOnly: !!process.env.CI,
@@ -21,8 +22,8 @@ export default defineConfig({
   // Retry on CI only
   retries: process.env.CI ? 2 : 0,
 
-  // Opt out of parallel tests on CI
-  workers: process.env.CI ? 1 : undefined,
+  // CRITICAL: Always use single worker - parallel E2E causes severe resource exhaustion
+  workers: 1,
 
   // Reporter configuration
   // CRITICAL: JSON reporter for reliable result parsing
