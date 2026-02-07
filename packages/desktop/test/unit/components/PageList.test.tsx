@@ -2,14 +2,14 @@
  * Tests for PageList component
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { render, screen, waitFor, fireEvent, cleanup } from '@testing-library/react';
 import { act } from 'react';
 import type { Page, PageService, BlockService } from '@double-bind/core';
 import { PageList, PageListItem } from '../../../src/components/PageList.js';
 import { ServiceProvider } from '../../../src/providers/ServiceProvider.js';
 import { useAppStore } from '../../../src/stores/ui-store.js';
-import { clearQueryCache } from '../../../src/hooks/useCozoQuery.js';
+import { clearQueryCache, invalidateQueries } from '../../../src/hooks/useCozoQuery.js';
 
 // ============================================================================
 // Mock Data
@@ -96,6 +96,11 @@ describe('PageList', () => {
       historyIndex: -1,
     });
     // Clear query cache
+    clearQueryCache();
+  });
+
+  afterEach(() => {
+    cleanup();
     clearQueryCache();
   });
 
@@ -388,6 +393,112 @@ describe('PageList', () => {
 
       await waitFor(() => {
         expect(pageService.getAllPages).toHaveBeenCalledWith({ limit: 100 });
+      });
+    });
+  });
+
+  // ==========================================================================
+  // Cache Invalidation
+  // ==========================================================================
+
+  describe('Cache Invalidation', () => {
+    it('re-fetches pages when query is invalidated', async () => {
+      const initialPages: Page[] = [
+        {
+          pageId: 'page-1',
+          title: 'First Page',
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+          isDeleted: false,
+          dailyNoteDate: null,
+        },
+      ];
+
+      const updatedPages: Page[] = [
+        ...initialPages,
+        {
+          pageId: 'page-2',
+          title: 'New Page',
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+          isDeleted: false,
+          dailyNoteDate: null,
+        },
+      ];
+
+      const pageService = createMockPageService(initialPages);
+      pageService.getAllPages = vi
+        .fn()
+        .mockResolvedValueOnce(initialPages)
+        .mockResolvedValueOnce(updatedPages);
+
+      render(
+        <TestWrapper pageService={pageService}>
+          <PageList />
+        </TestWrapper>
+      );
+
+      // Wait for initial render
+      await waitFor(() => {
+        expect(screen.getByTestId('page-list')).toBeDefined();
+      });
+
+      expect(screen.getByText('First Page')).toBeDefined();
+      expect(screen.queryByText('New Page')).toBeNull();
+      expect(pageService.getAllPages).toHaveBeenCalledTimes(1);
+
+      // Invalidate the pages query (simulating what happens after page creation)
+      act(() => {
+        invalidateQueries(['pages']);
+      });
+
+      // Wait for re-fetch and verify new page appears
+      await waitFor(() => {
+        expect(pageService.getAllPages).toHaveBeenCalledTimes(2);
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText('New Page')).toBeDefined();
+      });
+    });
+
+    it('shows updated page list after page creation flow', async () => {
+      const initialPages: Page[] = [];
+
+      const createdPage: Page = {
+        pageId: 'new-page-id',
+        title: 'Untitled',
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        isDeleted: false,
+        dailyNoteDate: null,
+      };
+
+      const pageService = createMockPageService(initialPages);
+      pageService.getAllPages = vi
+        .fn()
+        .mockResolvedValueOnce(initialPages)
+        .mockResolvedValueOnce([createdPage]);
+
+      render(
+        <TestWrapper pageService={pageService}>
+          <PageList />
+        </TestWrapper>
+      );
+
+      // Wait for initial render (empty state)
+      await waitFor(() => {
+        expect(screen.getByTestId('page-list-empty')).toBeDefined();
+      });
+
+      // Simulate page creation by invalidating the query
+      act(() => {
+        invalidateQueries(['pages']);
+      });
+
+      // Wait for re-fetch and verify new page appears
+      await waitFor(() => {
+        expect(screen.getByText('Untitled')).toBeDefined();
       });
     });
   });
