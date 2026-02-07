@@ -19,6 +19,12 @@ export default defineWorkspace([
       environment: 'node',
       include: ['test/integration/**/*.{test,spec}.ts'],
       passWithNoTests: true,
+      pool: 'forks',
+      poolOptions: {
+        forks: {
+          singleFork: true,
+        },
+      },
     },
   },
 
@@ -31,6 +37,12 @@ export default defineWorkspace([
       environment: 'node',
       include: ['test/integration/**/*.{test,spec}.ts'],
       passWithNoTests: true,
+      pool: 'forks',
+      poolOptions: {
+        forks: {
+          singleFork: true,
+        },
+      },
     },
   },
 
@@ -43,6 +55,12 @@ export default defineWorkspace([
       environment: 'node',
       include: ['**/*.{test,spec}.ts'],
       passWithNoTests: true,
+      pool: 'forks',
+      poolOptions: {
+        forks: {
+          singleFork: true,
+        },
+      },
     },
   },
 ]);

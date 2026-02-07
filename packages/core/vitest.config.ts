@@ -8,5 +8,11 @@ export default defineConfig({
     include: ['test/unit/**/*.{test,spec}.ts'],
     exclude: ['test/integration/**'],
     passWithNoTests: true,
+    pool: 'forks',
+    poolOptions: {
+      forks: {
+        singleFork: true,
+      },
+    },
   },
 });
