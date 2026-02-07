@@ -129,6 +129,8 @@ const E2E_SCHEMA_STATEMENTS = [
   `::index create links:by_target { target_id, source_id, link_type }`,
   `::index create block_refs:by_target { target_block_id, source_block_id }`,
   `?[key, value] <- [["schema_version", "1"]] :put metadata { key, value }`,
+  // Mark the initial migration as applied so runMigrations() in main.tsx won't try to re-run it
+  `?[key, value] <- [["applied_migrations", '["001-initial-schema"]']] :put metadata { key, value }`,
 ];
 
 /**
