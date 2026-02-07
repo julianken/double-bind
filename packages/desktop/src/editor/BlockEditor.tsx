@@ -307,29 +307,33 @@ export function BlockEditor({
   // Determine if we're in service mode
   const useServiceMode = blockService && pageId && focusBlock && onBlocksChanged;
 
-  // Update context ref on each render so plugins always have fresh values
-  useEffect(() => {
-    if (useServiceMode) {
-      contextRef.current = {
-        blockId,
-        pageId: pageId!,
-        previousBlockId: previousBlockId ?? null,
-        nextBlockId: nextBlockId ?? null,
-        getContentBeforeCursor: (view: EditorView) => {
-          const { from } = view.state.selection;
-          return view.state.doc.textBetween(0, from);
-        },
-        getContentAfterCursor: (view: EditorView) => {
-          const { to } = view.state.selection;
-          const docSize = view.state.doc.content.size;
-          return view.state.doc.textBetween(to, docSize);
-        },
-        focusBlock: focusBlock!,
-        onBlocksChanged: onBlocksChanged!,
-        getBlockContent,
-      };
-    }
-  });
+  // Update context ref SYNCHRONOUSLY during render so plugins always have fresh values.
+  // This is safe because we're only mutating the ref, not triggering side effects.
+  // This ensures the context is available immediately when Enter key is pressed,
+  // avoiding race conditions with useEffect timing.
+  if (useServiceMode) {
+    contextRef.current = {
+      blockId,
+      pageId: pageId!,
+      previousBlockId: previousBlockId ?? null,
+      nextBlockId: nextBlockId ?? null,
+      getContentBeforeCursor: (view: EditorView) => {
+        const { from } = view.state.selection;
+        return view.state.doc.textBetween(0, from);
+      },
+      getContentAfterCursor: (view: EditorView) => {
+        const { to } = view.state.selection;
+        const docSize = view.state.doc.content.size;
+        return view.state.doc.textBetween(to, docSize);
+      },
+      focusBlock: focusBlock!,
+      onBlocksChanged: onBlocksChanged!,
+      getBlockContent,
+    };
+  } else {
+    // Clear context when not in service mode
+    contextRef.current = null;
+  }
 
   // Stable callback to get current context
   const getContext = useCallback((): OutlinerContext | null => {
