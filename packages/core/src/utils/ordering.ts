@@ -53,13 +53,16 @@ export function keysBetween(before: string | null, after: string | null, count: 
 }
 
 /**
- * Check if a key exceeds the maximum length and needs rebalancing.
+ * Check if any key exceeds the maximum length and needs rebalancing.
  *
- * @param key - The key to check
- * @returns true if the key is too long
+ * @param keys - A single key or array of keys to check
+ * @returns true if any key is too long
  */
-export function needsRebalance(key: string): boolean {
-  return key.length > MAX_KEY_LENGTH;
+export function needsRebalance(keys: string | string[]): boolean {
+  if (Array.isArray(keys)) {
+    return keys.some((key) => key.length > MAX_KEY_LENGTH);
+  }
+  return keys.length > MAX_KEY_LENGTH;
 }
 
 /**

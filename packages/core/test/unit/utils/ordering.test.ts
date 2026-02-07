@@ -113,6 +113,21 @@ describe('ordering utilities', () => {
       const longKey = 'a'.repeat(MAX_KEY_LENGTH + 1);
       expect(needsRebalance(longKey)).toBe(true);
     });
+
+    it('should return false for array of short keys', () => {
+      expect(needsRebalance(['a0', 'a1', 'a2'])).toBe(false);
+      expect(needsRebalance(['a'.repeat(MAX_KEY_LENGTH)])).toBe(false);
+    });
+
+    it('should return true if any key in array exceeds max length', () => {
+      const longKey = 'a'.repeat(MAX_KEY_LENGTH + 1);
+      expect(needsRebalance(['a0', longKey, 'a2'])).toBe(true);
+      expect(needsRebalance([longKey])).toBe(true);
+    });
+
+    it('should return false for empty array', () => {
+      expect(needsRebalance([])).toBe(false);
+    });
   });
 
   describe('rebalanceKeys', () => {
