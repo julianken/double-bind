@@ -22,6 +22,7 @@ import type { PropertyRepository } from '../repositories/property-repository.js'
 import { parseContent, type ParsedContent } from '../parsers/content-parser.js';
 import {
   keyBetween,
+  keysBetween,
   keyForInsertAfter,
   DEFAULT_ORDER,
   needsRebalance,
@@ -168,6 +169,10 @@ export class BlockService {
   /**
    * Soft-delete a block and remove associated links/refs/tags/properties.
    *
+   * If the block has children, they are promoted to be siblings of the
+   * deleted block (re-parented to the deleted block's parent) and positioned
+   * immediately after where the deleted block was located.
+   *
    * @param blockId - The block to delete
    * @throws DoubleBindError with BLOCK_NOT_FOUND if block doesn't exist
    * @throws DoubleBindError with context on repository failure
@@ -178,6 +183,35 @@ export class BlockService {
       const block = await this.blockRepo.getById(blockId);
       if (!block) {
         throw new DoubleBindError(`Block not found: ${blockId}`, ErrorCode.BLOCK_NOT_FOUND);
+      }
+
+      // Promote children to siblings before deleting
+      // Get children of this block
+      const children = await this.blockRepo.getChildren(blockId);
+
+      if (children.length > 0) {
+        // Get siblings of the block being deleted to calculate order keys
+        const parentKey = computeParentKey(block.parentId, block.pageId);
+        const siblings = await this.blockRepo.getChildren(parentKey);
+
+        // Find the position of the block being deleted
+        const deletedIndex = siblings.findIndex((s) => s.blockId === blockId);
+        const afterSibling = siblings[deletedIndex];
+        const nextSibling = deletedIndex < siblings.length - 1 ? siblings[deletedIndex + 1] : null;
+
+        // Generate order keys for promoted children
+        // They should be placed immediately after the deleted block
+        const newOrderKeys = keysBetween(
+          afterSibling?.order ?? null,
+          nextSibling?.order ?? null,
+          children.length
+        );
+
+        // Move each child to become a sibling of the deleted block
+        for (let i = 0; i < children.length; i++) {
+          const child = children[i]!;
+          await this.blockRepo.move(child.blockId, block.parentId, newOrderKeys[i]!);
+        }
       }
 
       // Remove all associated links and block refs

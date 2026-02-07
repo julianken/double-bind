@@ -135,6 +135,43 @@ const splitBlock: OutlinerCommand = async (
 };
 
 /**
+ * Delete an empty block entirely when Backspace is pressed.
+ * If the block has content, fall through to the default merge behavior.
+ */
+const deleteEmptyBlockOnBackspace: OutlinerCommand = async (
+  _state,
+  _dispatch,
+  view,
+  context,
+  blockService
+): Promise<boolean> => {
+  const currentContent = view.state.doc.textContent;
+
+  // Only handle empty blocks - non-empty blocks use standard merge behavior
+  if (currentContent.trim() !== '') {
+    return false;
+  }
+
+  try {
+    // Delete the empty block
+    await blockService.deleteBlock(context.blockId);
+
+    context.onBlocksChanged();
+
+    // Focus previous block at the end, or next block at start
+    if (context.previousBlockId) {
+      context.focusBlock(context.previousBlockId, 'end');
+    } else if (context.nextBlockId) {
+      context.focusBlock(context.nextBlockId, 'start');
+    }
+
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+/**
  * Merge current block with previous block when backspace is pressed at position 0.
  * Note: The position check is done in the shouldHandle callback in createOutlinerKeymap.
  */
@@ -170,6 +207,43 @@ const mergeWithPrevious: OutlinerCommand = async (
     if (currentContent) {
       // This is a limitation - the full implementation should be in the UI layer
       // that has access to both blocks' content
+    }
+
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+/**
+ * Delete an empty block entirely when Delete is pressed.
+ * If the block has content, fall through to the default merge behavior.
+ */
+const deleteEmptyBlockOnDelete: OutlinerCommand = async (
+  _state,
+  _dispatch,
+  view,
+  context,
+  blockService
+): Promise<boolean> => {
+  const currentContent = view.state.doc.textContent;
+
+  // Only handle empty blocks - non-empty blocks use standard merge behavior
+  if (currentContent.trim() !== '') {
+    return false;
+  }
+
+  try {
+    // Delete the empty block
+    await blockService.deleteBlock(context.blockId);
+
+    context.onBlocksChanged();
+
+    // Focus next block at start, or previous block at end
+    if (context.nextBlockId) {
+      context.focusBlock(context.nextBlockId, 'start');
+    } else if (context.previousBlockId) {
+      context.focusBlock(context.previousBlockId, 'end');
     }
 
     return true;
@@ -289,22 +363,54 @@ export function createOutlinerKeymap(
     // Shift-Enter: Insert newline (sync, doesn't need async handling)
     'Shift-Enter': insertNewline,
 
-    // Backspace: Merge with previous when at start
-    // Only handle when cursor is at position 0 or 1 AND there's a previous block
-    Backspace: createAsyncKeyHandler(getContext, blockService, mergeWithPrevious, (state, ctx) => {
-      const { from } = state.selection;
-      // Only handle if at start of block and there's a previous block to merge with
-      return (from === 0 || from === 1) && ctx.previousBlockId !== null;
-    }),
+    // Backspace: Delete empty block OR merge with previous when at start
+    // First try to delete empty block, then fall back to merge behavior
+    Backspace: (state, dispatch, view) => {
+      const ctx = getContext();
+      if (!ctx || !view) return false;
 
-    // Delete: Merge with next when at end
-    // Only handle when cursor is at the end of the document AND there's a next block
-    Delete: createAsyncKeyHandler(getContext, blockService, mergeWithNext, (state, ctx) => {
+      const { from } = state.selection;
+      const isAtStart = from === 0 || from === 1;
+
+      // First, try to delete empty block (works anywhere in the block)
+      if (state.doc.textContent.trim() === '') {
+        void deleteEmptyBlockOnBackspace(state, dispatch, view, ctx, blockService);
+        return true;
+      }
+
+      // Only handle merge if at start of block and there's a previous block
+      if (!isAtStart || ctx.previousBlockId === null) {
+        return false;
+      }
+
+      void mergeWithPrevious(state, dispatch, view, ctx, blockService);
+      return true;
+    },
+
+    // Delete: Delete empty block OR merge with next when at end
+    // First try to delete empty block, then fall back to merge behavior
+    Delete: (state, dispatch, view) => {
+      const ctx = getContext();
+      if (!ctx || !view) return false;
+
       const { to } = state.selection;
       const docSize = state.doc.content.size;
-      // Only handle if at end of block and there's a next block to merge with
-      return to >= docSize && ctx.nextBlockId !== null;
-    }),
+      const isAtEnd = to >= docSize;
+
+      // First, try to delete empty block (works anywhere in the block)
+      if (state.doc.textContent.trim() === '') {
+        void deleteEmptyBlockOnDelete(state, dispatch, view, ctx, blockService);
+        return true;
+      }
+
+      // Only handle merge if at end of block and there's a next block
+      if (!isAtEnd || ctx.nextBlockId === null) {
+        return false;
+      }
+
+      void mergeWithNext(state, dispatch, view, ctx, blockService);
+      return true;
+    },
   });
 }
 
