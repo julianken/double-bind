@@ -36,6 +36,10 @@ export {
   todoUncheckedRule,
   todoCheckedRule,
   codeBlockRule,
+  markInputRule,
+  boldRule,
+  italicRule,
+  inlineCodeRule,
   type InputRulesConfig,
 } from './input-rules.js';
 
