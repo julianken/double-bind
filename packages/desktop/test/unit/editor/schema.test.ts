@@ -512,9 +512,20 @@ describe('ProseMirror Schema', () => {
       expect(schema.marks.pageLink).toBeDefined();
     });
 
+    it('should have pageId attribute with default empty string', () => {
+      const pageLinkMark = schema.marks.pageLink.create();
+      expect(pageLinkMark.attrs.pageId).toBe('');
+    });
+
     it('should have title attribute with default empty string', () => {
       const pageLinkMark = schema.marks.pageLink.create();
       expect(pageLinkMark.attrs.title).toBe('');
+    });
+
+    it('should accept pageId attribute', () => {
+      const pageId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
+      const pageLinkMark = schema.marks.pageLink.create({ pageId });
+      expect(pageLinkMark.attrs.pageId).toBe(pageId);
     });
 
     it('should accept title attribute', () => {
@@ -522,8 +533,16 @@ describe('ProseMirror Schema', () => {
       expect(pageLinkMark.attrs.title).toBe('My Page');
     });
 
+    it('should accept both pageId and title attributes', () => {
+      const pageId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
+      const title = 'My Page';
+      const pageLinkMark = schema.marks.pageLink.create({ pageId, title });
+      expect(pageLinkMark.attrs.pageId).toBe(pageId);
+      expect(pageLinkMark.attrs.title).toBe(title);
+    });
+
     it('should apply to text', () => {
-      const pageLinkMark = schema.marks.pageLink.create({ title: 'Test Page' });
+      const pageLinkMark = schema.marks.pageLink.create({ pageId: '01ARZ3NDEKTSV4RRFFQ69G5FAV', title: 'Test Page' });
       const textNode = schema.text('Test Page', [pageLinkMark]);
       expect(textNode.marks).toHaveLength(1);
       expect(textNode.marks[0].type.name).toBe('pageLink');
@@ -534,22 +553,34 @@ describe('ProseMirror Schema', () => {
       expect(spec.inclusive).toBe(false);
     });
 
-    it('should serialize to anchor element with data-type', () => {
-      const pageLinkMark = schema.marks.pageLink.create({ title: 'Linked Page' });
+    it('should serialize to anchor element with data-type and data-page-id', () => {
+      const pageId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
+      const pageLinkMark = schema.marks.pageLink.create({ pageId, title: 'Linked Page' });
       const textNode = schema.text('Linked Page', [pageLinkMark]);
       const paragraph = schema.nodes.paragraph.create(null, [textNode]);
       const doc = schema.nodes.doc.create(null, [paragraph]);
       const html = serializeToHTML(doc);
       expect(html).toContain('data-type="page-link"');
+      expect(html).toContain(`data-page-id="${pageId}"`);
       expect(html).toContain('data-title="Linked Page"');
       expect(html).toContain('class="page-link"');
     });
 
-    it('should parse from page-link anchor element', () => {
-      const doc = parseHTML('<p><a data-type="page-link" data-title="My Page">My Page</a></p>');
+    it('should parse from page-link anchor element with pageId', () => {
+      const pageId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
+      const doc = parseHTML(`<p><a data-type="page-link" data-page-id="${pageId}" data-title="My Page">My Page</a></p>`);
       const textNode = doc.firstChild?.firstChild;
       expect(textNode?.marks.some((m) => m.type.name === 'pageLink')).toBe(true);
       const pageLinkMark = textNode?.marks.find((m) => m.type.name === 'pageLink');
+      expect(pageLinkMark?.attrs.pageId).toBe(pageId);
+      expect(pageLinkMark?.attrs.title).toBe('My Page');
+    });
+
+    it('should parse pageId as empty string when not present in DOM', () => {
+      const doc = parseHTML('<p><a data-type="page-link" data-title="My Page">My Page</a></p>');
+      const textNode = doc.firstChild?.firstChild;
+      const pageLinkMark = textNode?.marks.find((m) => m.type.name === 'pageLink');
+      expect(pageLinkMark?.attrs.pageId).toBe('');
       expect(pageLinkMark?.attrs.title).toBe('My Page');
     });
   });
@@ -699,7 +730,7 @@ describe('ProseMirror Schema', () => {
 
     it('should support combining pageLink with formatting marks', () => {
       const boldMark = schema.marks.bold.create();
-      const pageLinkMark = schema.marks.pageLink.create({ title: 'Bold Link' });
+      const pageLinkMark = schema.marks.pageLink.create({ pageId: '01ARZ3NDEKTSV4RRFFQ69G5FAV', title: 'Bold Link' });
       const textNode = schema.text('Bold Link', [boldMark, pageLinkMark]);
       expect(textNode.marks).toHaveLength(2);
       expect(textNode.marks.some((m) => m.type.name === 'bold')).toBe(true);
@@ -716,7 +747,7 @@ describe('ProseMirror Schema', () => {
     });
 
     it('should support combining all reference marks', () => {
-      const pageLinkMark = schema.marks.pageLink.create({ title: 'Page' });
+      const pageLinkMark = schema.marks.pageLink.create({ pageId: '01ARZ3NDEKTSV4RRFFQ69G5FAV', title: 'Page' });
       const blockRefMark = schema.marks.blockRef.create({ blockId: '01ARZ3NDEKTSV4RRFFQ69G5FAV' });
       const tagMark = schema.marks.tag.create({ tag: 'test' });
       // Note: In practice, these wouldn't all apply to the same text,

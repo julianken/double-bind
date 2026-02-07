@@ -298,28 +298,34 @@ const strikethrough: MarkSpec = {
 
 /**
  * Page link mark - reference to another page via [[Page Name]] syntax.
- * Stores the page title for display and linking.
+ * Stores the page ID for linking and title for display.
  */
 const pageLink: MarkSpec = {
   attrs: {
+    pageId: { default: '', validate: 'string' },
     title: { default: '', validate: 'string' },
   },
   inclusive: false,
   parseDOM: [
     {
       tag: 'a[data-type="page-link"]',
-      getAttrs(dom): { title: string } | false {
+      getAttrs(dom): { pageId: string; title: string } | false {
         if (!(dom instanceof HTMLElement)) return false;
-        return { title: dom.dataset.title || dom.textContent || '' };
+        return {
+          pageId: dom.dataset.pageId || '',
+          title: dom.dataset.title || dom.textContent || '',
+        };
       },
     },
   ],
   toDOM(mark): DOMOutputSpec {
+    const pageId = mark.attrs.pageId as string;
     const title = mark.attrs.title as string;
     return [
       'a',
       {
         'data-type': 'page-link',
+        'data-page-id': pageId,
         'data-title': title,
         class: 'page-link',
         href: '#',
