@@ -1287,6 +1287,205 @@ describe('PageView', () => {
       useAppStore.setState({ selectedBlockIds: new Set() });
     });
   });
+
+  // ==========================================================================
+  // Multi-Block Delete (Delete/Backspace)
+  // ==========================================================================
+
+  describe('Multi-Block Delete', () => {
+    it('Delete key deletes all selected blocks when multiple blocks are selected', async () => {
+      const services = createMockServices();
+      const deleteBlockMock = vi.fn().mockResolvedValue(undefined);
+      (services.blockService.deleteBlock as ReturnType<typeof vi.fn>) = deleteBlockMock;
+
+      // Set up selected blocks in the store
+      const { useAppStore } = await import('../../../src/stores/ui-store.js');
+      useAppStore.setState({
+        selectedBlockIds: new Set(['block-1', 'block-2']),
+      });
+
+      render(
+        <TestWrapper services={services}>
+          <PageView pageId="page-1" />
+        </TestWrapper>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('page-view')).toBeDefined();
+      });
+
+      // Press Delete to delete selected blocks
+      fireEvent.keyDown(window, { key: 'Delete' });
+
+      await waitFor(() => {
+        expect(deleteBlockMock).toHaveBeenCalled();
+      });
+
+      // Clean up
+      useAppStore.setState({ selectedBlockIds: new Set() });
+    });
+
+    it('Backspace key deletes all selected blocks when multiple blocks are selected', async () => {
+      const services = createMockServices();
+      const deleteBlockMock = vi.fn().mockResolvedValue(undefined);
+      (services.blockService.deleteBlock as ReturnType<typeof vi.fn>) = deleteBlockMock;
+
+      // Set up selected blocks in the store
+      const { useAppStore } = await import('../../../src/stores/ui-store.js');
+      useAppStore.setState({
+        selectedBlockIds: new Set(['block-3', 'block-4']),
+      });
+
+      render(
+        <TestWrapper services={services}>
+          <PageView pageId="page-1" />
+        </TestWrapper>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('page-view')).toBeDefined();
+      });
+
+      // Press Backspace to delete selected blocks
+      fireEvent.keyDown(window, { key: 'Backspace' });
+
+      await waitFor(() => {
+        expect(deleteBlockMock).toHaveBeenCalled();
+      });
+
+      // Clean up
+      useAppStore.setState({ selectedBlockIds: new Set() });
+    });
+
+    it('does not trigger multi-block delete when only one block is selected', async () => {
+      const services = createMockServices();
+      const deleteBlockMock = vi.fn().mockResolvedValue(undefined);
+      (services.blockService.deleteBlock as ReturnType<typeof vi.fn>) = deleteBlockMock;
+
+      // Set up single selected block in the store
+      const { useAppStore } = await import('../../../src/stores/ui-store.js');
+      useAppStore.setState({
+        selectedBlockIds: new Set(['block-1']),
+      });
+
+      render(
+        <TestWrapper services={services}>
+          <PageView pageId="page-1" />
+        </TestWrapper>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('page-view')).toBeDefined();
+      });
+
+      // Press Delete - should not trigger multi-block delete (handled by BlockNode)
+      fireEvent.keyDown(window, { key: 'Delete' });
+
+      // Small delay to ensure async handler would have run
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // Should not call deleteBlock since only 1 block is selected
+      expect(deleteBlockMock).not.toHaveBeenCalled();
+
+      // Clean up
+      useAppStore.setState({ selectedBlockIds: new Set() });
+    });
+
+    it('does not trigger multi-block delete when no blocks are selected', async () => {
+      const services = createMockServices();
+      const deleteBlockMock = vi.fn().mockResolvedValue(undefined);
+      (services.blockService.deleteBlock as ReturnType<typeof vi.fn>) = deleteBlockMock;
+
+      // Ensure no blocks are selected
+      const { useAppStore } = await import('../../../src/stores/ui-store.js');
+      useAppStore.setState({
+        selectedBlockIds: new Set(),
+      });
+
+      render(
+        <TestWrapper services={services}>
+          <PageView pageId="page-1" />
+        </TestWrapper>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('page-view')).toBeDefined();
+      });
+
+      // Press Delete
+      fireEvent.keyDown(window, { key: 'Delete' });
+
+      // Small delay to ensure async handler would have run
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // Should not call deleteBlock
+      expect(deleteBlockMock).not.toHaveBeenCalled();
+    });
+
+    it('clears selection after deletion', async () => {
+      const services = createMockServices();
+      const deleteBlockMock = vi.fn().mockResolvedValue(undefined);
+      (services.blockService.deleteBlock as ReturnType<typeof vi.fn>) = deleteBlockMock;
+
+      // Set up selected blocks in the store
+      const { useAppStore } = await import('../../../src/stores/ui-store.js');
+      useAppStore.setState({
+        selectedBlockIds: new Set(['block-3', 'block-4']),
+      });
+
+      render(
+        <TestWrapper services={services}>
+          <PageView pageId="page-1" />
+        </TestWrapper>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('page-view')).toBeDefined();
+      });
+
+      // Press Delete to delete selected blocks
+      fireEvent.keyDown(window, { key: 'Delete' });
+
+      await waitFor(() => {
+        expect(deleteBlockMock).toHaveBeenCalled();
+      });
+
+      // Selection should be cleared
+      await waitFor(() => {
+        expect(useAppStore.getState().selectedBlockIds.size).toBe(0);
+      });
+    });
+
+    it('handles delete errors gracefully', async () => {
+      const services = createMockServices();
+      const deleteBlockMock = vi.fn().mockRejectedValue(new Error('Cannot delete'));
+      (services.blockService.deleteBlock as ReturnType<typeof vi.fn>) = deleteBlockMock;
+
+      // Set up selected blocks in the store
+      const { useAppStore } = await import('../../../src/stores/ui-store.js');
+      useAppStore.setState({
+        selectedBlockIds: new Set(['block-1', 'block-2']),
+      });
+
+      render(
+        <TestWrapper services={services}>
+          <PageView pageId="page-1" />
+        </TestWrapper>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('page-view')).toBeDefined();
+      });
+
+      // Press Delete - should not throw
+      expect(() => {
+        fireEvent.keyDown(window, { key: 'Delete' });
+      }).not.toThrow();
+
+      // Clean up
+      useAppStore.setState({ selectedBlockIds: new Set() });
+    });
+  });
 });
 
 // ============================================================================
