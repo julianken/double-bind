@@ -496,6 +496,206 @@ describe('BlockService', () => {
     });
   });
 
+  describe('moveBlockUp', () => {
+    it('should swap block with its previous sibling', async () => {
+      const previousSiblingId = '01HXQ5NF6Z8V4JQXRK4KBBBBBB';
+      const previousSibling: Block = {
+        ...testBlock,
+        blockId: previousSiblingId,
+        content: 'Previous',
+        order: 'a0',
+      };
+      const blockToMove: Block = {
+        ...testBlock,
+        content: 'To move up',
+        order: 'a1',
+      };
+
+      const getByIdSpy = vi.spyOn(blockRepo, 'getById');
+      const getChildrenSpy = vi.spyOn(blockRepo, 'getChildren');
+      const moveSpy = vi.spyOn(blockRepo, 'move');
+
+      getByIdSpy.mockResolvedValueOnce(blockToMove);
+      getChildrenSpy.mockResolvedValueOnce([previousSibling, blockToMove]);
+      moveSpy.mockResolvedValueOnce(undefined);
+
+      await blockService.moveBlockUp(testBlockId);
+
+      // Verify block was moved with an order before the previous sibling
+      expect(moveSpy).toHaveBeenCalledWith(testBlockId, null, expect.any(String));
+      const moveCall = moveSpy.mock.calls[0];
+      const newOrder = moveCall?.[2] as string;
+      expect(newOrder < 'a0').toBe(true);
+    });
+
+    it('should do nothing if block is already the first sibling', async () => {
+      const blockToMove: Block = {
+        ...testBlock,
+        content: 'First block',
+        order: 'a0',
+      };
+
+      const getByIdSpy = vi.spyOn(blockRepo, 'getById');
+      const getChildrenSpy = vi.spyOn(blockRepo, 'getChildren');
+      const moveSpy = vi.spyOn(blockRepo, 'move');
+
+      getByIdSpy.mockResolvedValueOnce(blockToMove);
+      getChildrenSpy.mockResolvedValueOnce([blockToMove]);
+
+      await blockService.moveBlockUp(testBlockId);
+
+      // Verify no move was performed
+      expect(moveSpy).not.toHaveBeenCalled();
+    });
+
+    it('should position correctly when moving from third to second position', async () => {
+      const sibling1: Block = {
+        ...testBlock,
+        blockId: '01HXQ5NF6Z8V4JQXRK4KAAAAAA',
+        content: 'First',
+        order: 'a0',
+      };
+      const sibling2: Block = {
+        ...testBlock,
+        blockId: '01HXQ5NF6Z8V4JQXRK4KBBBBBB',
+        content: 'Second',
+        order: 'a1',
+      };
+      const blockToMove: Block = {
+        ...testBlock,
+        content: 'Third (to move)',
+        order: 'a2',
+      };
+
+      const getByIdSpy = vi.spyOn(blockRepo, 'getById');
+      const getChildrenSpy = vi.spyOn(blockRepo, 'getChildren');
+      const moveSpy = vi.spyOn(blockRepo, 'move');
+
+      getByIdSpy.mockResolvedValueOnce(blockToMove);
+      getChildrenSpy.mockResolvedValueOnce([sibling1, sibling2, blockToMove]);
+      moveSpy.mockResolvedValueOnce(undefined);
+
+      await blockService.moveBlockUp(testBlockId);
+
+      // Verify block was moved with an order between sibling1 and sibling2
+      expect(moveSpy).toHaveBeenCalled();
+      const moveCall = moveSpy.mock.calls[0];
+      const newOrder = moveCall?.[2] as string;
+      expect(newOrder > 'a0').toBe(true);
+      expect(newOrder < 'a1').toBe(true);
+    });
+
+    it('should throw BLOCK_NOT_FOUND for non-existent block', async () => {
+      const getByIdSpy = vi.spyOn(blockRepo, 'getById');
+      getByIdSpy.mockResolvedValueOnce(null);
+
+      await expect(blockService.moveBlockUp('nonexistent')).rejects.toThrow(DoubleBindError);
+      await expect(blockService.moveBlockUp('nonexistent')).rejects.toMatchObject({
+        code: ErrorCode.BLOCK_NOT_FOUND,
+      });
+    });
+  });
+
+  describe('moveBlockDown', () => {
+    it('should swap block with its next sibling', async () => {
+      const nextSiblingId = '01HXQ5NF6Z8V4JQXRK4KBBBBBB';
+      const blockToMove: Block = {
+        ...testBlock,
+        content: 'To move down',
+        order: 'a0',
+      };
+      const nextSibling: Block = {
+        ...testBlock,
+        blockId: nextSiblingId,
+        content: 'Next',
+        order: 'a1',
+      };
+
+      const getByIdSpy = vi.spyOn(blockRepo, 'getById');
+      const getChildrenSpy = vi.spyOn(blockRepo, 'getChildren');
+      const moveSpy = vi.spyOn(blockRepo, 'move');
+
+      getByIdSpy.mockResolvedValueOnce(blockToMove);
+      getChildrenSpy.mockResolvedValueOnce([blockToMove, nextSibling]);
+      moveSpy.mockResolvedValueOnce(undefined);
+
+      await blockService.moveBlockDown(testBlockId);
+
+      // Verify block was moved with an order after the next sibling
+      expect(moveSpy).toHaveBeenCalledWith(testBlockId, null, expect.any(String));
+      const moveCall = moveSpy.mock.calls[0];
+      const newOrder = moveCall?.[2] as string;
+      expect(newOrder > 'a1').toBe(true);
+    });
+
+    it('should do nothing if block is already the last sibling', async () => {
+      const blockToMove: Block = {
+        ...testBlock,
+        content: 'Last block',
+        order: 'a0',
+      };
+
+      const getByIdSpy = vi.spyOn(blockRepo, 'getById');
+      const getChildrenSpy = vi.spyOn(blockRepo, 'getChildren');
+      const moveSpy = vi.spyOn(blockRepo, 'move');
+
+      getByIdSpy.mockResolvedValueOnce(blockToMove);
+      getChildrenSpy.mockResolvedValueOnce([blockToMove]);
+
+      await blockService.moveBlockDown(testBlockId);
+
+      // Verify no move was performed
+      expect(moveSpy).not.toHaveBeenCalled();
+    });
+
+    it('should position correctly when moving from first to second position', async () => {
+      const blockToMove: Block = {
+        ...testBlock,
+        content: 'First (to move)',
+        order: 'a0',
+      };
+      const sibling2: Block = {
+        ...testBlock,
+        blockId: '01HXQ5NF6Z8V4JQXRK4KBBBBBB',
+        content: 'Second',
+        order: 'a1',
+      };
+      const sibling3: Block = {
+        ...testBlock,
+        blockId: '01HXQ5NF6Z8V4JQXRK4KCCCCCC',
+        content: 'Third',
+        order: 'a2',
+      };
+
+      const getByIdSpy = vi.spyOn(blockRepo, 'getById');
+      const getChildrenSpy = vi.spyOn(blockRepo, 'getChildren');
+      const moveSpy = vi.spyOn(blockRepo, 'move');
+
+      getByIdSpy.mockResolvedValueOnce(blockToMove);
+      getChildrenSpy.mockResolvedValueOnce([blockToMove, sibling2, sibling3]);
+      moveSpy.mockResolvedValueOnce(undefined);
+
+      await blockService.moveBlockDown(testBlockId);
+
+      // Verify block was moved with an order between sibling2 and sibling3
+      expect(moveSpy).toHaveBeenCalled();
+      const moveCall = moveSpy.mock.calls[0];
+      const newOrder = moveCall?.[2] as string;
+      expect(newOrder > 'a1').toBe(true);
+      expect(newOrder < 'a2').toBe(true);
+    });
+
+    it('should throw BLOCK_NOT_FOUND for non-existent block', async () => {
+      const getByIdSpy = vi.spyOn(blockRepo, 'getById');
+      getByIdSpy.mockResolvedValueOnce(null);
+
+      await expect(blockService.moveBlockDown('nonexistent')).rejects.toThrow(DoubleBindError);
+      await expect(blockService.moveBlockDown('nonexistent')).rejects.toMatchObject({
+        code: ErrorCode.BLOCK_NOT_FOUND,
+      });
+    });
+  });
+
   describe('indentBlock', () => {
     it('should make block a child of its previous sibling', async () => {
       const previousSiblingId = '01HXQ5NF6Z8V4JQXRK4KDDDDDD';

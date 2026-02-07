@@ -252,6 +252,184 @@ export class BlockService {
   }
 
   /**
+   * Move a block up (swap with previous sibling).
+   *
+   * If the block is already the first sibling, this operation does nothing.
+   *
+   * @param blockId - The block to move up
+   * @throws DoubleBindError with BLOCK_NOT_FOUND if block doesn't exist
+   * @throws DoubleBindError with context on repository failure
+   */
+  async moveBlockUp(blockId: BlockId): Promise<void> {
+    try {
+      // Get the block to move
+      const block = await this.blockRepo.getById(blockId);
+      if (!block) {
+        throw new DoubleBindError(`Block not found: ${blockId}`, ErrorCode.BLOCK_NOT_FOUND);
+      }
+
+      // Get siblings under the same parent
+      const parentKey = computeParentKey(block.parentId, block.pageId);
+      const siblings = await this.blockRepo.getChildren(parentKey);
+
+      // Find this block's position among siblings
+      const currentIndex = siblings.findIndex((s) => s.blockId === blockId);
+      if (currentIndex <= 0) {
+        // Already at the top - nothing to do
+        return;
+      }
+
+      // Calculate new order: position before the previous sibling
+      // We need to insert at currentIndex - 1, which means after sibling at currentIndex - 2
+      let newOrder: string;
+      if (currentIndex === 1) {
+        // Moving to first position - insert before the first sibling
+        const firstSibling = siblings[0];
+        newOrder = keyBetween(null, firstSibling?.order ?? null);
+      } else {
+        // Insert between sibling at currentIndex - 2 and sibling at currentIndex - 1
+        const beforeSibling = siblings[currentIndex - 2];
+        const afterSibling = siblings[currentIndex - 1];
+        newOrder = keyBetween(beforeSibling?.order ?? null, afterSibling?.order ?? null);
+      }
+
+      // Check if rebalance is needed
+      if (needsRebalance(newOrder)) {
+        // Trigger rebalance of all siblings
+        const rebalancedKeys = rebalanceKeys(siblings.length);
+
+        // Build the new order map - the block being moved takes the position of its previous sibling
+        const newOrders = new Map<string, string>();
+        let keyIndex = 0;
+        for (let i = 0; i < siblings.length; i++) {
+          const sibling = siblings[i]!;
+          if (i === currentIndex - 1) {
+            // This is where the moved block should go
+            newOrders.set(blockId, rebalancedKeys[keyIndex]!);
+            keyIndex++;
+            // The previous sibling takes the moved block's old position
+            newOrders.set(sibling.blockId, rebalancedKeys[keyIndex]!);
+            keyIndex++;
+          } else if (i === currentIndex) {
+            // Skip the block being moved (already handled above)
+            continue;
+          } else {
+            newOrders.set(sibling.blockId, rebalancedKeys[keyIndex]!);
+            keyIndex++;
+          }
+        }
+
+        await this.blockRepo.rebalanceSiblings(parentKey, newOrders);
+
+        if (this.onRebalance) {
+          this.onRebalance(parentKey);
+        }
+      } else {
+        // Move the block to the new position
+        await this.blockRepo.move(blockId, block.parentId, newOrder);
+      }
+    } catch (error) {
+      if (error instanceof DoubleBindError) {
+        throw error;
+      }
+      throw new DoubleBindError(
+        `Failed to move block up "${blockId}": ${error instanceof Error ? error.message : String(error)}`,
+        ErrorCode.DB_MUTATION_FAILED,
+        error instanceof Error ? error : undefined
+      );
+    }
+  }
+
+  /**
+   * Move a block down (swap with next sibling).
+   *
+   * If the block is already the last sibling, this operation does nothing.
+   *
+   * @param blockId - The block to move down
+   * @throws DoubleBindError with BLOCK_NOT_FOUND if block doesn't exist
+   * @throws DoubleBindError with context on repository failure
+   */
+  async moveBlockDown(blockId: BlockId): Promise<void> {
+    try {
+      // Get the block to move
+      const block = await this.blockRepo.getById(blockId);
+      if (!block) {
+        throw new DoubleBindError(`Block not found: ${blockId}`, ErrorCode.BLOCK_NOT_FOUND);
+      }
+
+      // Get siblings under the same parent
+      const parentKey = computeParentKey(block.parentId, block.pageId);
+      const siblings = await this.blockRepo.getChildren(parentKey);
+
+      // Find this block's position among siblings
+      const currentIndex = siblings.findIndex((s) => s.blockId === blockId);
+      if (currentIndex < 0 || currentIndex >= siblings.length - 1) {
+        // Already at the bottom or not found - nothing to do
+        return;
+      }
+
+      // Calculate new order: position after the next sibling
+      // We need to insert at currentIndex + 1, which means after sibling at currentIndex + 1
+      let newOrder: string;
+      if (currentIndex === siblings.length - 2) {
+        // Moving to last position - insert after the last sibling
+        const lastSibling = siblings[siblings.length - 1];
+        newOrder = keyBetween(lastSibling?.order ?? null, null);
+      } else {
+        // Insert between sibling at currentIndex + 1 and sibling at currentIndex + 2
+        const beforeSibling = siblings[currentIndex + 1];
+        const afterSibling = siblings[currentIndex + 2];
+        newOrder = keyBetween(beforeSibling?.order ?? null, afterSibling?.order ?? null);
+      }
+
+      // Check if rebalance is needed
+      if (needsRebalance(newOrder)) {
+        // Trigger rebalance of all siblings
+        const rebalancedKeys = rebalanceKeys(siblings.length);
+
+        // Build the new order map - the block being moved takes the position after its next sibling
+        const newOrders = new Map<string, string>();
+        let keyIndex = 0;
+        for (let i = 0; i < siblings.length; i++) {
+          const sibling = siblings[i]!;
+          if (i === currentIndex) {
+            // Skip the block being moved (will be handled when we reach currentIndex + 1)
+            continue;
+          } else if (i === currentIndex + 1) {
+            // The next sibling takes the moved block's old position
+            newOrders.set(sibling.blockId, rebalancedKeys[keyIndex]!);
+            keyIndex++;
+            // This is where the moved block should go
+            newOrders.set(blockId, rebalancedKeys[keyIndex]!);
+            keyIndex++;
+          } else {
+            newOrders.set(sibling.blockId, rebalancedKeys[keyIndex]!);
+            keyIndex++;
+          }
+        }
+
+        await this.blockRepo.rebalanceSiblings(parentKey, newOrders);
+
+        if (this.onRebalance) {
+          this.onRebalance(parentKey);
+        }
+      } else {
+        // Move the block to the new position
+        await this.blockRepo.move(blockId, block.parentId, newOrder);
+      }
+    } catch (error) {
+      if (error instanceof DoubleBindError) {
+        throw error;
+      }
+      throw new DoubleBindError(
+        `Failed to move block down "${blockId}": ${error instanceof Error ? error.message : String(error)}`,
+        ErrorCode.DB_MUTATION_FAILED,
+        error instanceof Error ? error : undefined
+      );
+    }
+  }
+
+  /**
    * Indent a block by making it a child of its previous sibling.
    *
    * If the block has no previous sibling, this operation does nothing.
