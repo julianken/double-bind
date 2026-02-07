@@ -12,6 +12,11 @@ import express, { type Request, type Response, type Express } from 'express';
 import type { Server } from 'http';
 import { CozoDb } from 'cozo-node';
 
+const BRIDGE_PORT = 3001;
+const BRIDGE_URL = `http://localhost:${BRIDGE_PORT}`;
+const HEALTH_CHECK_TIMEOUT = 10000; // 10 seconds
+const HEALTH_CHECK_INTERVAL = 100; // 100ms between retries
+
 // Store the server instance for teardown
 let server: Server | null = null;
 
@@ -170,6 +175,11 @@ async function globalSetup(_config: FullConfig): Promise<void> {
     res.sendStatus(200);
   });
 
+  // Health check endpoint for server readiness verification
+  app.get('/health', (_req: Request, res: Response) => {
+    res.json({ status: 'ok' });
+  });
+
   // Handle reset endpoint for test isolation
   app.post('/reset', async (_req: Request, res: Response) => {
     try {
@@ -233,13 +243,39 @@ async function globalSetup(_config: FullConfig): Promise<void> {
     }
   });
 
-  // Start server
-  server = app.listen(3001, () => {
-    console.log('E2E HTTP bridge server listening on port 3001');
+  // Start server and wait for it to be listening
+  await new Promise<void>((resolve, reject) => {
+    server = app.listen(BRIDGE_PORT, () => {
+      console.log(`E2E HTTP bridge server listening on port ${BRIDGE_PORT}`);
+      resolve();
+    });
+    server.on('error', reject);
   });
 
   // Store server reference for global teardown
   (globalThis as { __e2eServer?: Server }).__e2eServer = server;
+
+  // Wait for server to be ready by checking health endpoint
+  const startTime = Date.now();
+  let lastError: Error | null = null;
+
+  while (Date.now() - startTime < HEALTH_CHECK_TIMEOUT) {
+    try {
+      const response = await fetch(`${BRIDGE_URL}/health`);
+      if (response.ok) {
+        console.log('E2E HTTP bridge server health check passed');
+        return;
+      }
+      lastError = new Error(`Health check returned status ${response.status}`);
+    } catch (error) {
+      lastError = error as Error;
+    }
+    await new Promise((resolve) => setTimeout(resolve, HEALTH_CHECK_INTERVAL));
+  }
+
+  throw new Error(
+    `E2E HTTP bridge server failed health check after ${HEALTH_CHECK_TIMEOUT}ms: ${lastError?.message}`
+  );
 }
 
 export default globalSetup;
