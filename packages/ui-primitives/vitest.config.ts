@@ -8,5 +8,11 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     include: ['test/**/*.{test,spec}.{ts,tsx}'],
+    pool: 'forks',
+    poolOptions: {
+      forks: {
+        singleFork: true,
+      },
+    },
   },
 });

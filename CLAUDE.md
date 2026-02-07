@@ -10,9 +10,9 @@ This file provides guidance to Claude Code when working with this repository.
 
 **Development Model:** This project is developed exclusively with AI agents. Never include time estimates or effort projections. Focus on dependencies, complexity, and completion status.
 
-**Testing:** All code must pass tests locally before committing. Run the test suite and verify no failures before PRs.
+**Testing:** All code must pass tests locally before committing. Run the test suite and verify no failures before PRs. Vitest is configured to run sequentially (single fork) by default — do not override this. Parallel test execution causes severe system resource exhaustion.
 
-**E2E Testing:** After running E2E tests, ALWAYS run `pnpm test:e2e:summary` to verify results. Terminal output may not show failure counts. **NEVER claim "no failures" without checking the summary.** See [docs/testing/e2e-fast.md](docs/testing/e2e-fast.md).
+**E2E Testing:** After running E2E tests, ALWAYS run `pnpm test:e2e:summary` to verify results. Terminal output may not show failure counts. **NEVER claim "no failures" without checking the summary.** See [docs/testing/e2e-fast.md](docs/testing/e2e-fast.md). **NEVER run E2E tests in parallel** — always use `--workers=1`. Parallel E2E execution causes severe system resource exhaustion.
 
 **PRs:** All pull requests MUST use the template at `.github/PULL_REQUEST_TEMPLATE.md` if one exists.
 
@@ -34,15 +34,15 @@ This file provides guidance to Claude Code when working with this repository.
 
 ## Tech Stack
 
-| Layer | Technology | Version |
-|-------|------------|---------|
-| Runtime | Node.js | ≥20.0.0 |
-| Package Manager | pnpm | 9.15.0 |
-| Desktop Shell | Tauri | v2 |
-| Language | TypeScript | 5.7+ |
-| Frontend | React + ProseMirror + Zustand | React 19 |
-| Database | CozoDB (RocksDB backend) | 0.7 |
-| Testing | Vitest + Playwright | — |
+| Layer           | Technology                    | Version  |
+| --------------- | ----------------------------- | -------- |
+| Runtime         | Node.js                       | ≥20.0.0  |
+| Package Manager | pnpm                          | 9.15.0   |
+| Desktop Shell   | Tauri                         | v2       |
+| Language        | TypeScript                    | 5.7+     |
+| Frontend        | React + ProseMirror + Zustand | React 19 |
+| Database        | CozoDB (RocksDB backend)      | 0.7      |
+| Testing         | Vitest + Playwright           | —        |
 
 ---
 
@@ -82,12 +82,12 @@ pnpm clean                # Clean build artifacts
 
 ## Testing Layers
 
-| Layer | Tool | What It Tests | Speed |
-|-------|------|---------------|-------|
-| 1. Unit | Vitest + MockGraphDB | Business logic, isolated | Fast |
-| 2. Integration | Vitest + cozo-node | Datalog queries against real CozoDB | Fast |
-| 3. E2E Fast | Playwright + Vite | UI flows with mock Tauri IPC | Medium |
-| 4. E2E Full | Playwright + Tauri binary | Full stack including Rust shim | Slow |
+| Layer          | Tool                      | What It Tests                       | Speed  |
+| -------------- | ------------------------- | ----------------------------------- | ------ |
+| 1. Unit        | Vitest + MockGraphDB      | Business logic, isolated            | Fast   |
+| 2. Integration | Vitest + cozo-node        | Datalog queries against real CozoDB | Fast   |
+| 3. E2E Fast    | Playwright + Vite         | UI flows with mock Tauri IPC        | Medium |
+| 4. E2E Full    | Playwright + Tauri binary | Full stack including Rust shim      | Slow   |
 
 Use Layer 1-2 during development. Run Layer 3 before PRs. Run Layer 4 for IPC/Rust changes.
 
@@ -107,13 +107,13 @@ Use Layer 1-2 during development. Run Layer 3 before PRs. Run Layer 4 for IPC/Ru
 
 ## Documentation Map
 
-| Area | Path | Contents |
-|------|------|----------|
-| Architecture | [docs/architecture/](docs/architecture/) | System overview, tech stack, data flow, WASM option |
-| Decisions | [docs/decisions/](docs/decisions/) | ADRs 001-013 (database, language, editor, etc.) |
-| Database | [docs/database/](docs/database/) | Schema, queries, migrations, FTS |
-| Frontend | [docs/frontend/](docs/frontend/) | React, ProseMirror, state, graph viz |
-| Testing | [docs/testing/](docs/testing/) | 4-layer strategy, E2E guides |
-| Security | [docs/security/](docs/security/) | Threat model, injection prevention |
-| Packages | [docs/packages/](docs/packages/) | Per-package specs (10 packages) |
-| Infrastructure | [docs/infrastructure/](docs/infrastructure/) | Monorepo, Rust shim, Tauri config |
+| Area           | Path                                         | Contents                                            |
+| -------------- | -------------------------------------------- | --------------------------------------------------- |
+| Architecture   | [docs/architecture/](docs/architecture/)     | System overview, tech stack, data flow, WASM option |
+| Decisions      | [docs/decisions/](docs/decisions/)           | ADRs 001-013 (database, language, editor, etc.)     |
+| Database       | [docs/database/](docs/database/)             | Schema, queries, migrations, FTS                    |
+| Frontend       | [docs/frontend/](docs/frontend/)             | React, ProseMirror, state, graph viz                |
+| Testing        | [docs/testing/](docs/testing/)               | 4-layer strategy, E2E guides                        |
+| Security       | [docs/security/](docs/security/)             | Threat model, injection prevention                  |
+| Packages       | [docs/packages/](docs/packages/)             | Per-package specs (10 packages)                     |
+| Infrastructure | [docs/infrastructure/](docs/infrastructure/) | Monorepo, Rust shim, Tauri config                   |

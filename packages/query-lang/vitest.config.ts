@@ -6,5 +6,11 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     include: ['test/**/*.{test,spec}.ts'],
+    pool: 'forks',
+    poolOptions: {
+      forks: {
+        singleFork: true,
+      },
+    },
   },
 });

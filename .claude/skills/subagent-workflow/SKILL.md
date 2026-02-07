@@ -12,22 +12,22 @@ description: MANDATORY for all multi-step tasks - parallel task execution with s
 1. **One Linear issue = one worktree = one PR** — never split an issue across multiple PRs
 2. **Always query Linear before starting** — Linear is the source of truth
 3. **Both spec + quality reviews required** — no exceptions, no shortcuts
-4. **E2E tests must pass before PR** — GitHub Actions are disabled; local validation is mandatory
+4. **Tests must pass before PR** — GitHub Actions are disabled; local validation is mandatory. Tests are configured to run sequentially by default (Vitest uses single fork, Playwright E2E uses `--workers=1`). Do not override these settings — parallel execution causes severe system resource exhaustion.
 5. **All work via dispatched agents** — lead agent orchestrates, never edits code directly
 6. **Fixes stay in the same worktree/PR** — never create a new PR for review fixes
 7. **Update Linear at every state transition** — full audit trail required
-8. **Clean debug artifacts before PR** — no debug-*.spec.ts, *.bak, or console.log leftovers
+8. **Clean debug artifacts before PR** — no debug-_.spec.ts, _.bak, or console.log leftovers
 
 ## Linear State Definitions
 
-| State | Meaning |
-|-------|---------|
-| **Backlog** | Not yet planned |
-| **Todo** | Ready to start (no blockers) |
-| **In Progress** | Actively being worked on |
-| **Blocked** | Work started but cannot proceed (set `blockedBy`) |
-| **In Review** | PR created, awaiting review |
-| **Done** | Merged and complete |
+| State           | Meaning                                           |
+| --------------- | ------------------------------------------------- |
+| **Backlog**     | Not yet planned                                   |
+| **Todo**        | Ready to start (no blockers)                      |
+| **In Progress** | Actively being worked on                          |
+| **Blocked**     | Work started but cannot proceed (set `blockedBy`) |
+| **In Review**   | PR created, awaiting review                       |
+| **Done**        | Merged and complete                               |
 
 ## Workflow Overview
 
@@ -136,7 +136,7 @@ Update Linear: `state: "In Progress"` for each issue. Post comment: `"Starting w
 4. Write tests (>80% coverage)
 5. Run pre-PR gate:
    pnpm test:run && pnpm lint && pnpm typecheck
-   pnpm test:e2e && pnpm test:e2e:summary  # MUST show "0 failed"
+   pnpm test:e2e --workers=1 && pnpm test:e2e:summary  # MUST show "0 failed", NEVER parallel
    git status --porcelain | grep -E "debug-|\.bak$" && echo "FAIL" && exit 1
 6. Clean debug artifacts (debug-*.spec.ts, *.bak, console.log)
 7. Commit: feat(scope): description (BEA-###)
