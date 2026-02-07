@@ -126,11 +126,22 @@ const E2E_SCHEMA_STATEMENTS = [
     =>
     value: String
 }`,
+  // saved_queries relation from migration 002-saved-queries
+  `:create saved_queries {
+    id: String
+    =>
+    name: String,
+    type: String,
+    definition: String,
+    description: String?,
+    created_at: Float,
+    updated_at: Float
+}`,
   `::index create links:by_target { target_id, source_id, link_type }`,
   `::index create block_refs:by_target { target_block_id, source_block_id }`,
-  `?[key, value] <- [["schema_version", "1"]] :put metadata { key, value }`,
-  // Mark the initial migration as applied so runMigrations() in main.tsx won't try to re-run it
-  `?[key, value] <- [["applied_migrations", '["001-initial-schema"]']] :put metadata { key, value }`,
+  `?[key, value] <- [["schema_version", "2"]] :put metadata { key, value }`,
+  // Mark migrations as applied so runMigrations() in main.tsx won't try to re-run them
+  `?[key, value] <- [["applied_migrations", '["001-initial-schema","002-saved-queries"]']] :put metadata { key, value }`,
 ];
 
 /**
