@@ -81,20 +81,6 @@ async function getBlockParentId(blockId: string): Promise<string | null> {
 }
 
 /**
- * Helper to get the order value of a block from the database.
- */
-async function _getBlockOrder(blockId: string): Promise<string> {
-  const result = await executeQuery(
-    `?[order] := *blocks{ block_id, order }, block_id == $block_id`,
-    { block_id: blockId }
-  );
-  if (result.rows.length > 0 && result.rows[0]) {
-    return result.rows[0][0] as string;
-  }
-  return '';
-}
-
-/**
  * Helper type for block service methods exposed on window.
  */
 type BlockServiceMethods = {

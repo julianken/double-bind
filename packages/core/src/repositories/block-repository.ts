@@ -281,8 +281,12 @@ export class BlockRepository {
     const oldParentKey = computeParentKey(existing.parentId, existing.pageId);
     const newParentKey = computeParentKey(newParentId, existing.pageId);
 
-    // CozoDB doesn't support multiple ? rules with system commands in a single block.
-    // Run as separate mutations in sequence.
+    // CozoDB limitation: Multiple `?` rules with system commands (:put, :rm) cannot be
+    // combined in a single block. Error: "The rule '?' cannot have multiple definitions
+    // since it contains non-Horn clauses". Therefore, we run as separate mutations.
+    // Note: This means the operation is NOT atomic. If a failure occurs mid-sequence,
+    // the database may be left in an inconsistent state. For a local-first app, this is
+    // acceptable as the user can retry the operation.
 
     // 1. Update the block itself
     const updateBlockScript = `
