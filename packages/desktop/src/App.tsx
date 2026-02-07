@@ -19,6 +19,7 @@ import { PageView as RealPageView } from './screens/PageView.js';
 import { GraphViewScreen } from './screens/GraphViewScreen.js';
 import { SearchResultsView as RealSearchResultsView } from './screens/SearchResultsView.js';
 import { Sidebar as FullSidebar } from './layout/Sidebar.js';
+import { invalidateQueries } from './hooks/useCozoQuery.js';
 
 // ============================================================================
 // Sidebar Component - Uses full Sidebar when ServiceProvider is available,
@@ -73,6 +74,8 @@ function Sidebar() {
     const handleNewPage = async () => {
       try {
         const page = await services.pageService.createPage('Untitled');
+        // Invalidate the pages query so the PageList refreshes with the new page
+        invalidateQueries(['pages']);
         navigateToPage('page/' + page.pageId);
       } catch (error) {
         console.error('Failed to create page:', error);
