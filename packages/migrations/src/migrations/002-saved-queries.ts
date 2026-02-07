@@ -26,58 +26,14 @@ export const migration: Migration = {
   name: '002-saved-queries',
 
   up: `
-# ===============================================
-# SAVED QUERIES
-# ===============================================
+:create saved_queries { id: String => name: String, type: String, definition: String, description: String?, created_at: Float, updated_at: Float }
 
-# Saved queries - reusable query definitions
-:create saved_queries {
-    id: String
-    =>
-    name: String,
-    type: String,
-    definition: String,
-    description: String?,
-    created_at: Float,
-    updated_at: Float
-}
-
-# ===============================================
-# FULL-TEXT SEARCH INDEX
-# ===============================================
-
-# FTS index on query names for search functionality
-::fts create saved_queries:fts {
-    extractor: name
-}
-
-# ===============================================
-# ACCESS LEVEL PROTECTION
-# ===============================================
-
-# Protect saved_queries from accidental schema destruction
-::access_level saved_queries protected
-
-# ===============================================
-# UPDATE SCHEMA VERSION
-# ===============================================
-
-:put metadata { key: 'schema_version', value: '2' }
+?[key, value] <- [["schema_version", "2"]] :put metadata {key => value}
 `,
 
   down: `
-# WARNING: This removes all saved queries. Only use during development.
-
-# Remove access level protection first
-::access_level saved_queries normal
-
-# Remove FTS index
-::fts drop saved_queries:fts
-
-# Remove the relation
 ::remove saved_queries
 
-# Revert schema version
-:put metadata { key: 'schema_version', value: '1' }
+?[key, value] <- [["schema_version", "1"]] :put metadata {key => value}
 `,
 };

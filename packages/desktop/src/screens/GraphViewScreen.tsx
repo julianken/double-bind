@@ -289,7 +289,7 @@ export function GraphViewScreen(_props: GraphViewScreenProps): React.ReactElemen
   // Handle node click - navigate to page
   const handleNodeClick = useCallback(
     (pageId: PageId) => {
-      navigateToPage(pageId);
+      navigateToPage('page/' + pageId);
     },
     [navigateToPage]
   );

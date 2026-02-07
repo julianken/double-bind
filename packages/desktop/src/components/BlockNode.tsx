@@ -18,9 +18,10 @@ import { memo, useCallback, useMemo, useState, useEffect } from 'react';
 import type { Block, BlockId, PageId } from '@double-bind/types';
 import { parseContent } from '@double-bind/core';
 import { InlineBlockRef, InlinePageLink } from '@double-bind/ui-primitives';
-import { useCozoQuery } from '../hooks/useCozoQuery.js';
+import { useCozoQuery, invalidateQueries } from '../hooks/useCozoQuery.js';
 import { useAppStore } from '../stores/ui-store.js';
 import { useServices } from '../providers/ServiceProvider.js';
+import { BlockEditor as RealBlockEditor } from '../editor/BlockEditor.js';
 
 // ============================================================================
 // Types
@@ -56,17 +57,9 @@ export interface BulletHandleProps {
   onToggleCollapse?: () => void;
 }
 
-export interface BlockEditorProps {
-  /**
-   * The block ID being edited
-   */
-  blockId: BlockId;
-
-  /**
-   * Initial content to display in the editor
-   */
-  initialContent: string;
-}
+// BlockEditorProps is now defined in '../editor/BlockEditor.tsx'
+// We re-export it here for backward compatibility if needed
+export type { BlockEditorProps } from '../editor/BlockEditor.js';
 
 export interface StaticBlockContentProps {
   /**
@@ -158,24 +151,16 @@ export const STATIC_BLOCK_CONTENT_CSS_CLASSES = {
  * @returns Query result with block data
  */
 export function useBlock(blockId: BlockId) {
-  const queryFn = useCallback(async (): Promise<Block | null> => {
-    // TODO: Replace with real blockService.getById(blockId)
-    // This is a placeholder that returns mock data for testing
-    return {
-      blockId,
-      pageId: 'mock-page-id',
-      parentId: null,
-      content: 'Mock block content',
-      contentType: 'text' as const,
-      order: 'a0',
-      isCollapsed: false,
-      isDeleted: false,
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    };
-  }, [blockId]);
+  const services = useSafeServices();
 
-  return useCozoQuery(['block', blockId], queryFn, { enabled: !!blockId });
+  const queryFn = useCallback(async (): Promise<Block | null> => {
+    if (!services?.blockService) {
+      return null;
+    }
+    return services.blockService.getById(blockId);
+  }, [blockId, services]);
+
+  return useCozoQuery(['block', blockId], queryFn, { enabled: !!blockId && !!services });
 }
 
 /**
@@ -183,16 +168,20 @@ export function useBlock(blockId: BlockId) {
  * Returns blocks ordered by their 'order' field.
  *
  * @param blockId - The parent block ID
+ * @param pageId - The page ID (required to construct parent key)
  * @returns Query result with array of child blocks
  */
-export function useBlockChildren(blockId: BlockId) {
-  const queryFn = useCallback(async (): Promise<Block[]> => {
-    // TODO: Replace with real blockService.getChildren(blockId)
-    // This is a placeholder that returns empty array for testing
-    return [];
-  }, [blockId]);
+export function useBlockChildren(blockId: BlockId, pageId: PageId | undefined) {
+  const services = useSafeServices();
 
-  return useCozoQuery(['blocks', 'children', blockId], queryFn, { enabled: !!blockId });
+  const queryFn = useCallback(async (): Promise<Block[]> => {
+    if (!services?.blockService || !pageId) {
+      return [];
+    }
+    return services.blockService.getChildren(blockId, pageId);
+  }, [blockId, pageId, services]);
+
+  return useCozoQuery(['blocks', 'children', blockId], queryFn, { enabled: !!blockId && !!pageId && !!services });
 }
 
 // ============================================================================
@@ -226,20 +215,8 @@ export function BulletHandle({ isCollapsed, hasChildren, onToggleCollapse }: Bul
   );
 }
 
-/**
- * BlockEditor - ProseMirror-based rich text editor
- *
- * Rendered when a block is focused for editing.
- * Handles keyboard navigation, markdown shortcuts, etc.
- */
-export function BlockEditor({ blockId, initialContent }: BlockEditorProps) {
-  // TODO: Implement with ProseMirror (separate Linear issue)
-  return (
-    <div className="block-editor" data-block-id={blockId} data-testid="block-editor">
-      <textarea defaultValue={initialContent} aria-label="Block editor" />
-    </div>
-  );
-}
+// BlockEditor is now imported from '../editor/BlockEditor.js'
+// The stub has been replaced with the real ProseMirror implementation
 
 // ============================================================================
 // Content Parsing Helpers
@@ -924,8 +901,9 @@ export const StaticBlockContent = memo(function StaticBlockContent({
  * ```
  */
 function BlockNodeComponent({ blockId, depth = 0 }: BlockNodeProps) {
+  const services = useSafeServices();
   const { data: block, isLoading: blockLoading, error: blockError } = useBlock(blockId);
-  const { data: children, isLoading: childrenLoading } = useBlockChildren(blockId);
+  const { data: children, isLoading: childrenLoading } = useBlockChildren(blockId, block?.pageId);
 
   // Get focused block and navigation from UI store
   const focusedBlockId = useAppStore((s) => s.focusedBlockId);
@@ -934,6 +912,21 @@ function BlockNodeComponent({ blockId, depth = 0 }: BlockNodeProps) {
 
   const isEditing = focusedBlockId === blockId;
   const hasChildren = (children?.length ?? 0) > 0;
+
+  // Callback to focus a specific block (for editor integration)
+  const focusBlock = useCallback(
+    (targetBlockId: BlockId, _position?: 'start' | 'end') => {
+      setFocusedBlock(targetBlockId);
+      // Position handling would be done by the editor itself
+    },
+    [setFocusedBlock]
+  );
+
+  // Callback when blocks change (for query invalidation)
+  const handleBlocksChanged = useCallback(() => {
+    invalidateQueries(['blocks']);
+    invalidateQueries(['block']);
+  }, []);
 
   // Handle activating this block for editing
   const handleActivate = useCallback(() => {
@@ -949,7 +942,7 @@ function BlockNodeComponent({ blockId, depth = 0 }: BlockNodeProps) {
   // Handle page link click - navigate to the linked page
   const handlePageLinkClick = useCallback(
     (pageId: PageId) => {
-      navigateToPage(pageId);
+      navigateToPage('page/' + pageId);
     },
     [navigateToPage]
   );
@@ -1015,7 +1008,16 @@ function BlockNodeComponent({ blockId, depth = 0 }: BlockNodeProps) {
         />
         <div className="block-content">
           {isEditing ? (
-            <BlockEditor blockId={blockId} initialContent={block.content} />
+            <RealBlockEditor
+              blockId={blockId}
+              initialContent={block.content}
+              blockService={services?.blockService}
+              pageId={block.pageId}
+              previousBlockId={null} // TODO: Calculate from siblings
+              focusBlock={focusBlock}
+              onBlocksChanged={handleBlocksChanged}
+              autoFocus
+            />
           ) : (
             <StaticBlockContent
               content={block.content}

@@ -66,10 +66,20 @@ function PlaceholderSidebar() {
 
 function Sidebar() {
   const services = useContext(ServiceContext);
+  const navigateToPage = useAppStore((s) => s.navigateToPage);
 
   // When ServiceProvider is present, use the full-featured Sidebar
   if (services) {
-    return <FullSidebar />;
+    const handleNewPage = async () => {
+      try {
+        const page = await services.pageService.createPage('Untitled');
+        navigateToPage('page/' + page.pageId);
+      } catch (error) {
+        console.error('Failed to create page:', error);
+      }
+    };
+
+    return <FullSidebar onNewPage={handleNewPage} />;
   }
 
   // Placeholder for unit tests without ServiceProvider

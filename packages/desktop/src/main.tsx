@@ -7,7 +7,8 @@
 
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { tauriGraphDB, createServices } from '@double-bind/core';
+import { tauriGraphDB, httpGraphDB, isInTauri, createServices } from '@double-bind/core';
+import { runMigrations } from '@double-bind/migrations';
 import { ServiceProvider } from './providers/ServiceProvider.js';
 import { App } from './App.js';
 
@@ -16,14 +17,31 @@ if (!rootElement) {
   throw new Error('Failed to find root element');
 }
 
-// Create services from the GraphDB
-// In E2E mode, tauriGraphDB is mocked to use the HTTP bridge
-const services = createServices(tauriGraphDB);
+// Type assertion is safe because we throw above if null
+const root = rootElement as HTMLElement;
 
-createRoot(rootElement).render(
-  <StrictMode>
-    <ServiceProvider services={services}>
-      <App />
-    </ServiceProvider>
-  </StrictMode>
-);
+// Run migrations and then render the app
+async function initializeApp() {
+  // Auto-detect environment: use Tauri IPC in desktop app, HTTP bridge in browser
+  const graphDB = isInTauri() ? tauriGraphDB : httpGraphDB;
+
+  try {
+    // Run database migrations before rendering
+    await runMigrations(graphDB);
+  } catch {
+    // Continue rendering - app will show error state
+  }
+
+  // Create services from the GraphDB
+  const services = createServices(graphDB);
+
+  createRoot(root).render(
+    <StrictMode>
+      <ServiceProvider services={services}>
+        <App />
+      </ServiceProvider>
+    </StrictMode>
+  );
+}
+
+initializeApp();

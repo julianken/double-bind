@@ -5,7 +5,8 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { render, screen, waitFor, cleanup, fireEvent } from '@testing-library/react';
 import type { Block, Page } from '@double-bind/types';
-import { PageView, PageTitle, BlockNode } from '../../../src/screens/PageView.js';
+import { PageView, PageTitle } from '../../../src/screens/PageView.js';
+import { BlockNode } from '../../../src/components/BlockNode.js';
 import { ServiceProvider, type Services } from '../../../src/providers/ServiceProvider.js';
 import { clearQueryCache } from '../../../src/hooks/useCozoQuery.js';
 

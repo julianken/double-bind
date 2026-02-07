@@ -5,6 +5,52 @@ import type { Migration, MigrationResult } from './types.js';
 import { ALL_MIGRATIONS } from './registry.js';
 
 /**
+ * Split a migration script into individual statements.
+ *
+ * CozoDB doesn't support multiple system commands (like :create, :put) in a single query.
+ * This function splits the script so each statement can be executed separately.
+ *
+ * @param script - The full migration script
+ * @returns Array of individual statements to execute
+ */
+function splitIntoStatements(script: string): string[] {
+  const lines = script.split('\n');
+  const statements: string[] = [];
+  let currentStatement = '';
+  let braceDepth = 0;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+
+    // Skip empty lines and comments
+    if (!trimmed || trimmed.startsWith('#')) {
+      continue;
+    }
+
+    // Track brace depth to handle multi-line statements
+    for (const char of line) {
+      if (char === '{') braceDepth++;
+      if (char === '}') braceDepth--;
+    }
+
+    currentStatement += line + '\n';
+
+    // Statement is complete when braces are balanced and we have content
+    if (braceDepth === 0 && currentStatement.trim()) {
+      statements.push(currentStatement.trim());
+      currentStatement = '';
+    }
+  }
+
+  // Add any remaining content
+  if (currentStatement.trim()) {
+    statements.push(currentStatement.trim());
+  }
+
+  return statements;
+}
+
+/**
  * Metadata relation key for tracking applied migrations.
  */
 const MIGRATIONS_KEY = 'applied_migrations';
@@ -126,7 +172,13 @@ export async function runMigrations(db: GraphDB): Promise<MigrationResult> {
   for (const migration of pending) {
     try {
       // Execute the migration's up script
-      await db.mutate(migration.up);
+      // Split by lines starting with : (system commands like :create, :put)
+      // and execute each separately since CozoDB doesn't support multiple system commands in one query
+      const statements = splitIntoStatements(migration.up);
+      for (let i = 0; i < statements.length; i++) {
+        const stmt = statements[i]!;
+        await db.mutate(stmt);
+      }
 
       // Record that this migration was applied
       result.applied.push(migration.name);
@@ -154,7 +206,10 @@ export async function runMigrations(db: GraphDB): Promise<MigrationResult> {
  */
 async function updateAppliedMigrations(db: GraphDB, migrations: string[]): Promise<void> {
   const value = JSON.stringify(migrations);
-  await db.mutate(`:put metadata { key: $key, value: $value }`, { key: MIGRATIONS_KEY, value });
+  await db.mutate(`?[key, value] <- [[$key, $value]] :put metadata {key => value}`, {
+    key: MIGRATIONS_KEY,
+    value,
+  });
 }
 
 /**

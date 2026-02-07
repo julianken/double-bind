@@ -311,7 +311,8 @@ describe('PageList', () => {
 
       fireEvent.click(screen.getByTestId('page-list-item-page-2'));
 
-      expect(navigateToPageSpy).toHaveBeenCalledWith('page-2');
+      // Navigation path includes "page/" prefix
+      expect(navigateToPageSpy).toHaveBeenCalledWith('page/page-2');
     });
 
     it('navigates when pressing Enter on a page', async () => {
@@ -331,7 +332,8 @@ describe('PageList', () => {
       const pageItem = screen.getByTestId('page-list-item-page-1');
       fireEvent.keyDown(pageItem, { key: 'Enter' });
 
-      expect(navigateToPageSpy).toHaveBeenCalledWith('page-1');
+      // Navigation path includes "page/" prefix
+      expect(navigateToPageSpy).toHaveBeenCalledWith('page/page-1');
     });
 
     it('navigates when pressing Space on a page', async () => {
@@ -351,7 +353,8 @@ describe('PageList', () => {
       const pageItem = screen.getByTestId('page-list-item-page-3');
       fireEvent.keyDown(pageItem, { key: ' ' });
 
-      expect(navigateToPageSpy).toHaveBeenCalledWith('page-3');
+      // Navigation path includes "page/" prefix
+      expect(navigateToPageSpy).toHaveBeenCalledWith('page/page-3');
     });
   });
 

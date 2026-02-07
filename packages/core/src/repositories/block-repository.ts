@@ -142,31 +142,36 @@ export class BlockRepository {
     const order = input.order ?? DEFAULT_ORDER;
     const parentKey = computeParentKey(parentId, input.pageId);
 
-    const script = `
-{
-    ?[block_id, page_id, parent_id, content, content_type, order, is_collapsed, is_deleted, created_at, updated_at] <- [
+    // CozoDB doesn't allow multiple ? rules with :put in a single query
+    // So we execute each :put as a separate mutation
+
+    // 1. Insert the block
+    await this.db.mutate(
+      `?[block_id, page_id, parent_id, content, content_type, order, is_collapsed, is_deleted, created_at, updated_at] <- [
         [$id, $page_id, $parent_id, $content, $content_type, $order, false, false, $now, $now]
-    ]
-    :put blocks { block_id, page_id, parent_id, content, content_type, order, is_collapsed, is_deleted, created_at, updated_at }
+      ] :put blocks { block_id, page_id, parent_id, content, content_type, order, is_collapsed, is_deleted, created_at, updated_at }`,
+      {
+        id: blockId,
+        page_id: input.pageId,
+        parent_id: parentId,
+        content: input.content,
+        content_type: contentType,
+        order,
+        now,
+      }
+    );
 
-    ?[page_id, block_id] <- [[$page_id, $id]]
-    :put blocks_by_page { page_id, block_id }
+    // 2. Index by page
+    await this.db.mutate(
+      `?[page_id, block_id] <- [[$page_id, $id]] :put blocks_by_page { page_id, block_id }`,
+      { page_id: input.pageId, id: blockId }
+    );
 
-    ?[parent_id, block_id] <- [[$parent_key, $id]]
-    :put blocks_by_parent { parent_id, block_id }
-}
-`.trim();
-
-    await this.db.mutate(script, {
-      id: blockId,
-      page_id: input.pageId,
-      parent_id: parentId,
-      content: input.content,
-      content_type: contentType,
-      order,
-      parent_key: parentKey,
-      now,
-    });
+    // 3. Index by parent
+    await this.db.mutate(
+      `?[parent_id, block_id] <- [[$parent_key, $id]] :put blocks_by_parent { parent_id, block_id }`,
+      { parent_key: parentKey, id: blockId }
+    );
 
     return blockId;
   }

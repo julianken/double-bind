@@ -65,6 +65,8 @@ export class PageService {
   /**
    * Create a new page with the given title.
    *
+   * Creates the page and an initial empty block so users can start typing immediately.
+   *
    * @param title - The page title
    * @returns The newly created page
    * @throws DoubleBindError with context on repository failure
@@ -80,6 +82,12 @@ export class PageService {
           ErrorCode.DB_QUERY_FAILED
         );
       }
+
+      // Create an initial empty block so users can start typing
+      await this.blockRepo.create({
+        pageId,
+        content: '',
+      });
 
       return page;
     } catch (error) {

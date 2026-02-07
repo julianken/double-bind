@@ -71,7 +71,7 @@ export {
 } from './parsers/index.js';
 
 // Client implementations
-export { tauriGraphDB } from './client/index.js';
+export { tauriGraphDB, httpGraphDB, isInTauri } from './client/index.js';
 
 // Utils - ordering and other utilities
 export {

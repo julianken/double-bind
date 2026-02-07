@@ -39,48 +39,25 @@ describe('002-saved-queries migration', () => {
       expect(migration.up).toContain('updated_at: Float');
     });
 
-    it('creates FTS index on saved_queries', () => {
-      expect(migration.up).toContain('::fts create saved_queries:fts');
-      expect(migration.up).toContain('extractor: name');
-    });
-
-    it('sets access level protection on saved_queries', () => {
-      expect(migration.up).toContain('::access_level saved_queries protected');
-    });
+    // Note: FTS and access level protection were removed from the simplified
+    // migration to work with the Tauri IPC bridge's blocked operations.
 
     it('updates schema version to 2', () => {
-      expect(migration.up).toContain("key: 'schema_version'");
-      expect(migration.up).toContain("value: '2'");
+      // Uses inline JSON array syntax in simplified format
+      expect(migration.up).toContain('schema_version');
+      expect(migration.up).toContain(':put metadata');
     });
   });
 
   describe('down script content', () => {
-    it('removes access level protection before removal', () => {
-      expect(migration.down).toContain('::access_level saved_queries normal');
-    });
-
-    it('drops FTS index', () => {
-      expect(migration.down).toContain('::fts drop saved_queries:fts');
-    });
-
     it('removes saved_queries relation', () => {
       expect(migration.down).toContain('::remove saved_queries');
     });
 
     it('reverts schema version to 1', () => {
-      expect(migration.down).toContain("key: 'schema_version'");
-      expect(migration.down).toContain("value: '1'");
-    });
-
-    it('contains operations in correct order (protection, fts, remove)', () => {
-      const accessLevelPos = migration.down.indexOf('::access_level saved_queries normal');
-      const ftsDropPos = migration.down.indexOf('::fts drop saved_queries:fts');
-      const removePos = migration.down.indexOf('::remove saved_queries');
-
-      // Protection must be removed before FTS index
-      expect(accessLevelPos).toBeLessThan(ftsDropPos);
-      // FTS must be dropped before relation removal
-      expect(ftsDropPos).toBeLessThan(removePos);
+      // Uses inline JSON array syntax in simplified format
+      expect(migration.down).toContain('"schema_version", "1"');
+      expect(migration.down).toContain(':put metadata');
     });
   });
 

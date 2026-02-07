@@ -18,6 +18,10 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   timeout: 30000,
 
+  // Global setup/teardown to start HTTP bridge server for mock Tauri IPC
+  globalSetup: './test/e2e/setup/global-setup.ts',
+  globalTeardown: './test/e2e/setup/global-teardown.ts',
+
   // CRITICAL: JSON reporter for reliable result parsing
   // Terminal output may not show failure counts (TTY issues, background runs)
   reporter: [
