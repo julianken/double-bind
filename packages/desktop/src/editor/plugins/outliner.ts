@@ -6,6 +6,7 @@
  * - Shift+Tab: Outdent the current block
  * - Enter: Split block at cursor position, creating a new sibling block below
  * - Backspace at position 0: Merge content with previous block
+ * - Delete at end of block: Merge next block's content into current block
  * - Shift+Enter: Insert newline within the block (does not split)
  */
 
@@ -31,6 +32,8 @@ export interface OutlinerContext {
   pageId: PageId;
   /** The previous sibling block ID (null if first block) */
   previousBlockId: BlockId | null;
+  /** The next sibling block ID (null if last block) */
+  nextBlockId: BlockId | null;
   /** Callback to get content before cursor position */
   getContentBeforeCursor: (view: EditorView) => string;
   /** Callback to get content after cursor position */
@@ -39,6 +42,8 @@ export interface OutlinerContext {
   focusBlock: (blockId: BlockId, position?: 'start' | 'end') => void;
   /** Callback to refresh the block list after mutations */
   onBlocksChanged: () => void;
+  /** Callback to get content of a specific block */
+  getBlockContent?: (blockId: BlockId) => string;
 }
 
 /**
@@ -174,6 +179,48 @@ const mergeWithPrevious: OutlinerCommand = async (
 };
 
 /**
+ * Merge next block into current block when Delete is pressed at end of block.
+ * Note: The position check is done in the shouldHandle callback in createOutlinerKeymap.
+ */
+const mergeWithNext: OutlinerCommand = async (
+  _state,
+  _dispatch,
+  view,
+  context,
+  blockService
+): Promise<boolean> => {
+  // Next block check is done in shouldHandle, but we keep a guard for safety
+  if (!context.nextBlockId) {
+    return false;
+  }
+
+  const currentContent = view.state.doc.textContent;
+
+  try {
+    // Get the next block's content if available
+    const nextBlockContent = context.getBlockContent?.(context.nextBlockId) ?? '';
+
+    // Update current block with merged content
+    const mergedContent = currentContent + nextBlockContent;
+    await blockService.updateContent(context.blockId, mergedContent);
+
+    // Delete the next block
+    await blockService.deleteBlock(context.nextBlockId);
+
+    context.onBlocksChanged();
+
+    // Keep focus in current block at the merge point (end of original content)
+    // The focusBlock with a specific cursor position would be ideal,
+    // but 'end' will work for now since we stay in the same block
+    context.focusBlock(context.blockId, 'end');
+
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+/**
  * Insert a newline character within the block (Shift+Enter).
  * This does NOT split the block.
  */
@@ -248,6 +295,15 @@ export function createOutlinerKeymap(
       const { from } = state.selection;
       // Only handle if at start of block and there's a previous block to merge with
       return (from === 0 || from === 1) && ctx.previousBlockId !== null;
+    }),
+
+    // Delete: Merge with next when at end
+    // Only handle when cursor is at the end of the document AND there's a next block
+    Delete: createAsyncKeyHandler(getContext, blockService, mergeWithNext, (state, ctx) => {
+      const { to } = state.selection;
+      const docSize = state.doc.content.size;
+      // Only handle if at end of block and there's a next block to merge with
+      return to >= docSize && ctx.nextBlockId !== null;
     }),
   });
 }
