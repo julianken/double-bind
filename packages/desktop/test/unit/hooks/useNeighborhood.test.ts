@@ -4,12 +4,22 @@
 
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { renderHook, cleanup, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createElement, type ReactNode } from 'react';
 import { useNeighborhood } from '../../../src/hooks/useNeighborhood.js';
 import { ServiceProvider, type Services } from '../../../src/providers/ServiceProvider.js';
 import { clearQueryCache } from '../../../src/hooks/useCozoQuery.js';
 import type { PageService, BlockService, GraphService, GraphResult } from '@double-bind/core';
 import type { Page, Link } from '@double-bind/types';
+
+// Create a QueryClient for testing
+const createTestQueryClient = () =>
+  new QueryClient({
+    defaultOptions: {
+      queries: { retry: false, staleTime: 0, gcTime: Infinity },
+      mutations: { retry: false },
+    },
+  });
 
 // ============================================================================
 // Mocks
@@ -86,7 +96,12 @@ function createWrapper(graphService: Partial<GraphService>) {
   };
 
   return function Wrapper({ children }: { children: ReactNode }) {
-    return createElement(ServiceProvider, { services }, children);
+    const queryClient = createTestQueryClient();
+    return createElement(
+      QueryClientProvider,
+      { client: queryClient },
+      createElement(ServiceProvider, { services }, children)
+    );
   };
 }
 

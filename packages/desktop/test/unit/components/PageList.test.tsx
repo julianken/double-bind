@@ -5,11 +5,21 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, waitFor, fireEvent, cleanup } from '@testing-library/react';
 import { act } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { Page, PageService, BlockService } from '@double-bind/core';
 import { PageList, PageListItem } from '../../../src/components/PageList.js';
 import { ServiceProvider } from '../../../src/providers/ServiceProvider.js';
 import { useAppStore } from '../../../src/stores/ui-store.js';
 import { clearQueryCache, invalidateQueries } from '../../../src/hooks/useCozoQuery.js';
+
+// Create a QueryClient for testing
+const createTestQueryClient = () =>
+  new QueryClient({
+    defaultOptions: {
+      queries: { retry: false, staleTime: 0, gcTime: Infinity },
+      mutations: { retry: false },
+    },
+  });
 
 // ============================================================================
 // Mock Data
@@ -80,7 +90,12 @@ function TestWrapper({
   pageService?: PageService;
   blockService?: BlockService;
 }) {
-  return <ServiceProvider services={{ pageService, blockService }}>{children}</ServiceProvider>;
+  const queryClient = createTestQueryClient();
+  return (
+    <QueryClientProvider client={queryClient}>
+      <ServiceProvider services={{ pageService, blockService }}>{children}</ServiceProvider>
+    </QueryClientProvider>
+  );
 }
 
 // ============================================================================

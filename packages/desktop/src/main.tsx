@@ -2,15 +2,17 @@
  * Main entry point for the Double-Bind desktop application.
  *
  * Initializes services using the Tauri GraphDB client and renders the app
- * wrapped in ServiceProvider for dependency injection.
+ * wrapped in ServiceProvider and QueryClientProvider for dependency injection.
  */
 
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { tauriGraphDB, httpGraphDB, isInTauri, createServices } from '@double-bind/core';
 import { runMigrations } from '@double-bind/migrations';
 import { ServiceProvider } from './providers/ServiceProvider.js';
 import { App } from './App.js';
+import { queryClient } from './lib/queryClient.js';
 import { invalidateQueries } from './hooks/useCozoQuery.js';
 import { initializeTheme } from './hooks/useTheme.js';
 
@@ -53,9 +55,11 @@ async function initializeApp() {
 
   createRoot(root).render(
     <StrictMode>
-      <ServiceProvider services={services}>
-        <App />
-      </ServiceProvider>
+      <QueryClientProvider client={queryClient}>
+        <ServiceProvider services={services}>
+          <App />
+        </ServiceProvider>
+      </QueryClientProvider>
     </StrictMode>
   );
 }

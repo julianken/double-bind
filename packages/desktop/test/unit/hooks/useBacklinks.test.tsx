@@ -6,11 +6,21 @@
 
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { renderHook, waitFor, cleanup } from '@testing-library/react';
-import type { ReactNode } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { createElement, type ReactNode } from 'react';
 import type { Block, Page } from '@double-bind/types';
 import { useBacklinks } from '../../../src/hooks/useBacklinks.js';
 import { ServiceProvider, type Services } from '../../../src/providers/ServiceProvider.js';
 import { clearQueryCache } from '../../../src/hooks/useCozoQuery.js';
+
+// Create a QueryClient for testing
+const createTestQueryClient = () =>
+  new QueryClient({
+    defaultOptions: {
+      queries: { retry: false, staleTime: 0, gcTime: Infinity },
+      mutations: { retry: false },
+    },
+  });
 
 // ============================================================================
 // Mock Data
@@ -114,7 +124,12 @@ function createMockServices(overrides?: Partial<Services>): Services {
 
 function createWrapper(services: Services) {
   return function TestWrapper({ children }: { children: ReactNode }) {
-    return <ServiceProvider services={services}>{children}</ServiceProvider>;
+    const queryClient = createTestQueryClient();
+    return createElement(
+      QueryClientProvider,
+      { client: queryClient },
+      createElement(ServiceProvider, { services }, children)
+    );
   };
 }
 

@@ -7,10 +7,18 @@
  *
  * Date format: ISO 8601 (YYYY-MM-DD) stored in page.dailyNoteDate
  * Display format: Human-readable (e.g., "Thursday, February 6, 2025")
+ *
+ * FIXED (DBB-341): Uses date-based query key instead of pageId-based key for stability.
+ * The old implementation caused infinite re-render loops because:
+ * 1. Initial render used key ['blocks', 'byPage', ''] (empty pageId)
+ * 2. After page load, key changed to ['blocks', 'byPage', actualId]
+ * 3. This triggered query re-execution, which triggered state changes, which triggered re-renders
+ *
+ * The new implementation uses a single useDailyNoteWithBlocks() hook with a date-based key
+ * ['dailyNote', 'withBlocks', '2025-02-08'] that's stable from first render.
  */
 
-import { useEffect, useCallback, useState, useMemo } from 'react';
-import type { Page, Block } from '@double-bind/types';
+import { useCallback, useMemo } from 'react';
 import {
   DndContext,
   closestCenter,
@@ -25,7 +33,8 @@ import {
   sortableKeyboardCoordinates,
 } from '@dnd-kit/sortable';
 import { useServices } from '../providers/index.js';
-import { useCozoQuery, invalidateQueries } from '../hooks/useCozoQuery.js';
+import { useDailyNoteWithBlocks, getTodayISODate } from '../hooks/useTanStackQuery.js';
+import { invalidateQueries } from '../hooks/useCozoQuery.js';
 import type { RouteComponentProps } from '../components/Router.js';
 import { BlockNode } from '../components/BlockNode.js';
 import { createDragEndHandler } from '../utils/createDragEndHandler.js';
@@ -39,11 +48,6 @@ import styles from './DailyNotesView.module.css';
  * Props for DailyNotesView (implements RouteComponentProps for Router compatibility)
  */
 export type DailyNotesViewProps = RouteComponentProps;
-
-/**
- * Loading state for the daily note
- */
-type LoadingState = 'idle' | 'loading' | 'success' | 'error';
 
 // ============================================================================
 // Helpers
@@ -72,12 +76,8 @@ export function formatDailyNoteDate(isoDate: string): string {
   });
 }
 
-/**
- * Get today's date in ISO format (YYYY-MM-DD)
- */
-export function getTodayISODate(): string {
-  return new Date().toISOString().split('T')[0]!;
-}
+// Re-export for external use
+export { getTodayISODate };
 
 // ============================================================================
 // Component
@@ -90,15 +90,13 @@ export function getTodayISODate(): string {
  * - Auto-creates today's daily note on mount
  * - Displays formatted date as page title
  * - Shows loading/error states
- * - Renders block tree (placeholder until BlockEditor is implemented)
+ * - Renders block tree with editable BlockNode components
+ *
+ * FIXED (DBB-341): Uses useDailyNoteWithBlocks() which has a date-based query key
+ * that's stable from first render, preventing the infinite re-render loop.
  */
 export function DailyNotesView(_props: DailyNotesViewProps): React.ReactElement {
-  const { pageService, blockService } = useServices();
-
-  // Track the daily note page once loaded/created
-  const [dailyNote, setDailyNote] = useState<Page | null>(null);
-  const [loadingState, setLoadingState] = useState<LoadingState>('idle');
-  const [error, setError] = useState<Error | null>(null);
+  const { blockService } = useServices();
 
   // DnD sensors: pointer (mouse/touch) + keyboard for accessibility
   const sensors = useSensors(
@@ -106,55 +104,14 @@ export function DailyNotesView(_props: DailyNotesViewProps): React.ReactElement 
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
-  // Fetch/create today's daily note on mount
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadDailyNote() {
-      setLoadingState('loading');
-      setError(null);
-
-      try {
-        const page = await pageService.getTodaysDailyNote();
-        if (!cancelled) {
-          setDailyNote(page);
-          setLoadingState('success');
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setError(err instanceof Error ? err : new Error(String(err)));
-          setLoadingState('error');
-        }
-      }
-    }
-
-    loadDailyNote();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [pageService]);
-
-  // Extract pageId for stable dependency (avoid re-creating callback on dailyNote object changes)
-  const dailyNotePageId = dailyNote?.pageId;
-
-  // Query function for fetching blocks (only when we have a daily note)
-  const blocksQueryFn = useCallback(async (): Promise<Block[]> => {
-    if (!dailyNotePageId) {
-      return [];
-    }
-    const { blocks } = await pageService.getPageWithBlocks(dailyNotePageId);
-    return blocks;
-  }, [pageService, dailyNotePageId]);
-
-  // Fetch blocks for the daily note
-  const {
-    data: blocks,
-    isLoading: blocksLoading,
-    error: blocksError,
-  } = useCozoQuery<Block[]>(['blocks', 'byPage', dailyNotePageId ?? ''], blocksQueryFn, {
-    enabled: !!dailyNotePageId,
-  });
+  // FIXED (DBB-341): Use the new stable hook with date-based query key.
+  // This replaces the old pattern of:
+  // 1. useState(dailyNote) + useEffect(loadDailyNote)
+  // 2. useCozoQuery(['blocks', 'byPage', dailyNote?.pageId ?? ''])
+  //
+  // The old pattern caused key instability ('' -> real ID) which triggered
+  // cascading re-renders. The new hook uses a date-based key that's stable.
+  const { page: dailyNote, blocks, isLoading, error } = useDailyNoteWithBlocks();
 
   // Get root-level blocks (parentId === null) - the BlockNode component handles children
   const rootBlocks = useMemo(() => {
@@ -177,13 +134,15 @@ export function DailyNotesView(_props: DailyNotesViewProps): React.ReactElement 
     try {
       await blockService.createBlock(
         dailyNote.pageId,
-        null,      // parentId - root level block
-        '',        // content - empty block
-        undefined  // afterBlockId - first block (undefined = insert at beginning)
+        null, // parentId - root level block
+        '', // content - empty block
+        undefined // afterBlockId - first block (undefined = insert at beginning)
       );
       // Trigger refetch to show the new block
-      invalidateQueries(['blocks', 'byPage', dailyNote.pageId]);
+      // Use the date-based key for proper invalidation
+      invalidateQueries(['dailyNote']);
     } catch (err) {
+      // eslint-disable-next-line no-console -- Error logging for debugging
       console.error('Failed to create first block:', err);
     }
   }, [dailyNote, blockService]);
@@ -192,7 +151,7 @@ export function DailyNotesView(_props: DailyNotesViewProps): React.ReactElement 
   // Render: Loading State
   // ============================================================================
 
-  if (loadingState === 'loading' || loadingState === 'idle') {
+  if (isLoading) {
     return (
       <div
         className={`${styles.container} ${styles['container--loading']}`}
@@ -201,9 +160,7 @@ export function DailyNotesView(_props: DailyNotesViewProps): React.ReactElement 
         aria-busy="true"
         aria-label="Loading today's daily note"
       >
-        <div className={styles.loadingIndicator}>
-          Loading today&apos;s daily note...
-        </div>
+        <div className={styles.loadingIndicator}>Loading today&apos;s daily note...</div>
       </div>
     );
   }
@@ -212,7 +169,7 @@ export function DailyNotesView(_props: DailyNotesViewProps): React.ReactElement 
   // Render: Error State
   // ============================================================================
 
-  if (loadingState === 'error' || error) {
+  if (error) {
     return (
       <div
         className={`${styles.container} ${styles['container--error']}`}
@@ -222,7 +179,7 @@ export function DailyNotesView(_props: DailyNotesViewProps): React.ReactElement 
       >
         <div className={styles.error}>
           <h1>Failed to load daily note</h1>
-          <p>{error?.message ?? 'An unknown error occurred'}</p>
+          <p>{error.message ?? 'An unknown error occurred'}</p>
         </div>
       </div>
     );
@@ -235,7 +192,7 @@ export function DailyNotesView(_props: DailyNotesViewProps): React.ReactElement 
   // Format the date for display
   const displayDate = dailyNote?.dailyNoteDate
     ? formatDailyNoteDate(dailyNote.dailyNoteDate)
-    : getTodayISODate();
+    : formatDailyNoteDate(getTodayISODate());
 
   return (
     <div
@@ -266,13 +223,7 @@ export function DailyNotesView(_props: DailyNotesViewProps): React.ReactElement 
         data-testid="daily-notes-content"
         aria-label="Daily note content"
       >
-        {blocksLoading ? (
-          <div className={styles.blocksLoading}>Loading blocks...</div>
-        ) : blocksError ? (
-          <div className={styles.blocksError}>
-            Failed to load blocks: {blocksError.message}
-          </div>
-        ) : rootBlocks.length > 0 ? (
+        {rootBlocks.length > 0 ? (
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
@@ -289,7 +240,9 @@ export function DailyNotesView(_props: DailyNotesViewProps): React.ReactElement 
                     blockId={block.blockId}
                     depth={0}
                     previousBlockId={index > 0 ? rootBlocks[index - 1]!.blockId : null}
-                    nextBlockId={index < rootBlocks.length - 1 ? rootBlocks[index + 1]!.blockId : null}
+                    nextBlockId={
+                      index < rootBlocks.length - 1 ? rootBlocks[index + 1]!.blockId : null
+                    }
                   />
                 ))}
               </ul>
