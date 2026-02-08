@@ -397,7 +397,7 @@ describe('createKeymapPlugin', () => {
 
   describe('No Conflicts with Global Shortcuts', () => {
     // Global shortcuts from keyboard-first.md:
-    // Ctrl+K, Ctrl+N, Ctrl+D, Ctrl+/, Ctrl+G, Ctrl+Q, Ctrl+\, Ctrl+B (toggle backlinks)
+    // Ctrl+K (search bar), Ctrl+P (command palette), Ctrl+N, Ctrl+D, Ctrl+/, Ctrl+G, Ctrl+Q, Ctrl+\, Ctrl+B (toggle backlinks)
     // Ctrl+[, Ctrl+], Ctrl+,
 
     it('bold keybinding does not use Ctrl+B (global backlinks toggle)', () => {
@@ -408,7 +408,7 @@ describe('createKeymapPlugin', () => {
       expect(KEYBINDINGS.bold).toBe('Ctrl+B');
     });
 
-    it('keybindings do not conflict with Ctrl+K (command palette)', () => {
+    it('keybindings do not conflict with Ctrl+K (search bar)', () => {
       // Verify none of our keybindings use Ctrl+K
       const values = Object.values(KEYBINDINGS);
       const hasCtrlK = values.some((v) => v === 'Ctrl+K' || v.includes('Ctrl+K'));
