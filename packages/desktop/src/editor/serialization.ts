@@ -285,6 +285,18 @@ export function docToText(doc: Node): string {
           case 'strikethrough':
             text = '~~' + text + '~~';
             break;
+          case 'pageLink':
+            // Page link text already includes [[ ]] brackets from insertion
+            // Just pass through the text as-is
+            break;
+          case 'blockRef':
+            // Block ref text already includes (( )) parens from insertion
+            // Just pass through the text as-is
+            break;
+          case 'tag':
+            // Tag text already includes # prefix from insertion
+            // Just pass through the text as-is
+            break;
         }
       }
 
