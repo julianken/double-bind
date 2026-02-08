@@ -159,10 +159,44 @@ async function initializeSchema(db: CozoDb): Promise<void> {
 /**
  * Reset the database to a clean state.
  * Creates a new in-memory database and sets up the minimal E2E schema.
+ * Verifies metadata is fully written before returning to prevent race conditions.
  */
 async function resetDatabase(): Promise<void> {
+  // Create a completely fresh database
   dbContainer.db = new CozoDb('mem');
+
+  // Initialize with schema AND proper metadata state
   await initializeSchema(dbContainer.db);
+
+  // Ensure metadata is fully written before returning
+  const schemaCheck = await dbContainer.db.run(
+    `?[v] := *metadata{ key: "schema_version", value: v }`
+  );
+
+  if (
+    !schemaCheck ||
+    typeof schemaCheck !== 'object' ||
+    !('rows' in schemaCheck) ||
+    !Array.isArray(schemaCheck.rows) ||
+    schemaCheck.rows.length === 0
+  ) {
+    throw new Error('Schema initialization failed: schema_version metadata not set');
+  }
+
+  // Verify applied_migrations is also set
+  const migrationsCheck = await dbContainer.db.run(
+    `?[v] := *metadata{ key: "applied_migrations", value: v }`
+  );
+
+  if (
+    !migrationsCheck ||
+    typeof migrationsCheck !== 'object' ||
+    !('rows' in migrationsCheck) ||
+    !Array.isArray(migrationsCheck.rows) ||
+    migrationsCheck.rows.length === 0
+  ) {
+    throw new Error('Schema initialization failed: applied_migrations metadata not set');
+  }
 }
 
 async function globalSetup(_config: FullConfig): Promise<void> {
