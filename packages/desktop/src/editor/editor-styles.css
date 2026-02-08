@@ -1,0 +1,39 @@
+/* ================================================================
+ * Editor Reference Highlighting (DBB-189)
+ *
+ * Styles for [[page links]], ((block refs)), and #tags.
+ *
+ * Two sources of styling:
+ *   1. Decoration-based classes (highlight-*) from the highlight-references plugin
+ *      — applied to plain text that matches reference patterns.
+ *   2. Mark-based classes (page-link, block-ref, tag) from schema toDOM
+ *      — applied to text inserted via autocomplete with a schema mark.
+ *
+ * The decoration plugin skips nodes with existing marks, so only one set
+ * of styles is ever active on a given text node. Both share the same
+ * visual appearance for consistency.
+ * ================================================================ */
+
+/* Page links: blue underlined text */
+.ProseMirror .highlight-page-link,
+.ProseMirror .page-link {
+  color: #2563eb;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* Block references: purple with subtle background */
+.ProseMirror .highlight-block-ref,
+.ProseMirror .block-ref {
+  color: #7c3aed;
+  background-color: rgba(124, 58, 237, 0.08);
+  border-radius: 2px;
+  padding: 0 2px;
+}
+
+/* Tags: green with medium weight */
+.ProseMirror .highlight-tag,
+.ProseMirror .tag {
+  color: #059669;
+  font-weight: 500;
+}

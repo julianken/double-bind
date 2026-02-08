@@ -2,11 +2,17 @@
  * Highlight References Plugin for ProseMirror
  *
  * Applies inline decorations to [[page links]], ((block refs)), and #tags
- * as the user types. Uses the same regex patterns as the content parser
+ * as the user types. Uses the canonical regex patterns from @double-bind/core
  * so highlighting is consistent with parsing.
  *
  * Decorations are purely visual (CSS classes) and do not interfere with
  * text editing or cursor movement.
+ *
+ * To avoid double-highlighting, the decoration builder skips text nodes
+ * that already have the corresponding schema mark (pageLink, blockRef, tag)
+ * applied. This ensures that text inserted via autocomplete (which applies
+ * a mark) is styled by the mark's toDOM, not by both the mark and the
+ * decoration.
  *
  * @see packages/core/src/parsers/content-parser.ts for canonical patterns
  * @see docs/frontend/prosemirror.md for editor architecture
@@ -16,6 +22,7 @@ import { Plugin, PluginKey } from 'prosemirror-state';
 import type { EditorState, Transaction } from 'prosemirror-state';
 import { Decoration, DecorationSet } from 'prosemirror-view';
 import type { Node as ProseMirrorNode } from 'prosemirror-model';
+import { PATTERN_SOURCES } from '@double-bind/core';
 
 // ============================================================================
 // Plugin Key
@@ -24,32 +31,28 @@ import type { Node as ProseMirrorNode } from 'prosemirror-model';
 /**
  * Plugin key for accessing highlight references state.
  */
-export const highlightReferencesPluginKey = new PluginKey<DecorationSet>(
-  'highlight-references'
-);
+export const highlightReferencesPluginKey = new PluginKey<DecorationSet>('highlight-references');
 
 // ============================================================================
-// Regex Patterns (matching content-parser.ts)
+// Regex Patterns (imported from @double-bind/core)
 // ============================================================================
 
 /**
- * Page links: [[Page Name]]
- * Negative lookbehind ensures we don't match #[[tags]] as page links.
+ * Create fresh RegExp instances from the canonical pattern sources.
+ * Fresh instances are created per buildDecorations call to avoid
+ * shared lastIndex state across calls.
  */
-const PAGE_LINK_RE = /(?<!#)\[\[((?:[^\]\n]|\](?!\]))+)\]\]/g;
-
-/**
- * Block references: ((ULID))
- * Matches exactly 26 Crockford Base32 characters.
- */
-const BLOCK_REF_RE = /\(\(([0-9A-HJKMNP-TV-Z]{26})\)\)/g;
-
-/**
- * Tags: #tag or #[[multi word tag]]
- * Simple tags: # followed by word characters and hyphens.
- * Multi-word tags: #[[ followed by any chars followed by ]].
- */
-const TAG_RE = /#(?:\[\[([^\]]+)\]\]|([\w][\w-]*))/g;
+function createPatterns(): {
+  pageLink: RegExp;
+  blockRef: RegExp;
+  tag: RegExp;
+} {
+  return {
+    pageLink: new RegExp(PATTERN_SOURCES.pageLink.source, PATTERN_SOURCES.pageLink.flags),
+    blockRef: new RegExp(PATTERN_SOURCES.blockRef.source, PATTERN_SOURCES.blockRef.flags),
+    tag: new RegExp(PATTERN_SOURCES.tag.source, PATTERN_SOURCES.tag.flags),
+  };
+}
 
 // ============================================================================
 // Decoration Builder
@@ -59,46 +62,55 @@ const TAG_RE = /#(?:\[\[([^\]]+)\]\]|([\w][\w-]*))/g;
  * Scans a ProseMirror document for reference patterns and builds
  * a DecorationSet with inline CSS class decorations.
  *
+ * Skips text nodes that already have the corresponding mark applied
+ * to avoid double-highlighting (e.g., text inserted via autocomplete
+ * with a pageLink mark should not also get a decoration).
+ *
  * @param doc - The ProseMirror document node
  * @returns A DecorationSet with decorations for all found references
  */
-function buildDecorations(doc: ProseMirrorNode): DecorationSet {
+export function buildDecorations(doc: ProseMirrorNode): DecorationSet {
   const decorations: Decoration[] = [];
+  const patterns = createPatterns();
 
   doc.descendants((node, pos) => {
     if (!node.isText || !node.text) return;
 
     const text = node.text;
 
-    // Find page links
-    PAGE_LINK_RE.lastIndex = 0;
-    let match: RegExpExecArray | null;
-    while ((match = PAGE_LINK_RE.exec(text)) !== null) {
-      const from = pos + match.index;
-      const to = pos + match.index + match[0].length;
-      decorations.push(
-        Decoration.inline(from, to, { class: 'highlight-page-link' })
-      );
+    // Check which marks are present on this text node
+    const hasPageLinkMark = node.marks.some((m) => m.type.name === 'pageLink');
+    const hasBlockRefMark = node.marks.some((m) => m.type.name === 'blockRef');
+    const hasTagMark = node.marks.some((m) => m.type.name === 'tag');
+
+    // Find page links (only if no pageLink mark)
+    if (!hasPageLinkMark) {
+      let match: RegExpExecArray | null;
+      while ((match = patterns.pageLink.exec(text)) !== null) {
+        const from = pos + match.index;
+        const to = pos + match.index + match[0].length;
+        decorations.push(Decoration.inline(from, to, { class: 'highlight-page-link' }));
+      }
     }
 
-    // Find block refs
-    BLOCK_REF_RE.lastIndex = 0;
-    while ((match = BLOCK_REF_RE.exec(text)) !== null) {
-      const from = pos + match.index;
-      const to = pos + match.index + match[0].length;
-      decorations.push(
-        Decoration.inline(from, to, { class: 'highlight-block-ref' })
-      );
+    // Find block refs (only if no blockRef mark)
+    if (!hasBlockRefMark) {
+      let match: RegExpExecArray | null;
+      while ((match = patterns.blockRef.exec(text)) !== null) {
+        const from = pos + match.index;
+        const to = pos + match.index + match[0].length;
+        decorations.push(Decoration.inline(from, to, { class: 'highlight-block-ref' }));
+      }
     }
 
-    // Find tags
-    TAG_RE.lastIndex = 0;
-    while ((match = TAG_RE.exec(text)) !== null) {
-      const from = pos + match.index;
-      const to = pos + match.index + match[0].length;
-      decorations.push(
-        Decoration.inline(from, to, { class: 'highlight-tag' })
-      );
+    // Find tags (only if no tag mark)
+    if (!hasTagMark) {
+      let match: RegExpExecArray | null;
+      while ((match = patterns.tag.exec(text)) !== null) {
+        const from = pos + match.index;
+        const to = pos + match.index + match[0].length;
+        decorations.push(Decoration.inline(from, to, { class: 'highlight-tag' }));
+      }
     }
   });
 

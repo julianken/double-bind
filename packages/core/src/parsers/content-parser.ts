@@ -95,6 +95,22 @@ const ULID_PATTERN = '[0-9A-HJKMNP-TV-Z]{26}';
  * match that stops at the first ]]. For deeply nested brackets like
  * [[Page [[Nested]]]], the outer link is matched.
  */
+/**
+ * Exported pattern sources for reuse across packages.
+ * Consumers should create fresh RegExp instances from these to avoid shared lastIndex state.
+ *
+ * @example
+ * ```typescript
+ * import { PATTERN_SOURCES } from '@double-bind/core';
+ * const pageLinkRe = new RegExp(PATTERN_SOURCES.pageLink.source, PATTERN_SOURCES.pageLink.flags);
+ * ```
+ */
+export const PATTERN_SOURCES = {
+  pageLink: { source: '(?<!#)\\[\\[((?:[^\\]\\n]|\\](?!\\]))+)\\]\\]', flags: 'g' },
+  blockRef: { source: `\\(\\(([0-9A-HJKMNP-TV-Z]{26})\\)\\)`, flags: 'g' },
+  tag: { source: '#(?:\\[\\[([^\\]]+)\\]\\]|([\\w][\\w-]*))', flags: 'g' },
+} as const;
+
 const PATTERNS = {
   /**
    * Page links: [[Page Name]]

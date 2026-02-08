@@ -23,6 +23,7 @@ import type { BlockService } from '@double-bind/core';
 import type { BlockId, PageId } from '@double-bind/types';
 
 import { schema } from './schema.js';
+import './editor-styles.css';
 import { textToDoc, docToText } from './serialization.js';
 import {
   createKeymapPlugin,

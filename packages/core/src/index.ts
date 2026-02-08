@@ -64,6 +64,7 @@ export {
 // Parsers
 export {
   parseContent,
+  PATTERN_SOURCES,
   type ParsedContent,
   type PageLink,
   type BlockReference,
