@@ -18,8 +18,19 @@
 import { useCallback, useMemo, useState, useEffect } from 'react';
 import type { BlockId, PageId } from '@double-bind/types';
 import type { PageWithBlocks } from '@double-bind/core';
-import { DndContext, closestCenter } from '@dnd-kit/core';
-import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import {
+  DndContext,
+  closestCenter,
+  useSensors,
+  useSensor,
+  PointerSensor,
+  KeyboardSensor,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  sortableKeyboardCoordinates,
+} from '@dnd-kit/sortable';
 import { BacklinksPanel } from '@double-bind/ui-primitives';
 import { useCozoQuery, invalidateQueries } from '../hooks/useCozoQuery.js';
 import { useBacklinks } from '../hooks/useBacklinks.js';
@@ -238,6 +249,12 @@ export function PageView({ pageId }: PageViewProps) {
   const navigateToPage = useAppStore((state) => state.navigateToPage);
   const selectedBlockIds = useAppStore((state) => state.selectedBlockIds);
   const clearSelection = useAppStore((state) => state.clearSelection);
+
+  // DnD sensors: pointer (mouse/touch) + keyboard for accessibility
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
 
   // Backlinks panel expanded state (persisted in component state)
   const [backlinksExpanded, setBacklinksExpanded] = useState(true);
@@ -525,7 +542,11 @@ export function PageView({ pageId }: PageViewProps) {
         {rootBlocks.length === 0 ? (
           <EmptyState />
         ) : (
-          <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
             <SortableContext
               items={rootBlocks.map((b) => b.blockId)}
               strategy={verticalListSortingStrategy}
