@@ -17,6 +17,7 @@
 import { memo, useCallback, useMemo, useState, useEffect } from 'react';
 import type { Block, BlockId, PageId } from '@double-bind/types';
 import { parseContent } from '@double-bind/core';
+import { DndContext, closestCenter } from '@dnd-kit/core';
 import { useSortable, SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { InlineBlockRef, InlinePageLink } from '@double-bind/ui-primitives';
@@ -24,6 +25,7 @@ import { useCozoQuery, invalidateQueries } from '../hooks/useCozoQuery.js';
 import { useAppStore } from '../stores/ui-store.js';
 import { useServices } from '../providers/ServiceProvider.js';
 import { BlockEditor as RealBlockEditor } from '../editor/BlockEditor.js';
+import { createDragEndHandler } from '../utils/createDragEndHandler.js';
 
 // ============================================================================
 // Types
@@ -988,6 +990,14 @@ function BlockNodeComponent({ blockId, depth = 0 }: BlockNodeProps) {
     [setFocusedBlock]
   );
 
+  // Handle drag-and-drop reordering of this block's children.
+  // Each nesting level needs its own DndContext so that the drag-end
+  // handler knows the correct siblings list to reorder within.
+  const handleChildDragEnd = useMemo(() => {
+    if (!children || children.length === 0 || !services?.blockService) return undefined;
+    return createDragEndHandler(children, services.blockService);
+  }, [children, services?.blockService]);
+
   // Loading state - only show skeleton when there's no cached block data.
   // When re-fetching after invalidation, keep showing stale data to avoid
   // unmounting ProseMirror editors (which destroys editor state and focus).
@@ -1070,17 +1080,19 @@ function BlockNodeComponent({ blockId, depth = 0 }: BlockNodeProps) {
       </div>
 
       {/* Render children recursively if not collapsed */}
-      {!block.isCollapsed && hasChildren && children && (
-        <SortableContext
-          items={children.map((c) => c.blockId)}
-          strategy={verticalListSortingStrategy}
-        >
-          <ul className="block-children" role="group" data-testid="block-children">
-            {children.map((child) => (
-              <BlockNode key={child.blockId} blockId={child.blockId} depth={depth + 1} />
-            ))}
-          </ul>
-        </SortableContext>
+      {!block.isCollapsed && hasChildren && children && handleChildDragEnd && (
+        <DndContext collisionDetection={closestCenter} onDragEnd={handleChildDragEnd}>
+          <SortableContext
+            items={children.map((c) => c.blockId)}
+            strategy={verticalListSortingStrategy}
+          >
+            <ul className="block-children" role="group" data-testid="block-children">
+              {children.map((child) => (
+                <BlockNode key={child.blockId} blockId={child.blockId} depth={depth + 1} />
+              ))}
+            </ul>
+          </SortableContext>
+        </DndContext>
       )}
     </li>
   );
