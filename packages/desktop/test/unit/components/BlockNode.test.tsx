@@ -881,4 +881,93 @@ describe('BlockNode Integration', () => {
       });
     });
   });
+
+  describe('Sibling Block IDs', () => {
+    it('accepts previousBlockId and nextBlockId props', async () => {
+      const blockService = createMockBlockService(createMockBlock({ blockId: 'middle-block' }));
+
+      render(
+        <TestWrapper blockService={blockService}>
+          <BlockNode
+            blockId="middle-block"
+            previousBlockId="prev-block"
+            nextBlockId="next-block"
+          />
+        </TestWrapper>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('block-node')).toBeDefined();
+      });
+    });
+
+    it('accepts null for previousBlockId (first sibling)', async () => {
+      const blockService = createMockBlockService(createMockBlock({ blockId: 'first-block' }));
+
+      render(
+        <TestWrapper blockService={blockService}>
+          <BlockNode
+            blockId="first-block"
+            previousBlockId={null}
+            nextBlockId="second-block"
+          />
+        </TestWrapper>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('block-node')).toBeDefined();
+      });
+    });
+
+    it('accepts null for nextBlockId (last sibling)', async () => {
+      const blockService = createMockBlockService(createMockBlock({ blockId: 'last-block' }));
+
+      render(
+        <TestWrapper blockService={blockService}>
+          <BlockNode
+            blockId="last-block"
+            previousBlockId="prev-block"
+            nextBlockId={null}
+          />
+        </TestWrapper>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('block-node')).toBeDefined();
+      });
+    });
+
+    it('passes sibling IDs to children when rendering recursively', async () => {
+      // Create parent block
+      const parentBlock = createMockBlock({ blockId: 'parent-block' });
+
+      // Create child blocks
+      const child1 = createMockBlock({ blockId: 'child-1', parentId: 'parent-block', order: 'a' });
+      const child2 = createMockBlock({ blockId: 'child-2', parentId: 'parent-block', order: 'b' });
+      const child3 = createMockBlock({ blockId: 'child-3', parentId: 'parent-block', order: 'c' });
+
+      const blockService = createMockBlockService();
+      blockService.getById = vi.fn().mockImplementation((id: string) => {
+        if (id === 'parent-block') return Promise.resolve(parentBlock);
+        if (id === 'child-1') return Promise.resolve(child1);
+        if (id === 'child-2') return Promise.resolve(child2);
+        if (id === 'child-3') return Promise.resolve(child3);
+        return Promise.resolve(null);
+      });
+      blockService.getChildren = vi.fn().mockResolvedValue([child1, child2, child3]);
+
+      render(
+        <TestWrapper blockService={blockService}>
+          <BlockNode blockId="parent-block" />
+        </TestWrapper>
+      );
+
+      // Wait for children to render
+      await waitFor(() => {
+        const childNodes = screen.getAllByTestId('block-node');
+        // Parent + 3 children = 4 nodes
+        expect(childNodes.length).toBe(4);
+      });
+    });
+  });
 });

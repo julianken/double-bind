@@ -505,8 +505,14 @@ export function PageView({ pageId }: PageViewProps) {
               strategy={verticalListSortingStrategy}
             >
               <ul role="tree" className={styles.blockTree} data-testid="block-tree">
-                {rootBlocks.map((block) => (
-                  <BlockNode key={block.blockId} blockId={block.blockId} depth={0} />
+                {rootBlocks.map((block, index) => (
+                  <BlockNode
+                    key={block.blockId}
+                    blockId={block.blockId}
+                    depth={0}
+                    previousBlockId={index > 0 ? rootBlocks[index - 1]!.blockId : null}
+                    nextBlockId={index < rootBlocks.length - 1 ? rootBlocks[index + 1]!.blockId : null}
+                  />
                 ))}
               </ul>
             </SortableContext>
