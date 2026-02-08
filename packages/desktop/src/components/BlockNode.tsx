@@ -17,6 +17,8 @@
 import { memo, useCallback, useMemo, useState, useEffect } from 'react';
 import type { Block, BlockId, PageId } from '@double-bind/types';
 import { parseContent } from '@double-bind/core';
+import { useSortable, SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { InlineBlockRef, InlinePageLink } from '@double-bind/ui-primitives';
 import { useCozoQuery, invalidateQueries } from '../hooks/useCozoQuery.js';
 import { useAppStore } from '../stores/ui-store.js';
@@ -55,6 +57,12 @@ export interface BulletHandleProps {
    * Callback when the collapse toggle is clicked
    */
   onToggleCollapse?: () => void;
+
+  /**
+   * Props to spread on the button element for drag handle functionality.
+   * Provided by @dnd-kit/sortable's useSortable hook.
+   */
+  dragHandleProps?: Record<string, unknown>;
 }
 
 // BlockEditorProps is now defined in '../editor/BlockEditor.tsx'
@@ -197,7 +205,12 @@ export function useBlockChildren(blockId: BlockId, pageId: PageId | undefined) {
  * Shows different visual states based on whether children exist and
  * whether the node is collapsed.
  */
-export function BulletHandle({ isCollapsed, hasChildren, onToggleCollapse }: BulletHandleProps) {
+export function BulletHandle({
+  isCollapsed,
+  hasChildren,
+  onToggleCollapse,
+  dragHandleProps,
+}: BulletHandleProps) {
   const handleClick = useCallback(() => {
     onToggleCollapse?.();
   }, [onToggleCollapse]);
@@ -207,10 +220,12 @@ export function BulletHandle({ isCollapsed, hasChildren, onToggleCollapse }: Bul
       type="button"
       className="bullet-handle"
       onClick={handleClick}
+      {...dragHandleProps}
       aria-label={hasChildren ? (isCollapsed ? 'Expand' : 'Collapse') : 'Bullet'}
       aria-expanded={hasChildren ? !isCollapsed : undefined}
       data-has-children={hasChildren}
       data-collapsed={isCollapsed}
+      style={{ cursor: 'grab' }}
     >
       <span className="bullet-icon">{hasChildren ? (isCollapsed ? '>' : 'v') : '-'}</span>
     </button>
@@ -912,6 +927,14 @@ function BlockNodeComponent({ blockId, depth = 0 }: BlockNodeProps) {
   const setFocusedBlock = useAppStore((s) => s.setFocusedBlock);
   const navigateToPage = useAppStore((s) => s.navigateToPage);
 
+  // Disable drag when this block's editor is focused
+  const isDragDisabled = focusedBlockId === blockId;
+
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: blockId,
+    disabled: isDragDisabled,
+  });
+
   const isEditing = focusedBlockId === blockId;
   const hasChildren = (children?.length ?? 0) > 0;
 
@@ -994,28 +1017,33 @@ function BlockNodeComponent({ blockId, depth = 0 }: BlockNodeProps) {
     );
   }
 
-  // Calculate indentation based on depth
-  const indentStyle = {
+  // Calculate indentation and sortable transform styles
+  const sortableStyle = {
     paddingLeft: `${depth * 24}px`,
     contentVisibility: 'auto' as const,
     containIntrinsicSize: 'auto 32px',
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
   };
 
   return (
     <li
+      ref={setNodeRef}
       className="block-container"
       role="treeitem"
       aria-expanded={hasChildren ? !block.isCollapsed : undefined}
       aria-level={depth + 1}
       data-block-id={blockId}
       data-testid="block-node"
-      style={indentStyle}
+      style={sortableStyle}
     >
       <div className="block-row">
         <BulletHandle
           isCollapsed={block.isCollapsed}
           hasChildren={hasChildren}
           onToggleCollapse={handleToggleCollapse}
+          dragHandleProps={{ ...attributes, ...listeners }}
         />
         <div className="block-content">
           {isEditing ? (
@@ -1043,11 +1071,16 @@ function BlockNodeComponent({ blockId, depth = 0 }: BlockNodeProps) {
 
       {/* Render children recursively if not collapsed */}
       {!block.isCollapsed && hasChildren && children && (
-        <ul className="block-children" role="group" data-testid="block-children">
-          {children.map((child) => (
-            <BlockNode key={child.blockId} blockId={child.blockId} depth={depth + 1} />
-          ))}
-        </ul>
+        <SortableContext
+          items={children.map((c) => c.blockId)}
+          strategy={verticalListSortingStrategy}
+        >
+          <ul className="block-children" role="group" data-testid="block-children">
+            {children.map((child) => (
+              <BlockNode key={child.blockId} blockId={child.blockId} depth={depth + 1} />
+            ))}
+          </ul>
+        </SortableContext>
       )}
     </li>
   );
