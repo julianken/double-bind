@@ -9,11 +9,26 @@
  * Display format: Human-readable (e.g., "Thursday, February 6, 2025")
  */
 
-import { useEffect, useCallback, useState } from 'react';
+import { useEffect, useCallback, useState, useMemo } from 'react';
 import type { Page, Block } from '@double-bind/types';
+import {
+  DndContext,
+  closestCenter,
+  useSensors,
+  useSensor,
+  PointerSensor,
+  KeyboardSensor,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  sortableKeyboardCoordinates,
+} from '@dnd-kit/sortable';
 import { useServices } from '../providers/index.js';
-import { useCozoQuery } from '../hooks/index.js';
+import { useCozoQuery, invalidateQueries } from '../hooks/useCozoQuery.js';
 import type { RouteComponentProps } from '../components/Router.js';
+import { BlockNode } from '../components/BlockNode.js';
+import { createDragEndHandler } from '../utils/createDragEndHandler.js';
 import styles from './DailyNotesView.module.css';
 
 // ============================================================================
@@ -78,12 +93,18 @@ export function getTodayISODate(): string {
  * - Renders block tree (placeholder until BlockEditor is implemented)
  */
 export function DailyNotesView(_props: DailyNotesViewProps): React.ReactElement {
-  const { pageService } = useServices();
+  const { pageService, blockService } = useServices();
 
   // Track the daily note page once loaded/created
   const [dailyNote, setDailyNote] = useState<Page | null>(null);
   const [loadingState, setLoadingState] = useState<LoadingState>('idle');
   const [error, setError] = useState<Error | null>(null);
+
+  // DnD sensors: pointer (mouse/touch) + keyboard for accessibility
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
 
   // Fetch/create today's daily note on mount
   useEffect(() => {
@@ -131,6 +152,38 @@ export function DailyNotesView(_props: DailyNotesViewProps): React.ReactElement 
   } = useCozoQuery<Block[]>(['blocks', 'byPage', dailyNote?.pageId ?? ''], blocksQueryFn, {
     enabled: !!dailyNote,
   });
+
+  // Get root-level blocks (parentId === null) - the BlockNode component handles children
+  const rootBlocks = useMemo(() => {
+    if (!blocks) return [];
+    return blocks
+      .filter((block) => block.parentId === null)
+      .sort((a, b) => a.order.localeCompare(b.order));
+  }, [blocks]);
+
+  // Handle drag-and-drop reordering of root-level blocks
+  const handleDragEnd = useMemo(
+    () => createDragEndHandler(rootBlocks, blockService),
+    [rootBlocks, blockService]
+  );
+
+  // Create first block when clicking empty state
+  const handleCreateFirstBlock = useCallback(async () => {
+    if (!dailyNote) return;
+
+    try {
+      await blockService.createBlock(
+        dailyNote.pageId,
+        null,      // parentId - root level block
+        '',        // content - empty block
+        undefined  // afterBlockId - first block (undefined = insert at beginning)
+      );
+      // Trigger refetch to show the new block
+      invalidateQueries(['blocks', 'byPage', dailyNote.pageId]);
+    } catch (err) {
+      console.error('Failed to create first block:', err);
+    }
+  }, [dailyNote, blockService]);
 
   // ============================================================================
   // Render: Loading State
@@ -216,30 +269,39 @@ export function DailyNotesView(_props: DailyNotesViewProps): React.ReactElement 
           <div className={styles.blocksError}>
             Failed to load blocks: {blocksError.message}
           </div>
-        ) : blocks && blocks.length > 0 ? (
-          <ul className={styles.blockTree} role="tree" aria-label="Block tree">
-            {blocks
-              .filter((block) => block.parentId === null)
-              .sort((a, b) => a.order.localeCompare(b.order))
-              .map((block) => (
-                <li
-                  key={block.blockId}
-                  className={styles.block}
-                  role="treeitem"
-                  data-testid={`block-${block.blockId}`}
-                >
-                  <div className={styles.blockContent}>
-                    {block.content || '(empty block)'}
-                  </div>
-                  {/* Child blocks would be rendered recursively here */}
-                  {/* This is a placeholder - full BlockNode component will handle this */}
-                </li>
-              ))}
-          </ul>
+        ) : rootBlocks.length > 0 ? (
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={rootBlocks.map((b) => b.blockId)}
+              strategy={verticalListSortingStrategy}
+            >
+              <ul role="tree" className={styles.blockTree} data-testid="block-tree">
+                {rootBlocks.map((block, index) => (
+                  <BlockNode
+                    key={block.blockId}
+                    blockId={block.blockId}
+                    depth={0}
+                    previousBlockId={index > 0 ? rootBlocks[index - 1]!.blockId : null}
+                    nextBlockId={index < rootBlocks.length - 1 ? rootBlocks[index + 1]!.blockId : null}
+                  />
+                ))}
+              </ul>
+            </SortableContext>
+          </DndContext>
         ) : (
-          <div className={styles.empty} data-testid="daily-notes-empty">
-            <p>Start writing in today&apos;s daily note...</p>
-          </div>
+          <button
+            type="button"
+            className={styles.empty}
+            data-testid="daily-notes-empty"
+            onClick={handleCreateFirstBlock}
+            aria-label="Create first block in daily note"
+          >
+            <p>Click here to start writing...</p>
+          </button>
         )}
       </section>
     </div>
