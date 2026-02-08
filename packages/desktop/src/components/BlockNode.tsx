@@ -258,19 +258,14 @@ function parseContentToSegments(content: string): ContentSegment[] {
     });
   }
 
-  // Add tags - need to find positions in content
-  const tagPattern = /#(?:\[\[([^\]]+)\]\]|([\w][\w-]*))/g;
-  let tagMatch: RegExpExecArray | null;
-  while ((tagMatch = tagPattern.exec(content)) !== null) {
-    const tagContent = tagMatch[1] || tagMatch[2];
-    if (tagContent) {
-      specialSegments.push({
-        type: 'tag',
-        content: tagContent,
-        start: tagMatch.index,
-        end: tagMatch.index + tagMatch[0].length,
-      });
-    }
+  // Add tags - use position info from parsed tags
+  for (const tagRef of parsed.tags) {
+    specialSegments.push({
+      type: 'tag',
+      content: tagRef.tag,
+      start: tagRef.startIndex,
+      end: tagRef.endIndex,
+    });
   }
 
   // Sort special segments by start position

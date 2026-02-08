@@ -846,7 +846,7 @@ export class BlockService {
     // Sync tags - get existing, compute diff, remove old, add new
     const existingTags = await this.tagRepo.getByEntity(blockId);
     const existingTagNames = new Set(existingTags.map((t) => t.tag));
-    const newTagNames = new Set(parsed.tags);
+    const newTagNames = new Set(parsed.tags.map((t) => t.tag));
 
     // Remove tags that are no longer in content
     for (const tag of existingTags) {
@@ -856,9 +856,9 @@ export class BlockService {
     }
 
     // Add new tags
-    for (const tagName of parsed.tags) {
-      if (!existingTagNames.has(tagName)) {
-        await this.tagRepo.addTag(blockId, tagName);
+    for (const tagRef of parsed.tags) {
+      if (!existingTagNames.has(tagRef.tag)) {
+        await this.tagRepo.addTag(blockId, tagRef.tag);
       }
     }
 
