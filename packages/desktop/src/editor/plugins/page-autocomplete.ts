@@ -164,6 +164,8 @@ function insertPageLink(view: EditorView, triggerPos: number, title: string, que
   // Create the replacement text, with pageLink mark if available
   const linkText = `[[${title}]]`;
   const pageLinkMarkType = state.schema.marks.pageLink;
+  // TODO: Resolve pageId from title at insertion time. Currently empty because
+  // page resolution is async and autocomplete insertion is synchronous.
   const textNode = pageLinkMarkType
     ? state.schema.text(linkText, [pageLinkMarkType.create({ pageId: '', title })])
     : state.schema.text(linkText);
