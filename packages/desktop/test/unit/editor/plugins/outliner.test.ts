@@ -624,6 +624,51 @@ describe('Outliner Plugin', () => {
       view.destroy();
     });
 
+    it('Tab key handler returns true to prevent focus jump (DBB-335)', () => {
+      const plugin = createOutlinerPlugin(mockBlockService, getContext);
+      const handleDOMEvents = plugin.props.handleDOMEvents;
+
+      // The handler should exist
+      expect(handleDOMEvents).toBeDefined();
+      expect(handleDOMEvents?.keydown).toBeDefined();
+
+      // Create a mock event for Tab key
+      const tabEvent = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true });
+
+      // Call the handler directly and verify it returns true
+      // This prevents the event from propagating to other elements (like search bar)
+      const result = handleDOMEvents?.keydown?.(null as unknown as EditorView, tabEvent);
+      expect(result).toBe(true);
+    });
+
+    it('Shift+Tab key handler returns true to prevent focus jump', () => {
+      const plugin = createOutlinerPlugin(mockBlockService, getContext);
+      const handleDOMEvents = plugin.props.handleDOMEvents;
+
+      // Create a mock event for Shift+Tab key
+      const shiftTabEvent = new KeyboardEvent('keydown', {
+        key: 'Tab',
+        shiftKey: true,
+        bubbles: true,
+      });
+
+      // Call the handler directly and verify it returns true
+      const result = handleDOMEvents?.keydown?.(null as unknown as EditorView, shiftTabEvent);
+      expect(result).toBe(true);
+    });
+
+    it('non-Tab key handler returns false to allow normal propagation', () => {
+      const plugin = createOutlinerPlugin(mockBlockService, getContext);
+      const handleDOMEvents = plugin.props.handleDOMEvents;
+
+      // Create a mock event for a non-Tab key
+      const enterEvent = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true });
+
+      // Call the handler directly and verify it returns false for non-Tab keys
+      const result = handleDOMEvents?.keydown?.(null as unknown as EditorView, enterEvent);
+      expect(result).toBe(false);
+    });
+
     it('plugins can be added to EditorState', () => {
       const plugins = outlinerPlugins(mockBlockService, getContext);
       const state = EditorState.create({
