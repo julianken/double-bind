@@ -14,9 +14,10 @@
 
 import { Plugin, PluginKey } from 'prosemirror-state';
 import type { EditorView } from 'prosemirror-view';
-import type { BlockId } from '@double-bind/types';
+import type { Block, BlockId } from '@double-bind/types';
 import type { BlockService } from '@double-bind/core';
 import { invalidateQueries } from '../../hooks/useCozoQuery.js';
+import { queryClient } from '../../lib/queryClient.js';
 
 /**
  * Plugin key for the persistence plugin.
@@ -140,8 +141,16 @@ export function createPersistencePlugin(options: PersistencePluginOptions): Plug
       // Track what we saved so we can detect changes on blur
       lastSavedContent = content;
 
-      // Invalidate queries immediately after successful save
-      // This ensures any navigation will see fresh data
+      // CRITICAL: Optimistically update the block cache immediately.
+      // This ensures StaticBlockContent renders with fresh data when
+      // the editor loses focus, without waiting for a refetch.
+      // Without this, the 30s staleTime causes a race condition where
+      // the old cached data is shown briefly before refetch completes.
+      queryClient.setQueryData(['block', blockId], (oldBlock: Block | undefined) =>
+        oldBlock ? { ...oldBlock, content } : undefined
+      );
+
+      // Invalidate queries to ensure other views (backlinks, search) refetch
       invalidateAllQueries();
     } finally {
       isSaving = false;
