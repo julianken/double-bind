@@ -341,6 +341,7 @@ test.describe('Page Creation Flow', () => {
   // TODO: Investigate why blocks render without content in some E2E test runs.
   // ============================================================================
 
+  // TODO: Enter key doesn't create new block in E2E - investigate DBB-326 fix
   test.skip('creates new block by pressing Enter', async ({ page }) => {
     // Seed a page with one block
     const pageId = generateId('page');
@@ -383,6 +384,7 @@ test.describe('Page Creation Flow', () => {
     await expect(blockNodes).toHaveCount(2, { timeout: 5000 });
   });
 
+  // TODO: Depends on Enter key creating new block
   test.skip('types content in new block after Enter', async ({ page }) => {
     // Seed a page with one block
     const pageId = generateId('page');
@@ -441,7 +443,7 @@ test.describe('Page Creation Flow', () => {
   // See: useBlockChildren in BlockNode.tsx - enabled condition may have timing issue
   // ============================================================================
 
-  test.skip('displays parent-child block structure correctly', async ({ page }) => {
+  test('displays parent-child block structure correctly', async ({ page }) => {
     // Seed a page with parent and child blocks
     const pageId = generateId('page');
     const parentBlockId = generateId('parent-block');
@@ -494,7 +496,7 @@ test.describe('Page Creation Flow', () => {
     expect(childIndex).toBeGreaterThan(parentIndex);
   });
 
-  test.skip('displays deeply nested block structure', async ({ page }) => {
+  test('displays deeply nested block structure', async ({ page }) => {
     // Seed a page with 3-level nesting
     const pageId = generateId('page');
     const level1Id = generateId('level-1');
