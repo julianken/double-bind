@@ -153,15 +153,15 @@ export const MiniGraph = memo(function MiniGraph({
     return { nodes: graphNodes, links: graphLinks };
   }, [nodes, edges, centerNodeId]);
 
-  // Center the graph on the center node after initial render
+  // Center the graph after simulation settles
   useEffect(() => {
     const fg = graphRef.current;
     if (!fg) return;
 
-    // Wait for simulation to settle, then center
+    // Wait for simulation to settle, then fit to view
     const timer = setTimeout(() => {
-      fg.centerAt(0, 0, 300);
-      fg.zoom(1.2, 300);
+      // zoomToFit maintains readable size by fitting all nodes with padding
+      fg.zoomToFit(300, 20);
     }, 500);
 
     return () => clearTimeout(timer);
