@@ -18,6 +18,9 @@
 import { useCallback, useMemo, useState, useEffect } from 'react';
 import type { BlockId, PageId } from '@double-bind/types';
 import type { PageWithBlocks } from '@double-bind/core';
+import { DndContext, closestCenter } from '@dnd-kit/core';
+import type { DragEndEvent } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { BacklinksPanel } from '@double-bind/ui-primitives';
 import { useCozoQuery, invalidateQueries } from '../hooks/useCozoQuery.js';
 import { useBacklinks } from '../hooks/useBacklinks.js';
@@ -259,6 +262,42 @@ export function PageView({ pageId }: PageViewProps) {
       .filter((block) => block.parentId === null)
       .sort((a, b) => a.order.localeCompare(b.order));
   }, [data?.blocks]);
+
+  // Handle drag-and-drop reordering of root-level blocks
+  const handleDragEnd = useCallback(
+    async (event: DragEndEvent) => {
+      const { active, over } = event;
+      if (!over || active.id === over.id) return;
+
+      const activeId = active.id as string;
+      const overId = over.id as string;
+
+      // Find the blocks to determine parent and new position
+      const activeBlock = rootBlocks.find((b) => b.blockId === activeId);
+      const overBlock = rootBlocks.find((b) => b.blockId === overId);
+      if (!activeBlock || !overBlock) return;
+
+      // Calculate afterBlockId based on position
+      const overIndex = rootBlocks.findIndex((b) => b.blockId === overId);
+      const activeIndex = rootBlocks.findIndex((b) => b.blockId === activeId);
+      const afterBlockId =
+        activeIndex < overIndex
+          ? overId // moving down: place after the over block
+          : overIndex > 0
+            ? rootBlocks[overIndex - 1]!.blockId
+            : undefined; // moving up: place after previous
+
+      await blockService.moveBlock(
+        activeId as BlockId,
+        activeBlock.parentId,
+        afterBlockId as BlockId | undefined
+      );
+      invalidateQueries(['blocks']);
+      invalidateQueries(['block']);
+      invalidateQueries(['page', 'withBlocks']);
+    },
+    [rootBlocks, blockService]
+  );
 
   // Toggle backlinks panel
   const toggleBacklinks = useCallback(() => {
@@ -514,11 +553,18 @@ export function PageView({ pageId }: PageViewProps) {
         {rootBlocks.length === 0 ? (
           <EmptyState />
         ) : (
-          <ul role="tree" className="block-tree" data-testid="block-tree">
-            {rootBlocks.map((block) => (
-              <BlockNode key={block.blockId} blockId={block.blockId} depth={0} />
-            ))}
-          </ul>
+          <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <SortableContext
+              items={rootBlocks.map((b) => b.blockId)}
+              strategy={verticalListSortingStrategy}
+            >
+              <ul role="tree" className="block-tree" data-testid="block-tree">
+                {rootBlocks.map((block) => (
+                  <BlockNode key={block.blockId} blockId={block.blockId} depth={0} />
+                ))}
+              </ul>
+            </SortableContext>
+          </DndContext>
         )}
       </div>
 
