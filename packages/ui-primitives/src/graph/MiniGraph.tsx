@@ -216,19 +216,10 @@ export const MiniGraph = memo(function MiniGraph({
     return { nodes: graphNodes, links: graphLinks };
   }, [nodes, edges, centerNodeId]);
 
-  // Center the graph after simulation settles
-  useEffect(() => {
-    const fg = graphRef.current;
-    if (!fg) return;
-
-    // Wait for simulation to settle, then fit to view
-    const timer = setTimeout(() => {
-      // zoomToFit maintains readable size by fitting all nodes with padding
-      fg.zoomToFit(300, 20);
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [centerNodeId]);
+  // Note: We intentionally don't call zoomToFit or zoom after render.
+  // The default auto-fit behavior provides the best initial view.
+  // Previous attempts to adjust zoom after simulation settles caused
+  // labels to be cut off or the graph to shrink unexpectedly.
 
   // Handle node click
   const handleNodeClick = useCallback(
