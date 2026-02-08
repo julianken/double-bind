@@ -12,6 +12,7 @@ import {
   getTodayISODate,
 } from '../../../src/screens/DailyNotesView.js';
 import { ServiceProvider, type Services } from '../../../src/providers/index.js';
+import { clearQueryCache } from '../../../src/hooks/useCozoQuery.js';
 
 // ============================================================================
 // Mock Data
@@ -97,7 +98,7 @@ function createMockServices(
 const createTestQueryClient = () =>
   new QueryClient({
     defaultOptions: {
-      queries: { retry: false, staleTime: 0, gcTime: Infinity },
+      queries: { retry: false, staleTime: 0, gcTime: 0 },
       mutations: { retry: false },
     },
   });
@@ -118,6 +119,7 @@ function renderWithServices(ui: React.ReactElement, services: Services = createM
 describe('DailyNotesView', () => {
   afterEach(() => {
     cleanup();
+    clearQueryCache();
     vi.clearAllMocks();
   });
 
