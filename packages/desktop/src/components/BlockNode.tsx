@@ -55,6 +55,18 @@ export interface BlockNodeProps {
    * @default 0
    */
   depth?: number;
+
+  /**
+   * ID of the previous sibling block (for keyboard navigation and merge operations).
+   * Pass null if this is the first sibling.
+   */
+  previousBlockId?: BlockId | null;
+
+  /**
+   * ID of the next sibling block (for keyboard navigation and merge operations).
+   * Pass null if this is the last sibling.
+   */
+  nextBlockId?: BlockId | null;
 }
 
 export interface BulletHandleProps {
@@ -926,7 +938,12 @@ export const StaticBlockContent = memo(function StaticBlockContent({
  * <BlockNode blockId="01HQXYZ..." depth={0} />
  * ```
  */
-function BlockNodeComponent({ blockId, depth = 0 }: BlockNodeProps) {
+function BlockNodeComponent({
+  blockId,
+  depth = 0,
+  previousBlockId,
+  nextBlockId,
+}: BlockNodeProps) {
   const services = useSafeServices();
   const { data: block, isLoading: blockLoading, error: blockError } = useBlock(blockId);
   const { data: children, isLoading: childrenLoading } = useBlockChildren(blockId, block?.pageId);
@@ -1079,7 +1096,8 @@ function BlockNodeComponent({ blockId, depth = 0 }: BlockNodeProps) {
               initialContent={block.content}
               blockService={services?.blockService}
               pageId={block.pageId}
-              previousBlockId={null} // TODO: Calculate from siblings
+              previousBlockId={previousBlockId ?? null}
+              nextBlockId={nextBlockId ?? null}
               focusBlock={focusBlock}
               onBlocksChanged={handleBlocksChanged}
               autoFocus
@@ -1111,16 +1129,28 @@ function BlockNodeComponent({ blockId, depth = 0 }: BlockNodeProps) {
               strategy={verticalListSortingStrategy}
             >
               <ul className={styles.children} role="group" data-testid="block-children">
-                {children.map((child) => (
-                  <BlockNode key={child.blockId} blockId={child.blockId} depth={depth + 1} />
+                {children.map((child, index) => (
+                  <BlockNode
+                    key={child.blockId}
+                    blockId={child.blockId}
+                    depth={depth + 1}
+                    previousBlockId={index > 0 ? children[index - 1]!.blockId : null}
+                    nextBlockId={index < children.length - 1 ? children[index + 1]!.blockId : null}
+                  />
                 ))}
               </ul>
             </SortableContext>
           </DndContext>
         ) : (
           <ul className={styles.children} role="group" data-testid="block-children">
-            {children.map((child) => (
-              <BlockNode key={child.blockId} blockId={child.blockId} depth={depth + 1} />
+            {children.map((child, index) => (
+              <BlockNode
+                key={child.blockId}
+                blockId={child.blockId}
+                depth={depth + 1}
+                previousBlockId={index > 0 ? children[index - 1]!.blockId : null}
+                nextBlockId={index < children.length - 1 ? children[index + 1]!.blockId : null}
+              />
             ))}
           </ul>
         ))}
