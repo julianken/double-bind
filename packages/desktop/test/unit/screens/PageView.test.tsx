@@ -5,7 +5,8 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { render, screen, waitFor, cleanup, fireEvent } from '@testing-library/react';
 import type { Block, Page } from '@double-bind/types';
-import { PageView, PageTitle } from '../../../src/screens/PageView.js';
+import { PageView } from '../../../src/screens/PageView.js';
+import { PageTitle } from '../../../src/screens/index.js';
 import { ServiceProvider, type Services } from '../../../src/providers/ServiceProvider.js';
 import { clearQueryCache } from '../../../src/hooks/useCozoQuery.js';
 
@@ -182,7 +183,9 @@ describe('PageView', () => {
         expect(screen.getByTestId('page-title')).toBeDefined();
       });
 
-      expect(screen.getByTestId('page-title').textContent).toBe('Test Page');
+      // Real PageTitle renders an <input> for regular pages, so check value
+      const titleEl = screen.getByTestId('page-title') as HTMLInputElement;
+      expect(titleEl.value).toBe('Test Page');
     });
 
     // Tests for block tree structure and block content rendering removed:
@@ -304,7 +307,9 @@ describe('PageView', () => {
         expect(screen.getByTestId('page-title')).toBeDefined();
       });
 
-      expect(screen.getByTestId('page-title').textContent).toBe('Test Page');
+      // Real PageTitle renders an <input> for regular pages, so check value
+      const titleEl = screen.getByTestId('page-title') as HTMLInputElement;
+      expect(titleEl.value).toBe('Test Page');
     });
   });
 
@@ -1237,20 +1242,32 @@ describe('PageView', () => {
 // ============================================================================
 
 describe('PageTitle', () => {
-  it('renders title text', () => {
-    render(<PageTitle title="My Page Title" />);
+  const mockOnSave = vi.fn().mockResolvedValue(undefined);
 
-    expect(screen.getByTestId('page-title').textContent).toBe('My Page Title');
+  it('renders title text for regular page', () => {
+    render(
+      <PageTitle pageId="page-1" title="My Page Title" dailyNoteDate={null} onSave={mockOnSave} />
+    );
+
+    const titleEl = screen.getByTestId('page-title') as HTMLInputElement;
+    expect(titleEl.value).toBe('My Page Title');
   });
 
-  it('renders as h1 element', () => {
-    render(<PageTitle title="Test" />);
+  it('renders as h1 element for daily note', () => {
+    render(
+      <PageTitle
+        pageId="page-1"
+        title="2024-01-15"
+        dailyNoteDate="2024-01-15"
+        onSave={mockOnSave}
+      />
+    );
 
     expect(screen.getByRole('heading', { level: 1 })).toBeDefined();
   });
 
   it('has correct CSS class', () => {
-    render(<PageTitle title="Test" />);
+    render(<PageTitle pageId="page-1" title="Test" dailyNoteDate={null} onSave={mockOnSave} />);
 
     expect(screen.getByTestId('page-title').className).toContain('page-title');
   });
