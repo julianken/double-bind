@@ -24,6 +24,7 @@ import { useBacklinks } from '../hooks/useBacklinks.js';
 import { useServices } from '../providers/ServiceProvider.js';
 import { useAppStore } from '../stores/ui-store.js';
 import { BlockNode } from '../components/BlockNode.js';
+import { PageTitle as RealPageTitle } from '../components/PageTitle.js';
 
 // ============================================================================
 // Types
@@ -51,24 +52,6 @@ function isMacOS(): boolean {
 // ============================================================================
 // Sub-Components
 // ============================================================================
-
-/**
- * PageTitle - Renders the page title header.
- *
- * This is a stub component that will be enhanced in future tickets
- * to support inline editing.
- */
-interface PageTitleProps {
-  title: string;
-}
-
-export function PageTitle({ title }: PageTitleProps) {
-  return (
-    <h1 className="page-title" data-testid="page-title">
-      {title}
-    </h1>
-  );
-}
 
 /**
  * LoadingState - Shown while page data is being fetched.
@@ -235,6 +218,7 @@ export function PageView({ pageId }: PageViewProps) {
   const navigateToPage = useAppStore((state) => state.navigateToPage);
   const selectedBlockIds = useAppStore((state) => state.selectedBlockIds);
   const clearSelection = useAppStore((state) => state.clearSelection);
+  const setFocusedBlock = useAppStore((state) => state.setFocusedBlock);
 
   // Backlinks panel expanded state (persisted in component state)
   const [backlinksExpanded, setBacklinksExpanded] = useState(true);
@@ -259,6 +243,23 @@ export function PageView({ pageId }: PageViewProps) {
       .filter((block) => block.parentId === null)
       .sort((a, b) => a.order.localeCompare(b.order));
   }, [data?.blocks]);
+
+  // Save page title
+  const handleSaveTitle = useCallback(
+    async (newTitle: string) => {
+      await pageService.updateTitle(pageId, newTitle);
+      invalidateQueries(['pages']);
+      invalidateQueries(['page', 'withBlocks']);
+    },
+    [pageService, pageId]
+  );
+
+  // Focus the first block (called when Down arrow is pressed in the title)
+  const handleFocusFirstBlock = useCallback(() => {
+    if (rootBlocks.length > 0) {
+      setFocusedBlock(rootBlocks[0]!.blockId);
+    }
+  }, [rootBlocks, setFocusedBlock]);
 
   // Toggle backlinks panel
   const toggleBacklinks = useCallback(() => {
@@ -509,7 +510,13 @@ export function PageView({ pageId }: PageViewProps) {
           padding: '16px',
         }}
       >
-        <PageTitle title={page.title} />
+        <RealPageTitle
+          pageId={pageId}
+          title={page.title}
+          dailyNoteDate={page.dailyNoteDate}
+          onSave={handleSaveTitle}
+          onFocusFirstBlock={handleFocusFirstBlock}
+        />
 
         {rootBlocks.length === 0 ? (
           <EmptyState />
