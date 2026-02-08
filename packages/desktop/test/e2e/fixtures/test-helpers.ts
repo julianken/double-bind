@@ -230,3 +230,54 @@ export async function toggleBacklinksWithKeyboard(page: Page): Promise<void> {
     await page.keyboard.press('Control+b');
   }
 }
+
+/**
+ * Wait for block content to be fully rendered.
+ * Handles race conditions where block element exists but content is still loading.
+ *
+ * @param page - Playwright page instance
+ * @param blockId - The block ID to wait for
+ * @param options - Optional configuration
+ * @returns The block element once content is ready
+ */
+export async function waitForBlockContent(
+  page: Page,
+  blockId: string,
+  options?: { timeout?: number }
+): Promise<void> {
+  const timeout = options?.timeout ?? 5000;
+
+  // Wait for the block node to exist
+  const blockSelector = `[data-block-id="${blockId}"]`;
+  await page.waitForSelector(blockSelector, { state: 'visible', timeout });
+
+  // Wait for content to be rendered (not loading state)
+  await page.waitForFunction(
+    (id) => {
+      const block = document.querySelector(`[data-block-id="${id}"]`);
+      if (!block) return false;
+
+      // Check it's not in loading state
+      if (block.getAttribute('data-testid') === 'block-node-loading') {
+        return false;
+      }
+
+      // Check content area has text
+      const content = block.querySelector('[data-testid="static-block-content"]');
+      if (content) {
+        const text = content.textContent?.trim();
+        return text !== undefined && text.length > 0;
+      }
+
+      // If editing, check editor has content
+      const editor = block.querySelector('[data-testid="block-editor"]');
+      if (editor) {
+        return true; // Editor is mounted, content is ready
+      }
+
+      return false;
+    },
+    blockId,
+    { timeout }
+  );
+}

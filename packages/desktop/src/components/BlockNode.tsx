@@ -960,8 +960,8 @@ function BlockNodeComponent({ blockId, depth = 0 }: BlockNodeProps) {
     [setFocusedBlock]
   );
 
-  // Loading state
-  if (blockLoading || childrenLoading) {
+  // Loading state - also show loading if block exists but content is not yet populated
+  if (blockLoading || childrenLoading || (block && block.content === undefined)) {
     return (
       <li
         className="block-container block-loading"
