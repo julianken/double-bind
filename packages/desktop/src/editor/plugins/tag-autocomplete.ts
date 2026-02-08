@@ -332,13 +332,23 @@ export function createTagAutocompletePlugin(
 
   /**
    * Insert the selected tag into the document.
+   * Creates a text node with the tag mark for visual highlighting.
    */
   function insertTag(view: EditorView, tag: string, triggerPos: number): void {
     const { state } = view;
     const { from } = state.selection;
 
-    // Replace the trigger and filter with the full tag
-    const tr = state.tr.delete(triggerPos, from).insertText(`#${tag} `, triggerPos);
+    // Replace the trigger and filter with the full tag using a tag mark
+    const tagText = `#${tag}`;
+    const tagMarkType = state.schema.marks.tag;
+    const tagNode = tagMarkType
+      ? state.schema.text(tagText, [tagMarkType.create({ tag })])
+      : state.schema.text(tagText);
+
+    // Delete old content, insert marked tag node, then add trailing space
+    const tr = state.tr.delete(triggerPos, from).replaceWith(triggerPos, triggerPos, tagNode);
+    // Insert a space after the tag (without the mark)
+    tr.insertText(' ', triggerPos + tagText.length);
 
     view.dispatch(tr);
 

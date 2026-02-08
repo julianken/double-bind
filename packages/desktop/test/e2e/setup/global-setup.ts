@@ -162,16 +162,17 @@ async function initializeSchema(db: CozoDb): Promise<void> {
  * Verifies metadata is fully written before returning to prevent race conditions.
  */
 async function resetDatabase(): Promise<void> {
-  // Create a completely fresh database
-  dbContainer.db = new CozoDb('mem');
+  // Create a completely fresh database and initialize schema BEFORE
+  // assigning to dbContainer. This prevents a race condition where the
+  // browser's runMigrations() could see the new empty DB before schema
+  // is ready, causing ":create blocks" to conflict with the schema setup.
+  const newDb = new CozoDb('mem');
 
   // Initialize with schema AND proper metadata state
-  await initializeSchema(dbContainer.db);
+  await initializeSchema(newDb);
 
-  // Ensure metadata is fully written before returning
-  const schemaCheck = await dbContainer.db.run(
-    `?[v] := *metadata{ key: "schema_version", value: v }`
-  );
+  // Ensure metadata is fully written before exposing the DB
+  const schemaCheck = await newDb.run(`?[v] := *metadata{ key: "schema_version", value: v }`);
 
   if (
     !schemaCheck ||
@@ -184,7 +185,7 @@ async function resetDatabase(): Promise<void> {
   }
 
   // Verify applied_migrations is also set
-  const migrationsCheck = await dbContainer.db.run(
+  const migrationsCheck = await newDb.run(
     `?[v] := *metadata{ key: "applied_migrations", value: v }`
   );
 
@@ -197,6 +198,10 @@ async function resetDatabase(): Promise<void> {
   ) {
     throw new Error('Schema initialization failed: applied_migrations metadata not set');
   }
+
+  // Only assign to dbContainer AFTER schema is fully initialized.
+  // This ensures no request can see a partially-initialized DB.
+  dbContainer.db = newDb;
 }
 
 async function globalSetup(_config: FullConfig): Promise<void> {

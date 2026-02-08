@@ -304,7 +304,9 @@ describe('createTagAutocompletePlugin', () => {
   describe('Plugin Key', () => {
     it('exports the plugin key', () => {
       expect(tagAutocompletePluginKey).toBeDefined();
-      expect(tagAutocompletePluginKey.key).toBe('tagAutocomplete$');
+      // ProseMirror appends $ + optional counter to key names; exact suffix
+      // depends on module load order across test files in singleFork mode
+      expect(tagAutocompletePluginKey.key).toMatch(/^tagAutocomplete\$/);
     });
 
     it('can retrieve state using plugin key', () => {

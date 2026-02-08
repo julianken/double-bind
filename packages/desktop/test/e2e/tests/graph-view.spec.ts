@@ -130,25 +130,22 @@ test.describe('Graph View', () => {
       ).toBeVisible({ timeout: 5000 });
     });
 
+    // TODO: This test is skipped because the real DailyNotesView (wired up for E2E)
+    // auto-creates today's daily note on mount, so the database is never truly empty
+    // by the time the graph view renders. The empty state is still reachable in
+    // production if the app starts on a non-daily-notes route, but this is not
+    // easily testable in the current E2E setup.
     test.skip('shows empty state when no pages exist', async ({ page }) => {
-      // TODO: This test has a race condition with parallel workers sharing the bridge server
-      // The bridge server is shared across all workers, so one worker's reset can affect another's test
-      // This would need to be fixed by using isolated database instances per worker
-      // Reset to empty database (clears any seeded data from beforeEach)
       await resetDatabase();
-
-      // Re-setup mock IPC since we're starting fresh
-      await setupMockIPC(page);
 
       await page.goto('/');
       await expect(page.getByTestId('app-shell')).toBeVisible({ timeout: 10000 });
 
-      // Open graph view
       await page.keyboard.press('Control+g');
 
-      // Verify empty state is shown
-      await expect(page.getByTestId('graph-view-empty')).toBeVisible({ timeout: 5000 });
-      await expect(page.getByText('No pages yet')).toBeVisible();
+      const emptyState = page.getByTestId('graph-view-empty');
+      await expect(emptyState).toBeVisible({ timeout: 5000 });
+      await expect(emptyState.getByText('No pages yet')).toBeVisible();
     });
   });
 

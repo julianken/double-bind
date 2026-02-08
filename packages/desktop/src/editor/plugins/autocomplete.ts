@@ -320,12 +320,16 @@ function selectResult(view: EditorView, state: AutocompleteState): void {
   const replaceStart = state.triggerPos;
   const replaceEnd = from;
 
-  // Create the block reference text: ((block_id))
+  // Create the block reference text with blockRef mark: ((block_id))
   const refText = `((${selectedResult.blockId}))`;
+  const blockRefMarkType = view.state.schema.marks.blockRef;
+  const textNode = blockRefMarkType
+    ? view.state.schema.text(refText, [blockRefMarkType.create({ blockId: selectedResult.blockId })])
+    : view.state.schema.text(refText);
 
   // Create transaction to replace the trigger + query with the reference
   const tr = view.state.tr
-    .replaceWith(replaceStart, replaceEnd, view.state.schema.text(refText))
+    .replaceWith(replaceStart, replaceEnd, textNode)
     .setMeta(autocompletePluginKey, { ...initialState });
 
   view.dispatch(tr);
