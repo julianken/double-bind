@@ -4,6 +4,8 @@
  * Fetches the N-hop neighborhood of a page via GraphService and transforms the data
  * into the format expected by MiniGraph component.
  *
+ * Now backed by TanStack Query (DBB-341) for stable reference identity.
+ *
  * @example
  * ```tsx
  * function SidebarGraph({ pageId }: { pageId: string }) {
@@ -23,11 +25,11 @@
  * ```
  */
 
-import { useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import type { PageId } from '@double-bind/types';
 import type { MiniGraphNode, MiniGraphEdge } from '@double-bind/ui-primitives';
 import { useServices } from '../providers/ServiceProvider.js';
-import { useCozoQuery } from './useCozoQuery.js';
+import { graphKeys } from '../lib/queryKeys.js';
 
 /**
  * Result type for useNeighborhood hook.
@@ -51,29 +53,29 @@ export interface UseNeighborhoodResult {
 export function useNeighborhood(pageId: PageId | null, hops: number): UseNeighborhoodResult {
   const { graphService } = useServices();
 
-  const queryFn = useCallback(async () => {
-    if (!pageId) {
-      return { nodes: [], edges: [] };
-    }
+  const { data, isLoading } = useQuery({
+    queryKey: graphKeys.neighborhood(pageId ?? '', hops),
+    queryFn: async () => {
+      if (!pageId) {
+        return { nodes: [], edges: [] };
+      }
 
-    const result = await graphService.getNeighborhood(pageId, hops);
+      const result = await graphService.getNeighborhood(pageId, hops);
 
-    // Transform Page[] to MiniGraphNode[]
-    const nodes: MiniGraphNode[] = result.nodes.map((page) => ({
-      id: page.pageId,
-      title: page.title,
-    }));
+      // Transform Page[] to MiniGraphNode[]
+      const nodes: MiniGraphNode[] = result.nodes.map((page) => ({
+        id: page.pageId,
+        title: page.title,
+      }));
 
-    // Transform Link[] to MiniGraphEdge[]
-    const edges: MiniGraphEdge[] = result.edges.map((link) => ({
-      source: link.sourceId,
-      target: link.targetId,
-    }));
+      // Transform Link[] to MiniGraphEdge[]
+      const edges: MiniGraphEdge[] = result.edges.map((link) => ({
+        source: link.sourceId,
+        target: link.targetId,
+      }));
 
-    return { nodes, edges };
-  }, [graphService, pageId, hops]);
-
-  const { data, isLoading } = useCozoQuery(['neighborhood', pageId ?? '', String(hops)], queryFn, {
+      return { nodes, edges };
+    },
     enabled: pageId !== null,
   });
 

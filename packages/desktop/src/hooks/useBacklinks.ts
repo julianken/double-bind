@@ -4,13 +4,16 @@
  * Fetches all blocks that link to the given page, grouped by source page.
  * Used by PageView to display the BacklinksPanel.
  *
+ * Now backed by TanStack Query (DBB-341) for stable reference identity.
+ *
  * @see packages/ui-primitives/src/data/BacklinksPanel.tsx
  */
 
-import { useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import type { PageId } from '@double-bind/types';
 import type { LinkedRef, UnlinkedRef } from '@double-bind/ui-primitives';
-import { useCozoQuery } from './useCozoQuery.js';
+import type { PageBacklink } from '@double-bind/core';
+import { pageKeys } from '../lib/queryKeys.js';
 import { useServices } from '../providers/ServiceProvider.js';
 
 /**
@@ -57,17 +60,16 @@ export interface UseBacklinksResult {
 export function useBacklinks(pageId: PageId): UseBacklinksResult {
   const { pageService } = useServices();
 
-  // Query function to fetch backlinks
-  const queryFn = useCallback(() => pageService.getPageBacklinks(pageId), [pageService, pageId]);
-
-  // Use the query cache for automatic re-fetching on invalidation
-  const { data, isLoading } = useCozoQuery(['backlinks', 'page', pageId], queryFn, {
+  // Use TanStack Query with structured query key
+  const { data, isLoading } = useQuery({
+    queryKey: pageKeys.backlinks(pageId),
+    queryFn: () => pageService.getPageBacklinks(pageId),
     enabled: !!pageId,
   });
 
   // Transform the PageBacklink[] into LinkedRef[] format
   const linkedRefs: LinkedRef[] = data
-    ? data.map((backlink) => ({
+    ? data.map((backlink: PageBacklink) => ({
         block: backlink.block,
         page: backlink.page,
       }))

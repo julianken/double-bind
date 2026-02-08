@@ -4,12 +4,22 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, cleanup, fireEvent, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { GraphDB, QueryResult } from '@double-bind/types';
 import type { Services } from '../../../src/providers/ServiceProvider.js';
 import { ServiceProvider } from '../../../src/providers/ServiceProvider.js';
 import { QueryViewScreen } from '../../../src/screens/QueryViewScreen.js';
 import { useQueryHistoryStore } from '../../../src/stores/query-history-store.js';
 import { useAppStore } from '../../../src/stores/ui-store.js';
+
+// Create a QueryClient for testing
+const createTestQueryClient = () =>
+  new QueryClient({
+    defaultOptions: {
+      queries: { retry: false, staleTime: 0, gcTime: Infinity },
+      mutations: { retry: false },
+    },
+  });
 
 // Mock GraphDB
 function createMockGraphDB(): GraphDB {
@@ -108,27 +118,27 @@ describe('QueryViewScreen', () => {
   describe('Basic Rendering', () => {
     it('renders the query view container', () => {
       render(
-        <ServiceProvider services={mockServices}>
+        <QueryClientProvider client={createTestQueryClient()}><ServiceProvider services={mockServices}>
           <QueryViewScreen params={{}} />
-        </ServiceProvider>
+        </ServiceProvider></QueryClientProvider>
       );
       expect(screen.getByTestId('query-view')).toBeDefined();
     });
 
     it('renders the toolbar', () => {
       render(
-        <ServiceProvider services={mockServices}>
+        <QueryClientProvider client={createTestQueryClient()}><ServiceProvider services={mockServices}>
           <QueryViewScreen params={{}} />
-        </ServiceProvider>
+        </ServiceProvider></QueryClientProvider>
       );
       expect(screen.getByTestId('query-toolbar')).toBeDefined();
     });
 
     it('renders mode toggle buttons', () => {
       render(
-        <ServiceProvider services={mockServices}>
+        <QueryClientProvider client={createTestQueryClient()}><ServiceProvider services={mockServices}>
           <QueryViewScreen params={{}} />
-        </ServiceProvider>
+        </ServiceProvider></QueryClientProvider>
       );
       expect(screen.getByTestId('mode-visual')).toBeDefined();
       expect(screen.getByTestId('mode-raw')).toBeDefined();
@@ -136,27 +146,27 @@ describe('QueryViewScreen', () => {
 
     it('renders execute button', () => {
       render(
-        <ServiceProvider services={mockServices}>
+        <QueryClientProvider client={createTestQueryClient()}><ServiceProvider services={mockServices}>
           <QueryViewScreen params={{}} />
-        </ServiceProvider>
+        </ServiceProvider></QueryClientProvider>
       );
       expect(screen.getByTestId('execute-query')).toBeDefined();
     });
 
     it('renders save button', () => {
       render(
-        <ServiceProvider services={mockServices}>
+        <QueryClientProvider client={createTestQueryClient()}><ServiceProvider services={mockServices}>
           <QueryViewScreen params={{}} />
-        </ServiceProvider>
+        </ServiceProvider></QueryClientProvider>
       );
       expect(screen.getByTestId('save-query-button')).toBeDefined();
     });
 
     it('renders side panel with tabs', () => {
       render(
-        <ServiceProvider services={mockServices}>
+        <QueryClientProvider client={createTestQueryClient()}><ServiceProvider services={mockServices}>
           <QueryViewScreen params={{}} />
-        </ServiceProvider>
+        </ServiceProvider></QueryClientProvider>
       );
       expect(screen.getByTestId('query-side-panel')).toBeDefined();
       expect(screen.getByTestId('tab-saved')).toBeDefined();
@@ -165,18 +175,18 @@ describe('QueryViewScreen', () => {
 
     it('renders editor pane', () => {
       render(
-        <ServiceProvider services={mockServices}>
+        <QueryClientProvider client={createTestQueryClient()}><ServiceProvider services={mockServices}>
           <QueryViewScreen params={{}} />
-        </ServiceProvider>
+        </ServiceProvider></QueryClientProvider>
       );
       expect(screen.getByTestId('query-editor-pane')).toBeDefined();
     });
 
     it('renders results pane', () => {
       render(
-        <ServiceProvider services={mockServices}>
+        <QueryClientProvider client={createTestQueryClient()}><ServiceProvider services={mockServices}>
           <QueryViewScreen params={{}} />
-        </ServiceProvider>
+        </ServiceProvider></QueryClientProvider>
       );
       expect(screen.getByTestId('query-results-pane')).toBeDefined();
     });
@@ -189,9 +199,9 @@ describe('QueryViewScreen', () => {
   describe('Mode Switching', () => {
     it('starts in visual mode by default', () => {
       render(
-        <ServiceProvider services={mockServices}>
+        <QueryClientProvider client={createTestQueryClient()}><ServiceProvider services={mockServices}>
           <QueryViewScreen params={{}} />
-        </ServiceProvider>
+        </ServiceProvider></QueryClientProvider>
       );
 
       const visualButton = screen.getByTestId('mode-visual');
@@ -200,9 +210,9 @@ describe('QueryViewScreen', () => {
 
     it('switches to raw mode when clicked', () => {
       render(
-        <ServiceProvider services={mockServices}>
+        <QueryClientProvider client={createTestQueryClient()}><ServiceProvider services={mockServices}>
           <QueryViewScreen params={{}} />
-        </ServiceProvider>
+        </ServiceProvider></QueryClientProvider>
       );
 
       const rawButton = screen.getByTestId('mode-raw');
@@ -214,9 +224,9 @@ describe('QueryViewScreen', () => {
 
     it('shows visual query builder in visual mode', () => {
       render(
-        <ServiceProvider services={mockServices}>
+        <QueryClientProvider client={createTestQueryClient()}><ServiceProvider services={mockServices}>
           <QueryViewScreen params={{}} />
-        </ServiceProvider>
+        </ServiceProvider></QueryClientProvider>
       );
 
       expect(screen.getByTestId('visual-query-builder')).toBeDefined();
@@ -224,9 +234,9 @@ describe('QueryViewScreen', () => {
 
     it('shows code editor in raw mode', () => {
       render(
-        <ServiceProvider services={mockServices}>
+        <QueryClientProvider client={createTestQueryClient()}><ServiceProvider services={mockServices}>
           <QueryViewScreen params={{}} />
-        </ServiceProvider>
+        </ServiceProvider></QueryClientProvider>
       );
 
       fireEvent.click(screen.getByTestId('mode-raw'));
@@ -242,9 +252,9 @@ describe('QueryViewScreen', () => {
   describe('Query Execution', () => {
     it('executes query when execute button clicked in raw mode', async () => {
       render(
-        <ServiceProvider services={mockServices}>
+        <QueryClientProvider client={createTestQueryClient()}><ServiceProvider services={mockServices}>
           <QueryViewScreen params={{}} />
-        </ServiceProvider>
+        </ServiceProvider></QueryClientProvider>
       );
 
       // Switch to raw mode
@@ -260,9 +270,9 @@ describe('QueryViewScreen', () => {
 
     it('displays results after execution', async () => {
       render(
-        <ServiceProvider services={mockServices}>
+        <QueryClientProvider client={createTestQueryClient()}><ServiceProvider services={mockServices}>
           <QueryViewScreen params={{}} />
-        </ServiceProvider>
+        </ServiceProvider></QueryClientProvider>
       );
 
       // Switch to raw mode
@@ -285,9 +295,9 @@ describe('QueryViewScreen', () => {
       const errorServices = createMockServices(errorGraphDB);
 
       render(
-        <ServiceProvider services={errorServices}>
+        <QueryClientProvider client={createTestQueryClient()}><ServiceProvider services={errorServices}>
           <QueryViewScreen params={{}} />
-        </ServiceProvider>
+        </ServiceProvider></QueryClientProvider>
       );
 
       // Switch to raw mode
@@ -303,9 +313,9 @@ describe('QueryViewScreen', () => {
 
     it('adds executed query to history', async () => {
       render(
-        <ServiceProvider services={mockServices}>
+        <QueryClientProvider client={createTestQueryClient()}><ServiceProvider services={mockServices}>
           <QueryViewScreen params={{}} />
-        </ServiceProvider>
+        </ServiceProvider></QueryClientProvider>
       );
 
       // Switch to raw mode
@@ -328,9 +338,9 @@ describe('QueryViewScreen', () => {
   describe('Side Panel', () => {
     it('shows saved queries tab by default', () => {
       render(
-        <ServiceProvider services={mockServices}>
+        <QueryClientProvider client={createTestQueryClient()}><ServiceProvider services={mockServices}>
           <QueryViewScreen params={{}} />
-        </ServiceProvider>
+        </ServiceProvider></QueryClientProvider>
       );
 
       expect(screen.getByTestId('saved-queries-list')).toBeDefined();
@@ -338,9 +348,9 @@ describe('QueryViewScreen', () => {
 
     it('switches to history tab when clicked', () => {
       render(
-        <ServiceProvider services={mockServices}>
+        <QueryClientProvider client={createTestQueryClient()}><ServiceProvider services={mockServices}>
           <QueryViewScreen params={{}} />
-        </ServiceProvider>
+        </ServiceProvider></QueryClientProvider>
       );
 
       fireEvent.click(screen.getByTestId('tab-history'));
@@ -360,9 +370,9 @@ describe('QueryViewScreen', () => {
   describe('Save Query Modal', () => {
     it('opens save modal when save button clicked', () => {
       render(
-        <ServiceProvider services={mockServices}>
+        <QueryClientProvider client={createTestQueryClient()}><ServiceProvider services={mockServices}>
           <QueryViewScreen params={{}} />
-        </ServiceProvider>
+        </ServiceProvider></QueryClientProvider>
       );
 
       fireEvent.click(screen.getByTestId('save-query-button'));
@@ -372,9 +382,9 @@ describe('QueryViewScreen', () => {
 
     it('closes modal when cancel clicked', () => {
       render(
-        <ServiceProvider services={mockServices}>
+        <QueryClientProvider client={createTestQueryClient()}><ServiceProvider services={mockServices}>
           <QueryViewScreen params={{}} />
-        </ServiceProvider>
+        </ServiceProvider></QueryClientProvider>
       );
 
       fireEvent.click(screen.getByTestId('save-query-button'));
@@ -387,9 +397,9 @@ describe('QueryViewScreen', () => {
 
     it('has name input in modal', () => {
       render(
-        <ServiceProvider services={mockServices}>
+        <QueryClientProvider client={createTestQueryClient()}><ServiceProvider services={mockServices}>
           <QueryViewScreen params={{}} />
-        </ServiceProvider>
+        </ServiceProvider></QueryClientProvider>
       );
 
       fireEvent.click(screen.getByTestId('save-query-button'));
@@ -399,9 +409,9 @@ describe('QueryViewScreen', () => {
 
     it('has description input in modal', () => {
       render(
-        <ServiceProvider services={mockServices}>
+        <QueryClientProvider client={createTestQueryClient()}><ServiceProvider services={mockServices}>
           <QueryViewScreen params={{}} />
-        </ServiceProvider>
+        </ServiceProvider></QueryClientProvider>
       );
 
       fireEvent.click(screen.getByTestId('save-query-button'));
