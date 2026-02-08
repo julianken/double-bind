@@ -9,6 +9,7 @@
  * - AbortController for cancelling in-flight requests
  * - Race condition prevention
  * - Callbacks (onResults, onSearchStart, onError)
+ * - Shared state via Zustand store
  */
 
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
@@ -18,6 +19,7 @@ import {
   DEFAULT_DEBOUNCE_MS,
   DEFAULT_MIN_QUERY_LENGTH,
 } from '../../../src/hooks/useSearch.js';
+import { useSearchStore } from '../../../src/stores/search-store.js';
 
 // ============================================================================
 // Tests
@@ -27,11 +29,15 @@ describe('useSearch', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useFakeTimers();
+    // Reset the Zustand store before each test
+    useSearchStore.getState().clearSearch();
   });
 
   afterEach(() => {
     cleanup();
     vi.useRealTimers();
+    // Reset the store after each test to ensure clean state
+    useSearchStore.getState().clearSearch();
   });
 
   // ============================================================================
@@ -994,6 +1000,92 @@ describe('useSearch', () => {
 
       // Results callback should not be called after unmount
       expect(onResults).not.toHaveBeenCalled();
+    });
+  });
+
+  // ============================================================================
+  // Shared State (DBB-337 fix)
+  // ============================================================================
+
+  describe('Shared State', () => {
+    it('shares state between multiple hook instances', async () => {
+      vi.useRealTimers();
+
+      // Render two hook instances (simulating SearchBar and SearchResultsView)
+      const { result: result1 } = renderHook(() => useSearch());
+      const { result: result2 } = renderHook(() => useSearch());
+
+      // Set query from first instance
+      act(() => {
+        result1.current.setQuery('shared query');
+      });
+
+      // Both instances should see the same query immediately
+      expect(result1.current.query).toBe('shared query');
+      expect(result2.current.query).toBe('shared query');
+
+      // Wait for search to complete
+      await waitFor(() => {
+        expect(result1.current.isLoading).toBe(false);
+      });
+
+      // Both instances should have the same results
+      expect(result1.current.results).toEqual(result2.current.results);
+      expect(result1.current.hasResults).toBe(true);
+      expect(result2.current.hasResults).toBe(true);
+    });
+
+    it('preserves state when hook unmounts and remounts', async () => {
+      vi.useRealTimers();
+
+      // First hook instance sets query
+      const { result: result1, unmount } = renderHook(() => useSearch());
+
+      act(() => {
+        result1.current.setQuery('persistent query');
+      });
+
+      await waitFor(() => {
+        expect(result1.current.hasResults).toBe(true);
+      });
+
+      // Unmount first instance (simulating navigation away)
+      unmount();
+
+      // Mount new instance (simulating navigation to SearchResultsView)
+      const { result: result2 } = renderHook(() => useSearch());
+
+      // New instance should have the same state
+      expect(result2.current.query).toBe('persistent query');
+      expect(result2.current.hasResults).toBe(true);
+      expect(result2.current.results.length).toBeGreaterThan(0);
+    });
+
+    it('clearSearch affects all instances', async () => {
+      vi.useRealTimers();
+
+      const { result: result1 } = renderHook(() => useSearch());
+      const { result: result2 } = renderHook(() => useSearch());
+
+      // Set query from first instance
+      act(() => {
+        result1.current.setQuery('query to clear');
+      });
+
+      await waitFor(() => {
+        expect(result1.current.hasResults).toBe(true);
+      });
+
+      // Clear from second instance
+      act(() => {
+        result2.current.clearSearch();
+      });
+
+      // Both instances should be cleared
+      expect(result1.current.query).toBe('');
+      expect(result1.current.results).toEqual([]);
+      expect(result2.current.query).toBe('');
+      expect(result2.current.results).toEqual([]);
     });
   });
 });
