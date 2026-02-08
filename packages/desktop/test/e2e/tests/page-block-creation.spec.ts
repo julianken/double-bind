@@ -74,10 +74,10 @@ test.describe('Dynamic Page and Block Creation', () => {
     });
 
     // Verify the page title shows "Untitled" (default title).
-    // PageView renders the title as an <h1> element, not an input.
+    // PageTitle renders an <input> for regular pages.
     const pageTitle = page.getByTestId('page-title');
     await expect(pageTitle).toBeVisible({ timeout: 5000 });
-    await expect(pageTitle).toContainText('Untitled');
+    await expect(pageTitle).toHaveValue('Untitled');
   });
 
   test('edits page title', async ({ page }) => {
@@ -108,10 +108,10 @@ test.describe('Dynamic Page and Block Creation', () => {
     });
 
     // Verify the original title is displayed.
-    // PageView renders the title as an <h1> element.
+    // PageTitle renders an <input> for regular pages.
     const pageTitle = page.getByTestId('page-title');
     await expect(pageTitle).toBeVisible({ timeout: 5000 });
-    await expect(pageTitle).toContainText('Original Title');
+    await expect(pageTitle).toHaveValue('Original Title');
   });
 
   test('creates new block by pressing Enter', async ({ page }) => {

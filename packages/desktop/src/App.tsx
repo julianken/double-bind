@@ -18,6 +18,7 @@ import { useServicesOptional, ServiceContext } from './providers/ServiceProvider
 import { PageView as RealPageView } from './screens/PageView.js';
 import { GraphViewScreen } from './screens/GraphViewScreen.js';
 import { SearchResultsView as RealSearchResultsView } from './screens/SearchResultsView.js';
+import { DailyNotesView as RealDailyNotesView } from './screens/DailyNotesView.js';
 import { Sidebar as FullSidebar } from './layout/Sidebar.js';
 import { invalidateQueries } from './hooks/useCozoQuery.js';
 
@@ -95,13 +96,27 @@ function Sidebar() {
 // These will be replaced with actual implementations in future issues
 // ============================================================================
 
-function DailyNotesView() {
+function PlaceholderDailyNotesView() {
   return (
     <div className="view daily-notes-view" data-testid="daily-notes-view">
       <h1>Daily Notes</h1>
       <p>Today&apos;s notes will appear here.</p>
     </div>
   );
+}
+
+/**
+ * DailyNotesView - Uses real DailyNotesView when ServiceProvider is available,
+ * otherwise renders a placeholder for unit testing without services.
+ */
+function DailyNotesView() {
+  const services = useContext(ServiceContext);
+
+  if (services) {
+    return <RealDailyNotesView params={{}} />;
+  }
+
+  return <PlaceholderDailyNotesView />;
 }
 
 /**
