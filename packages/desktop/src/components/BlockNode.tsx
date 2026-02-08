@@ -926,6 +926,8 @@ function BlockNodeComponent({ blockId, depth = 0 }: BlockNodeProps) {
   const handleBlocksChanged = useCallback(() => {
     invalidateQueries(['blocks']);
     invalidateQueries(['block']);
+    // Also invalidate the page query since PageView uses ['page', 'withBlocks', pageId]
+    invalidateQueries(['page', 'withBlocks']);
   }, []);
 
   // Handle activating this block for editing
