@@ -261,6 +261,8 @@ test.describe('Page Creation Flow', () => {
   // conflicts with an existing one" errors.
   // ============================================================================
 
+  // TODO: The "No pages yet" empty state overlaps with the New Page button, blocking clicks
+  // This is a CSS layout issue that needs to be fixed in the Sidebar component
   test.skip('creates a new page via sidebar button', async ({ page }) => {
     await page.goto('/');
     await expect(page.getByTestId('app-shell')).toBeVisible({ timeout: 10000 });
@@ -270,14 +272,11 @@ test.describe('Page Creation Flow', () => {
     await expect(sidebar).toBeVisible({ timeout: 5000 });
 
     // Click the "New Page" button in the sidebar
-    const newPageButton = page.locator('.sidebar-new-page-button');
+    const newPageButton = page.getByRole('button', { name: 'Create new page' });
     await expect(newPageButton).toBeVisible({ timeout: 5000 });
     await newPageButton.click();
 
-    // Wait for navigation and page creation to complete
-    await page.waitForTimeout(1000);
-
-    // Verify a new page is created and we navigate to it
+    // Verify a new page is created and we navigate to it - use proper assertion
     await expect(page.getByTestId('page-view')).toBeVisible({ timeout: 10000 });
 
     // The page should have a default title (Untitled)
@@ -290,6 +289,7 @@ test.describe('Page Creation Flow', () => {
     await expect(pageList).toContainText('Untitled', { timeout: 5000 });
   });
 
+  // TODO: Page title editing is not yet implemented - PageTitle is a read-only h1 element
   test.skip('edits page title', async ({ page }) => {
     // Seed a page first
     const pageId = generateId('page');
@@ -316,11 +316,8 @@ test.describe('Page Creation Flow', () => {
     // Press Enter to save and blur
     await pageTitle.press('Enter');
 
-    // Wait for save (debounced at 500ms, plus a buffer)
-    await page.waitForTimeout(800);
-
-    // Verify the title updated in the input
-    await expect(pageTitle).toHaveValue('Updated Title');
+    // Verify the title updated in the input - use assertion with timeout
+    await expect(pageTitle).toHaveValue('Updated Title', { timeout: 5000 });
 
     // Navigate away and back to verify persistence
     await page.goto('/');
@@ -329,7 +326,7 @@ test.describe('Page Creation Flow', () => {
 
     // Wait for page view to load
     await expect(page.getByTestId('page-view')).toBeVisible({ timeout: 5000 });
-    await expect(page.getByTestId('page-title')).toHaveValue('Updated Title');
+    await expect(page.getByTestId('page-title')).toHaveValue('Updated Title', { timeout: 5000 });
   });
 
   // ============================================================================
@@ -341,8 +338,7 @@ test.describe('Page Creation Flow', () => {
   // TODO: Investigate why blocks render without content in some E2E test runs.
   // ============================================================================
 
-  // TODO: Enter key doesn't create new block in E2E - investigate DBB-326 fix
-  test.skip('creates new block by pressing Enter', async ({ page }) => {
+  test('creates new block by pressing Enter', async ({ page }) => {
     // Seed a page with one block
     const pageId = generateId('page');
     const blockId = generateId('block');
@@ -362,9 +358,12 @@ test.describe('Page Creation Flow', () => {
     await expect(page.getByTestId('page-view')).toBeVisible({ timeout: 5000 });
     await expect(page.getByTestId('block-tree')).toBeVisible({ timeout: 5000 });
 
-    // Verify initial block count
+    // Verify initial block count and content
     const initialBlockNodes = page.getByTestId('block-node');
     await expect(initialBlockNodes).toHaveCount(1, { timeout: 5000 });
+
+    // Verify block content is visible before clicking
+    await expect(page.getByTestId('block-tree')).toContainText('First block', { timeout: 5000 });
 
     // Click on the first block to activate the editor
     await clickOnBlock(page);
@@ -372,19 +371,19 @@ test.describe('Page Creation Flow', () => {
     await expect(editor).toBeVisible({ timeout: 5000 });
     await expect(editor).toBeFocused({ timeout: 2000 });
 
-    // Move cursor to end and press Enter
-    await editor.press('End');
-    await editor.press('Enter');
+    // Verify the editor contains the block content
+    await expect(editor).toContainText('First block', { timeout: 5000 });
+
+    // Press Enter to create a new block (cursor position doesn't affect test - we just need 2 blocks)
+    await page.keyboard.press('Enter');
 
     // Wait for new block to be created
-    await page.waitForTimeout(1000);
-
-    // Verify two blocks exist now
     const blockNodes = page.getByTestId('block-node');
     await expect(blockNodes).toHaveCount(2, { timeout: 5000 });
   });
 
-  // TODO: Depends on Enter key creating new block
+  // TODO: Focus management after Enter needs more work - focusBlock doesn't reliably
+  // move focus to the new block's editor in time for typing
   test.skip('types content in new block after Enter', async ({ page }) => {
     // Seed a page with one block
     const pageId = generateId('page');
@@ -411,12 +410,12 @@ test.describe('Page Creation Flow', () => {
     await expect(editor).toBeVisible({ timeout: 5000 });
     await expect(editor).toBeFocused({ timeout: 2000 });
 
-    // Move to end, press Enter, and type new content
-    await editor.press('End');
-    await editor.press('Enter');
+    // Press Enter to create a new block
+    await page.keyboard.press('Enter');
 
-    // Wait for new block to be created
-    await page.waitForTimeout(1000);
+    // Wait for new block to be created - use proper assertion
+    const blockNodes = page.getByTestId('block-node');
+    await expect(blockNodes).toHaveCount(2, { timeout: 5000 });
 
     // The new block should be focused - find the currently focused editor
     const focusedEditor = page.locator('.ProseMirror:focus');
@@ -425,13 +424,10 @@ test.describe('Page Creation Flow', () => {
     // Type in the new block (which should now be focused)
     await page.keyboard.type('Second block content');
 
-    // Wait for content to be saved (debounced)
-    await page.waitForTimeout(800);
-
-    // Verify the block tree contains both blocks
+    // Verify the block tree contains both blocks - use waitFor assertion
     const blockTree = page.getByTestId('block-tree');
-    await expect(blockTree).toContainText('First block');
-    await expect(blockTree).toContainText('Second block content');
+    await expect(blockTree).toContainText('First block', { timeout: 5000 });
+    await expect(blockTree).toContainText('Second block content', { timeout: 5000 });
   });
 
   // ============================================================================
