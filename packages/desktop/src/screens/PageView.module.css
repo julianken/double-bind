@@ -1,0 +1,155 @@
+/**
+ * PageView Screen Styles
+ *
+ * Main content view for displaying page title and block tree.
+ */
+
+/* ============================================================================
+ * Container
+ * ============================================================================ */
+
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: var(--bg-primary);
+}
+
+/* ============================================================================
+ * Content Area
+ * ============================================================================ */
+
+.content {
+  flex: 1;
+  overflow: auto;
+  padding: var(--space-6);
+}
+
+/* ============================================================================
+ * Block Tree
+ * ============================================================================ */
+
+.blockTree {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* ============================================================================
+ * Loading State
+ * ============================================================================ */
+
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-muted);
+  font-size: var(--text-base);
+}
+
+/* ============================================================================
+ * Error State
+ * ============================================================================ */
+
+.error {
+  padding: var(--space-6);
+  color: var(--error);
+}
+
+.error h2 {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-lg);
+  font-weight: var(--font-semibold);
+}
+
+.error p {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+/* ============================================================================
+ * Empty State
+ * ============================================================================ */
+
+.empty {
+  padding: var(--space-8) var(--space-4);
+  text-align: center;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+/* ============================================================================
+ * Backlinks Section
+ * ============================================================================ */
+
+.backlinksSection {
+  flex-shrink: 0;
+  border-top: 1px solid var(--border-default);
+  background-color: var(--bg-secondary);
+}
+
+.backlinksHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  width: 100%;
+  border: none;
+  background-color: transparent;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+  text-align: left;
+  transition: background-color var(--transition-fast);
+}
+
+.backlinksHeader:hover {
+  background-color: var(--bg-hover);
+}
+
+.backlinksHeader:focus-visible {
+  outline: var(--ring-width) solid var(--ring-color);
+  outline-offset: -2px;
+}
+
+.backlinksChevron {
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 5px 0 5px 7px;
+  border-color: transparent transparent transparent currentColor;
+  opacity: 0.6;
+  transition: transform var(--transition-fast);
+}
+
+.backlinksChevron--expanded {
+  transform: rotate(90deg);
+}
+
+.backlinksTitle {
+  flex: 1;
+}
+
+.backlinksLoading {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.backlinksCount {
+  padding: 2px var(--space-2);
+  background-color: var(--bg-tertiary);
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+  color: var(--text-secondary);
+}
+
+.backlinksContent {
+  max-height: 300px;
+  overflow: auto;
+  padding: 0 var(--space-4) var(--space-4);
+}

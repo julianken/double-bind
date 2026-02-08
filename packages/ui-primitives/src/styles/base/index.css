@@ -1,0 +1,9 @@
+/**
+ * Base Styles Index
+ *
+ * Import this file to get reset + global styles.
+ * Usage: @import '@double-bind/ui-primitives/styles/base';
+ */
+
+@import './reset.css';
+@import './globals.css';

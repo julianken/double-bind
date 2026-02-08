@@ -20,6 +20,7 @@ import { GraphViewScreen } from './screens/GraphViewScreen.js';
 import { SearchResultsView as RealSearchResultsView } from './screens/SearchResultsView.js';
 import { DailyNotesView as RealDailyNotesView } from './screens/DailyNotesView.js';
 import { Sidebar as FullSidebar } from './layout/Sidebar.js';
+import { AppShell } from './layout/AppShell.js';
 import { invalidateQueries } from './hooks/useCozoQuery.js';
 
 // ============================================================================
@@ -220,51 +221,6 @@ const routes: Route[] = [
   { id: 'query', path: '/query', component: QueryView },
 ];
 
-// ============================================================================
-// Navigation Bar Component
-// ============================================================================
-
-function NavigationBar() {
-  const goBack = useAppStore((s) => s.goBack);
-  const goForward = useAppStore((s) => s.goForward);
-  const historyIndex = useAppStore((s) => s.historyIndex);
-  const pageHistory = useAppStore((s) => s.pageHistory);
-
-  const canGoBack = historyIndex > 0;
-  const canGoForward = historyIndex < pageHistory.length - 1;
-
-  return (
-    <nav className="navigation-bar" data-testid="navigation-bar" aria-label="History navigation">
-      <button onClick={goBack} disabled={!canGoBack} aria-label="Go back" title="Go back (Ctrl+[)">
-        Back
-      </button>
-      <button
-        onClick={goForward}
-        disabled={!canGoForward}
-        aria-label="Go forward"
-        title="Go forward (Ctrl+])"
-      >
-        Forward
-      </button>
-    </nav>
-  );
-}
-
-// ============================================================================
-// AppShell Component
-// ============================================================================
-
-function AppShell({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="app-shell" data-testid="app-shell">
-      <Sidebar />
-      <main className="main-content" role="main">
-        <NavigationBar />
-        <div className="content-area">{children}</div>
-      </main>
-    </div>
-  );
-}
 
 // ============================================================================
 // App Component
@@ -276,7 +232,7 @@ export function App() {
 
   return (
     <>
-      <AppShell>
+      <AppShell sidebar={<Sidebar />}>
         <Router routes={routes} defaultComponent={DailyNotesView} />
       </AppShell>
       <CommandPalette />

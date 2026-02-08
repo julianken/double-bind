@@ -14,6 +14,7 @@ import type { Page } from '@double-bind/types';
 import { useServices } from '../providers/ServiceProvider.js';
 import { useCozoQuery } from '../hooks/useCozoQuery.js';
 import { useAppStore } from '../stores/ui-store.js';
+import styles from './PageList.module.css';
 
 // ============================================================================
 // Types
@@ -109,7 +110,7 @@ export const PageListItem = memo(function PageListItem({
       role="option"
       aria-selected={isActive}
       data-testid={`page-list-item-${page.pageId}`}
-      className={`page-list-item ${isActive ? 'page-list-item--active' : ''}`}
+      className={`${styles.item} ${isActive ? styles['item--active'] : ''}`}
       onClick={onClick}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
@@ -118,40 +119,9 @@ export const PageListItem = memo(function PageListItem({
         }
       }}
       tabIndex={0}
-      style={{
-        padding: '8px 12px',
-        cursor: 'pointer',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        backgroundColor: isActive ? 'var(--color-bg-active, #e3e3e3)' : 'transparent',
-        borderRadius: '4px',
-        listStyle: 'none',
-      }}
     >
-      <span
-        className="page-list-item__title"
-        style={{
-          fontWeight: isActive ? 600 : 400,
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
-          flex: 1,
-          marginRight: '8px',
-        }}
-      >
-        {page.title || 'Untitled'}
-      </span>
-      <span
-        className="page-list-item__timestamp"
-        style={{
-          fontSize: '0.75rem',
-          color: 'var(--color-text-muted, #666)',
-          flexShrink: 0,
-        }}
-      >
-        {formatRelativeTime(page.updatedAt)}
-      </span>
+      <span className={styles.title}>{page.title || 'Untitled'}</span>
+      <span className={styles.timestamp}>{formatRelativeTime(page.updatedAt)}</span>
     </li>
   );
 });
@@ -196,12 +166,12 @@ export function PageList({ limit = 100, className }: PageListProps) {
   if (isLoading && !pages) {
     return (
       <div
-        className={`page-list page-list--loading ${className || ''}`}
+        className={`${styles.loading} ${className || ''}`}
         data-testid="page-list-loading"
         role="status"
         aria-label="Loading pages"
       >
-        <span style={{ padding: '12px', color: 'var(--color-text-muted, #666)' }}>Loading...</span>
+        Loading...
       </div>
     );
   }
@@ -209,14 +179,8 @@ export function PageList({ limit = 100, className }: PageListProps) {
   // Error state
   if (error) {
     return (
-      <div
-        className={`page-list page-list--error ${className || ''}`}
-        data-testid="page-list-error"
-        role="alert"
-      >
-        <span style={{ padding: '12px', color: 'var(--color-error, #d32f2f)' }}>
-          Failed to load pages
-        </span>
+      <div className={`${styles.error} ${className || ''}`} data-testid="page-list-error" role="alert">
+        Failed to load pages
       </div>
     );
   }
@@ -224,12 +188,8 @@ export function PageList({ limit = 100, className }: PageListProps) {
   // Empty state
   if (!pages || pages.length === 0) {
     return (
-      <div
-        className={`page-list page-list--empty ${className || ''}`}
-        data-testid="page-list-empty"
-        style={{ padding: '12px' }}
-      >
-        <span style={{ color: 'var(--color-text-muted, #666)' }}>No pages yet</span>
+      <div className={`${styles.empty} ${className || ''}`} data-testid="page-list-empty">
+        No pages yet
       </div>
     );
   }
@@ -237,15 +197,10 @@ export function PageList({ limit = 100, className }: PageListProps) {
   // Render page list
   return (
     <ul
-      className={`page-list ${className || ''}`}
+      className={`${styles.list} ${className || ''}`}
       data-testid="page-list"
       role="listbox"
       aria-label="Pages"
-      style={{
-        padding: 0,
-        margin: 0,
-        listStyle: 'none',
-      }}
     >
       {pages.map((page) => (
         <PageListItem

@@ -1,0 +1,101 @@
+/**
+ * PageList Component Styles
+ *
+ * Displays pages in the sidebar with relative timestamps.
+ */
+
+/* ============================================================================
+ * Container
+ * ============================================================================ */
+
+.list {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+/* ============================================================================
+ * Page List Item
+ * ============================================================================ */
+
+.item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-2) var(--space-3);
+  margin: 0 var(--space-2);
+  cursor: pointer;
+  border-radius: var(--radius-md);
+  background-color: transparent;
+  transition: background-color var(--transition-fast);
+  list-style: none;
+}
+
+.item:hover {
+  background-color: var(--bg-hover);
+}
+
+.item:focus {
+  outline: none;
+  background-color: var(--bg-hover);
+}
+
+.item:focus-visible {
+  outline: var(--ring-width) solid var(--ring-color);
+  outline-offset: -2px;
+}
+
+.item--active {
+  background-color: var(--bg-active);
+}
+
+.item--active:hover {
+  background-color: var(--bg-active);
+}
+
+/* ============================================================================
+ * Item Content
+ * ============================================================================ */
+
+.title {
+  flex: 1;
+  margin-right: var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: var(--font-normal);
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.item--active .title {
+  font-weight: var(--font-semibold);
+}
+
+.timestamp {
+  flex-shrink: 0;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+/* ============================================================================
+ * States
+ * ============================================================================ */
+
+.loading {
+  padding: var(--space-3);
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+.error {
+  padding: var(--space-3);
+  color: var(--error);
+  font-size: var(--text-sm);
+}
+
+.empty {
+  padding: var(--space-3);
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}

@@ -1,0 +1,70 @@
+/**
+ * PageTitle Component Styles
+ *
+ * Editable page title with daily note variant.
+ */
+
+/* ============================================================================
+ * Base Title
+ * ============================================================================ */
+
+.title {
+  font-size: var(--text-3xl);
+  font-weight: var(--font-bold);
+  color: var(--text-primary);
+  line-height: var(--leading-tight);
+  margin: 0 0 var(--space-4);
+}
+
+/* ============================================================================
+ * Daily Note Title (Read-only)
+ * ============================================================================ */
+
+.title--daily {
+  /* Additional styling for daily notes if needed */
+}
+
+/* ============================================================================
+ * Editable Title (Input)
+ * ============================================================================ */
+
+.title--editable {
+  display: block;
+  border: none;
+  background: transparent;
+  outline: none;
+  padding: 0;
+  font-family: inherit;
+  font-size: var(--text-3xl);
+  font-weight: var(--font-bold);
+  color: var(--text-primary);
+  line-height: var(--leading-tight);
+  margin: 0 0 var(--space-4);
+  border-radius: var(--radius-sm);
+  transition: background-color var(--transition-fast);
+}
+
+.title--editable::placeholder {
+  color: var(--text-muted);
+}
+
+.title--editable:hover {
+  background-color: var(--bg-hover);
+}
+
+.title--editable:focus {
+  background-color: var(--bg-hover);
+}
+
+.title--editable:focus-visible {
+  outline: var(--ring-width) solid var(--ring-color);
+  outline-offset: 2px;
+}
+
+/* ============================================================================
+ * Saving State
+ * ============================================================================ */
+
+.title--editable[data-saving="true"] {
+  color: var(--text-muted);
+}

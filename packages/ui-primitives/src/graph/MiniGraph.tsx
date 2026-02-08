@@ -12,13 +12,75 @@
  * - Fixed dimensions via props
  */
 
-import { type CSSProperties, memo, useCallback, useMemo, useRef, useEffect } from 'react';
+import {
+  type CSSProperties,
+  memo,
+  useCallback,
+  useMemo,
+  useRef,
+  useEffect,
+  useState,
+} from 'react';
 import ForceGraph2D, {
   type ForceGraphMethods,
   type NodeObject,
   type LinkObject,
 } from 'react-force-graph-2d';
 import type { PageId } from '@double-bind/types';
+
+// ============================================================================
+// Theme Detection
+// ============================================================================
+
+/**
+ * Get computed CSS variable value from the document.
+ * Falls back to provided default if unavailable.
+ */
+function getCSSVariable(name: string, fallback: string): string {
+  if (typeof document === 'undefined') return fallback;
+  const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  return value || fallback;
+}
+
+/**
+ * Hook to get theme-aware colors for canvas rendering.
+ * Listens for theme changes via data-theme attribute mutations.
+ */
+function useThemeColors() {
+  const [textColor, setTextColor] = useState(() =>
+    getCSSVariable('--text-primary', '#1f2937')
+  );
+  const [linkColor, setLinkColor] = useState(() =>
+    getCSSVariable('--border-default', '#d1d5db')
+  );
+
+  useEffect(() => {
+    if (typeof document === 'undefined' || typeof MutationObserver === 'undefined') return;
+
+    const updateColors = () => {
+      setTextColor(getCSSVariable('--text-primary', '#1f2937'));
+      setLinkColor(getCSSVariable('--border-default', '#d1d5db'));
+    };
+
+    // Initial update
+    updateColors();
+
+    // Watch for theme changes on document element
+    const observer = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        if (mutation.attributeName === 'data-theme') {
+          updateColors();
+          break;
+        }
+      }
+    });
+
+    observer.observe(document.documentElement, { attributes: true });
+    return () => observer.disconnect();
+  }, []);
+
+  return { textColor, linkColor };
+}
 
 // ============================================================================
 // Types
@@ -136,6 +198,7 @@ export const MiniGraph = memo(function MiniGraph({
   className,
 }: MiniGraphProps) {
   const graphRef = useRef<ForceGraphMethods<GraphNode, GraphLink> | undefined>(undefined);
+  const { textColor, linkColor } = useThemeColors();
 
   // Transform nodes to include isCenter flag
   const graphData = useMemo(() => {
@@ -153,19 +216,10 @@ export const MiniGraph = memo(function MiniGraph({
     return { nodes: graphNodes, links: graphLinks };
   }, [nodes, edges, centerNodeId]);
 
-  // Center the graph on the center node after initial render
-  useEffect(() => {
-    const fg = graphRef.current;
-    if (!fg) return;
-
-    // Wait for simulation to settle, then center
-    const timer = setTimeout(() => {
-      fg.centerAt(0, 0, 300);
-      fg.zoom(1.2, 300);
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [centerNodeId]);
+  // Note: We intentionally don't call zoomToFit or zoom after render.
+  // The default auto-fit behavior provides the best initial view.
+  // Previous attempts to adjust zoom after simulation settles caused
+  // labels to be cut off or the graph to shrink unexpectedly.
 
   // Handle node click
   const handleNodeClick = useCallback(
@@ -199,29 +253,32 @@ export const MiniGraph = memo(function MiniGraph({
         ctx.font = `${fontSize}px sans-serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'top';
-        ctx.fillStyle = COLORS.text;
+        ctx.fillStyle = textColor; // Theme-aware text color
         ctx.fillText(label, x, y + radius + 2);
       }
     },
-    []
+    [textColor]
   );
 
   // Custom link rendering
-  const paintLink = useCallback((link: GraphLink, ctx: CanvasRenderingContext2D) => {
-    const sourceNode = link.source as GraphNode;
-    const targetNode = link.target as GraphNode;
+  const paintLink = useCallback(
+    (link: GraphLink, ctx: CanvasRenderingContext2D) => {
+      const sourceNode = link.source as GraphNode;
+      const targetNode = link.target as GraphNode;
 
-    if (!sourceNode.x || !sourceNode.y || !targetNode.x || !targetNode.y) {
-      return;
-    }
+      if (!sourceNode.x || !sourceNode.y || !targetNode.x || !targetNode.y) {
+        return;
+      }
 
-    ctx.beginPath();
-    ctx.moveTo(sourceNode.x, sourceNode.y);
-    ctx.lineTo(targetNode.x, targetNode.y);
-    ctx.strokeStyle = COLORS.link;
-    ctx.lineWidth = SIZES.linkWidth;
-    ctx.stroke();
-  }, []);
+      ctx.beginPath();
+      ctx.moveTo(sourceNode.x, sourceNode.y);
+      ctx.lineTo(targetNode.x, targetNode.y);
+      ctx.strokeStyle = linkColor; // Theme-aware link color
+      ctx.lineWidth = SIZES.linkWidth;
+      ctx.stroke();
+    },
+    [linkColor]
+  );
 
   // Node tooltip (title only for simplicity)
   const nodeLabel = useCallback((node: GraphNode) => node.title, []);

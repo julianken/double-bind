@@ -1,0 +1,127 @@
+/**
+ * SearchBar Component Styles
+ *
+ * Global search input with keyboard shortcuts.
+ */
+
+/* ============================================================================
+ * Container
+ * ============================================================================ */
+
+.container {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 var(--space-3) var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background-color: var(--bg-tertiary);
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  transition: border-color var(--transition-fast), background-color var(--transition-fast);
+}
+
+.container:focus-within {
+  border-color: var(--accent-primary);
+  background-color: var(--bg-primary);
+}
+
+/* ============================================================================
+ * Icon
+ * ============================================================================ */
+
+.icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+/* ============================================================================
+ * Input
+ * ============================================================================ */
+
+.input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: var(--text-sm);
+  font-family: inherit;
+  color: var(--text-primary);
+}
+
+.input::placeholder {
+  color: var(--text-muted);
+}
+
+/* Hide browser's clear button on search inputs */
+.input::-webkit-search-cancel-button {
+  display: none;
+}
+
+/* ============================================================================
+ * Hint Text
+ * ============================================================================ */
+
+.hint {
+  font-size: var(--text-xs);
+  color: var(--text-disabled);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ============================================================================
+ * Keyboard Shortcut Badge
+ * ============================================================================ */
+
+.shortcut {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  background-color: var(--bg-active);
+  padding: 2px var(--space-1-5);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  flex-shrink: 0;
+}
+
+/* ============================================================================
+ * Clear Button
+ * ============================================================================ */
+
+.clearButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-1);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: var(--text-muted);
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.clearButton:hover {
+  background-color: var(--bg-active);
+  color: var(--text-primary);
+}
+
+/* ============================================================================
+ * Loading Spinner Animation
+ * ============================================================================ */
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}

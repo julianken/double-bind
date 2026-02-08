@@ -1,0 +1,17 @@
+/**
+ * Design System Entry Point
+ *
+ * Import this single file to get:
+ * - CSS Reset
+ * - Design tokens (colors, typography, spacing, effects, layout)
+ * - Global styles
+ *
+ * Usage in app entry:
+ *   import '@double-bind/ui-primitives/styles';
+ *
+ * Or in CSS:
+ *   @import '@double-bind/ui-primitives/styles';
+ */
+
+@import './tokens/index.css';
+@import './base/index.css';

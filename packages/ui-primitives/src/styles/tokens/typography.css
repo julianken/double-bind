@@ -1,0 +1,40 @@
+/**
+ * Typography Tokens - Design System Foundation
+ *
+ * Font families, type scale, line heights, and weights.
+ * Uses 1.2 modular ratio for harmonious sizing.
+ */
+
+:root {
+  /* Font families */
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'SF Mono', 'Fira Code', 'Consolas', 'Monaco', monospace;
+
+  /* Type scale (1.2 ratio) */
+  --text-xs: 0.694rem;    /* 11.1px */
+  --text-sm: 0.833rem;    /* 13.3px */
+  --text-base: 1rem;      /* 16px */
+  --text-lg: 1.2rem;      /* 19.2px */
+  --text-xl: 1.44rem;     /* 23px */
+  --text-2xl: 1.728rem;   /* 27.6px */
+  --text-3xl: 2.074rem;   /* 33.2px */
+
+  /* Line heights */
+  --leading-tight: 1.25;
+  --leading-snug: 1.375;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.625;
+  --leading-loose: 1.75;
+
+  /* Font weights */
+  --font-normal: 400;
+  --font-medium: 500;
+  --font-semibold: 600;
+  --font-bold: 700;
+
+  /* Letter spacing */
+  --tracking-tight: -0.025em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.025em;
+  --tracking-wider: 0.05em;
+}
