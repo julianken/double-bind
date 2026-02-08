@@ -324,7 +324,9 @@ function createAsyncKeyHandler(
 ): (state: EditorState, dispatch?: (tr: Transaction) => void, view?: EditorView) => boolean {
   return (state, dispatch, view) => {
     const ctx = context();
-    if (!ctx || !view) return false;
+    if (!ctx || !view) {
+      return false;
+    }
 
     // If a sync check is provided, use it to determine if we should handle
     if (shouldHandle && !shouldHandle(state, ctx)) {

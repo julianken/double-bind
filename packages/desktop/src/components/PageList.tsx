@@ -227,10 +227,9 @@ export function PageList({ limit = 100, className }: PageListProps) {
       <div
         className={`page-list page-list--empty ${className || ''}`}
         data-testid="page-list-empty"
+        style={{ padding: '12px' }}
       >
-        <span style={{ padding: '12px', color: 'var(--color-text-muted, #666)' }}>
-          No pages yet
-        </span>
+        <span style={{ color: 'var(--color-text-muted, #666)' }}>No pages yet</span>
       </div>
     );
   }

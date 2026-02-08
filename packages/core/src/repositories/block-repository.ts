@@ -23,6 +23,7 @@ import type {
 } from '@double-bind/types';
 import { DoubleBindError, ErrorCode } from '@double-bind/types';
 import { parseBlockRow, parseBlockVersionRow } from './block-repository.schemas.js';
+import { DEFAULT_ORDER } from '../utils/ordering.js';
 
 /**
  * Search result type that includes relevance score.
@@ -42,12 +43,6 @@ export interface BlockSearchResult extends Block {
 export function computeParentKey(parentId: BlockId | null, pageId: PageId): string {
   return parentId ?? `__page:${pageId}`;
 }
-
-/**
- * Default order key for new blocks.
- * Uses 'a' as a starting point - fractional indexing will compute between keys.
- */
-const DEFAULT_ORDER = 'a';
 
 /**
  * Repository for Block entity operations.
