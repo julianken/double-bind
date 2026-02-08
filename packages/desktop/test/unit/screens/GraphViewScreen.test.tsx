@@ -4,6 +4,7 @@
 
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { render, screen, waitFor, cleanup, fireEvent } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { Page, Link, PageId } from '@double-bind/types';
 import { GraphViewScreen } from '../../../src/screens/GraphViewScreen.js';
 import { ServiceProvider, type Services } from '../../../src/providers/index.js';
@@ -136,8 +137,22 @@ function createMockServices(
 // Test Wrapper
 // ============================================================================
 
+// Create a QueryClient for testing
+const createTestQueryClient = () =>
+  new QueryClient({
+    defaultOptions: {
+      queries: { retry: false, staleTime: 0, gcTime: Infinity },
+      mutations: { retry: false },
+    },
+  });
+
 function renderWithServices(ui: React.ReactElement, services: Services = createMockServices()) {
-  return render(<ServiceProvider services={services}>{ui}</ServiceProvider>);
+  const queryClient = createTestQueryClient();
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <ServiceProvider services={services}>{ui}</ServiceProvider>
+    </QueryClientProvider>
+  );
 }
 
 // ============================================================================

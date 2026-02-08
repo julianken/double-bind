@@ -4,6 +4,7 @@
 
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { render, screen, waitFor, cleanup, fireEvent } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { Block, Page } from '@double-bind/types';
 import { PageView } from '../../../src/screens/PageView.js';
 import { PageTitle } from '../../../src/screens/index.js';
@@ -108,8 +109,22 @@ function createMockServices(overrides?: Partial<Services>): Services {
 // Test Wrapper
 // ============================================================================
 
+// Create a QueryClient for testing
+const createTestQueryClient = () =>
+  new QueryClient({
+    defaultOptions: {
+      queries: { retry: false, staleTime: 0, gcTime: Infinity },
+      mutations: { retry: false },
+    },
+  });
+
 function TestWrapper({ children, services }: { children: React.ReactNode; services: Services }) {
-  return <ServiceProvider services={services}>{children}</ServiceProvider>;
+  const queryClient = createTestQueryClient();
+  return (
+    <QueryClientProvider client={queryClient}>
+      <ServiceProvider services={services}>{children}</ServiceProvider>
+    </QueryClientProvider>
+  );
 }
 
 // ============================================================================
