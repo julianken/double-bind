@@ -2,7 +2,7 @@
  * E2E Test: Command Palette (DBB-333 Phase 2)
  *
  * Tests the command palette functionality:
- * - Ctrl+K / Cmd+K opens the palette
+ * - Ctrl+P / Cmd+P opens the palette
  * - Typing in search filters results
  * - Selecting a result triggers navigation
  * - Escape closes the palette
@@ -39,9 +39,9 @@ async function navigateToTestPage(page: import('@playwright/test').Page, pageId:
 async function openCommandPalette(page: import('@playwright/test').Page): Promise<void> {
   const isMac = process.platform === 'darwin';
   if (isMac) {
-    await page.keyboard.press('Meta+k');
+    await page.keyboard.press('Meta+p');
   } else {
-    await page.keyboard.press('Control+k');
+    await page.keyboard.press('Control+p');
   }
 }
 
@@ -50,7 +50,7 @@ test.describe('Command Palette', () => {
     await resetDatabase();
   });
 
-  test('opens command palette with Ctrl+K and shows commands', async ({ page }) => {
+  test('opens command palette with Ctrl+P and shows commands', async ({ page }) => {
     // Seed a page to have a context
     const pageId = generateId('page');
     await seedPage({ pageId, title: 'Command Palette Test' });
@@ -166,7 +166,7 @@ test.describe('Command Palette', () => {
     await expect(page.getByTestId('command-palette')).not.toBeVisible({ timeout: 3000 });
   });
 
-  test('Ctrl+K toggles the palette open and closed', async ({ page }) => {
+  test('Ctrl+P toggles the palette open and closed', async ({ page }) => {
     const pageId = generateId('page');
     await seedPage({ pageId, title: 'Toggle Test' });
 
@@ -178,7 +178,7 @@ test.describe('Command Palette', () => {
     await openCommandPalette(page);
     await expect(page.getByTestId('command-palette')).toBeVisible({ timeout: 5000 });
 
-    // Press Ctrl+K again to close
+    // Press Ctrl+P again to close
     await openCommandPalette(page);
     await expect(page.getByTestId('command-palette')).not.toBeVisible({ timeout: 3000 });
   });
