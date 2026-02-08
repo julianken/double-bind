@@ -202,7 +202,8 @@ describe('Outliner Plugin', () => {
 
   describe('Tab Key (Indent)', () => {
     it('calls indentBlock on Tab press', async () => {
-      const plugins = [createOutlinerKeymap(mockBlockService, getContext)];
+      // Tab is now handled in createOutlinerPlugin's handleKeyDown
+      const plugins = [createOutlinerPlugin(mockBlockService, getContext)];
       const state = createEditorState('test', plugins);
       const view = createEditorView(state);
 
@@ -221,7 +222,8 @@ describe('Outliner Plugin', () => {
 
     it('does not indent when context is null', async () => {
       const nullContext = () => null;
-      const plugins = [createOutlinerKeymap(mockBlockService, nullContext)];
+      // Tab is now handled in createOutlinerPlugin's handleKeyDown
+      const plugins = [createOutlinerPlugin(mockBlockService, nullContext)];
       const state = createEditorState('test', plugins);
       const view = createEditorView(state);
 
@@ -242,7 +244,8 @@ describe('Outliner Plugin', () => {
 
   describe('Shift+Tab Key (Outdent)', () => {
     it('calls outdentBlock on Shift+Tab press', async () => {
-      const plugins = [createOutlinerKeymap(mockBlockService, getContext)];
+      // Shift+Tab is now handled in createOutlinerPlugin's handleKeyDown
+      const plugins = [createOutlinerPlugin(mockBlockService, getContext)];
       const state = createEditorState('test', plugins);
       const view = createEditorView(state);
 
@@ -540,7 +543,8 @@ describe('Outliner Plugin', () => {
         indentBlock: vi.fn().mockRejectedValue(new Error('Cannot indent')),
       } as unknown as BlockService;
 
-      const plugins = [createOutlinerKeymap(failingService, getContext)];
+      // Tab is now handled in createOutlinerPlugin's handleKeyDown
+      const plugins = [createOutlinerPlugin(failingService, getContext)];
       const state = createEditorState('test', plugins);
       const view = createEditorView(state);
 
@@ -563,7 +567,8 @@ describe('Outliner Plugin', () => {
         outdentBlock: vi.fn().mockRejectedValue(new Error('Cannot outdent')),
       } as unknown as BlockService;
 
-      const plugins = [createOutlinerKeymap(failingService, getContext)];
+      // Shift+Tab is now handled in createOutlinerPlugin's handleKeyDown
+      const plugins = [createOutlinerPlugin(failingService, getContext)];
       const state = createEditorState('test', plugins);
       const view = createEditorView(state);
 
@@ -626,24 +631,26 @@ describe('Outliner Plugin', () => {
 
     it('Tab key handler returns true to prevent focus jump (DBB-335)', () => {
       const plugin = createOutlinerPlugin(mockBlockService, getContext);
-      const handleDOMEvents = plugin.props.handleDOMEvents;
+      const handleKeyDown = plugin.props.handleKeyDown;
 
       // The handler should exist
-      expect(handleDOMEvents).toBeDefined();
-      expect(handleDOMEvents?.keydown).toBeDefined();
+      expect(handleKeyDown).toBeDefined();
 
       // Create a mock event for Tab key
       const tabEvent = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true });
 
+      // Create a mock view
+      const mockView = { state: { selection: { from: 0 } } } as unknown as EditorView;
+
       // Call the handler directly and verify it returns true
       // This prevents the event from propagating to other elements (like search bar)
-      const result = handleDOMEvents?.keydown?.(null as unknown as EditorView, tabEvent);
+      const result = handleKeyDown?.(mockView, tabEvent);
       expect(result).toBe(true);
     });
 
     it('Shift+Tab key handler returns true to prevent focus jump', () => {
       const plugin = createOutlinerPlugin(mockBlockService, getContext);
-      const handleDOMEvents = plugin.props.handleDOMEvents;
+      const handleKeyDown = plugin.props.handleKeyDown;
 
       // Create a mock event for Shift+Tab key
       const shiftTabEvent = new KeyboardEvent('keydown', {
@@ -652,20 +659,26 @@ describe('Outliner Plugin', () => {
         bubbles: true,
       });
 
+      // Create a mock view
+      const mockView = { state: { selection: { from: 0 } } } as unknown as EditorView;
+
       // Call the handler directly and verify it returns true
-      const result = handleDOMEvents?.keydown?.(null as unknown as EditorView, shiftTabEvent);
+      const result = handleKeyDown?.(mockView, shiftTabEvent);
       expect(result).toBe(true);
     });
 
     it('non-Tab key handler returns false to allow normal propagation', () => {
       const plugin = createOutlinerPlugin(mockBlockService, getContext);
-      const handleDOMEvents = plugin.props.handleDOMEvents;
+      const handleKeyDown = plugin.props.handleKeyDown;
 
       // Create a mock event for a non-Tab key
       const enterEvent = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true });
 
+      // Create a mock view
+      const mockView = { state: { selection: { from: 0 } } } as unknown as EditorView;
+
       // Call the handler directly and verify it returns false for non-Tab keys
-      const result = handleDOMEvents?.keydown?.(null as unknown as EditorView, enterEvent);
+      const result = handleKeyDown?.(mockView, enterEvent);
       expect(result).toBe(false);
     });
 

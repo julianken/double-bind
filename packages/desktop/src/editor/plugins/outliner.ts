@@ -353,11 +353,8 @@ export function createOutlinerKeymap(
   getContext: () => OutlinerContext | null
 ): Plugin {
   return keymap({
-    // Tab: Indent block
-    Tab: createAsyncKeyHandler(getContext, blockService, indentBlock),
-
-    // Shift-Tab: Outdent block
-    'Shift-Tab': createAsyncKeyHandler(getContext, blockService, outdentBlock),
+    // Note: Tab and Shift-Tab are handled in createOutlinerPlugin's handleKeyDown
+    // because we need to call event.preventDefault() to stop browser focus change
 
     // Enter: Split block at cursor
     Enter: createAsyncKeyHandler(getContext, blockService, splitBlock),
@@ -424,30 +421,41 @@ export function createOutlinerKeymap(
  * @returns A ProseMirror plugin
  */
 export function createOutlinerPlugin(
-  _blockService: BlockService,
-  _getContext: () => OutlinerContext | null
+  blockService: BlockService,
+  getContext: () => OutlinerContext | null
 ): Plugin {
   return new Plugin({
     key: outlinerPluginKey,
 
     props: {
       /**
-       * Handle DOM events that aren't covered by keymap.
-       * This is a fallback for any special cases.
+       * Handle Tab key for indent/outdent operations.
+       * We use handleKeyDown instead of keymap + handleDOMEvents because:
+       * 1. We need to call preventDefault() to stop browser focus change
+       * 2. We need to trigger the async indent/outdent operation
+       * 3. Using handleKeyDown lets us do both in one place
        */
-      handleDOMEvents: {
-        // Prevent default tab behavior (focus change)
-        keydown(_view, event) {
-          if (event.key === 'Tab') {
-            // Prevent browser's default tab behavior (focus change)
-            // The keymap handler will handle the actual indent/outdent
-            event.preventDefault();
-            // Return true to indicate the event was handled and should not propagate further
-            // This prevents the focus from jumping to other elements like the search bar
-            return true;
+      handleKeyDown(view, event) {
+        if (event.key === 'Tab') {
+          const ctx = getContext();
+          if (!ctx) {
+            return false;
           }
-          return false;
-        },
+
+          // Prevent browser's default tab behavior (focus change)
+          event.preventDefault();
+
+          // Execute indent or outdent based on Shift key
+          if (event.shiftKey) {
+            void outdentBlock(view.state, undefined, view, ctx, blockService);
+          } else {
+            void indentBlock(view.state, undefined, view, ctx, blockService);
+          }
+
+          // Return true to indicate we handled the key
+          return true;
+        }
+        return false;
       },
     },
   });
