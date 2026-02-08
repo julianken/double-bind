@@ -6,7 +6,8 @@
  *
  * Standard shortcuts:
  * - Ctrl+D / Cmd+D: Navigate to daily notes view
- * - Ctrl+K / Cmd+K: Toggle command palette (future)
+ * - Ctrl+P / Cmd+P: Toggle command palette
+ * - Ctrl+K / Cmd+K: Focus search bar
  * - Ctrl+[ / Cmd+[: Navigate back (future)
  * - Ctrl+] / Cmd+]: Navigate forward (future)
  */

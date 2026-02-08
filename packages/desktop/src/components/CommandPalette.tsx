@@ -2,7 +2,7 @@
  * CommandPalette - Global command palette component
  *
  * A keyboard-first command palette for quick access to application commands.
- * Triggered via Ctrl+K (Windows/Linux) or Cmd+K (macOS).
+ * Triggered via Ctrl+P (Windows/Linux) or Cmd+P (macOS).
  *
  * Features:
  * - Fuzzy search matching for commands
@@ -601,12 +601,12 @@ export function CommandPalette({
     setSelectedIndex(0);
   }, []);
 
-  // Global keyboard listener for Ctrl+K
+  // Global keyboard listener for Ctrl+P
   useEffect(() => {
     function handleGlobalKeyDown(event: KeyboardEvent) {
       const isCtrlOrCmd = event.ctrlKey || event.metaKey;
 
-      if (isCtrlOrCmd && event.key.toLowerCase() === 'k') {
+      if (isCtrlOrCmd && event.key.toLowerCase() === 'p') {
         event.preventDefault();
         togglePalette();
       }

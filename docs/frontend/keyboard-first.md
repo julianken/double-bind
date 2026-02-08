@@ -6,7 +6,7 @@ Every action in double-bind should be reachable without touching the mouse. Powe
 
 ## Command Palette
 
-The central keyboard interface. `Ctrl+K` (or `Cmd+K`) opens it from anywhere.
+The central keyboard interface. `Ctrl+P` (or `Cmd+P`) opens it from anywhere.
 
 ```
 ┌─────────────────────────────────────┐
@@ -36,10 +36,10 @@ Available from anywhere in the app:
 
 | Shortcut | Action |
 |----------|--------|
-| `Ctrl+K` | Open command palette |
+| `Ctrl+P` | Open command palette |
+| `Ctrl+K` | Focus search bar |
 | `Ctrl+N` | New page |
 | `Ctrl+D` | Today's daily note |
-| `Ctrl+/` | Focus search bar |
 | `Ctrl+G` | Open graph view |
 | `Ctrl+Q` | Open query editor |
 | `Ctrl+\` | Toggle sidebar |

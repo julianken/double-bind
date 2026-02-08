@@ -7,7 +7,7 @@
  * - Keyboard navigation (Arrow keys, Enter, Escape)
  * - Command selection and execution
  * - Backdrop click dismissal
- * - Global keyboard shortcut (Ctrl+K / Cmd+K)
+ * - Global keyboard shortcut (Ctrl+P / Cmd+P)
  * - Accessibility features
  * - Highlighted matching text
  * - Grouped command display
@@ -463,43 +463,43 @@ describe('CommandPalette', () => {
   // ============================================================================
 
   describe('Global Keyboard Shortcut', () => {
-    it('toggles store state on Ctrl+K', () => {
+    it('toggles store state on Ctrl+P', () => {
       render(<CommandPalette commands={createMockCommands()} />);
 
       expect(useAppStore.getState().commandPaletteOpen).toBe(false);
 
-      simulateGlobalKeyDown('k', { ctrl: true });
+      simulateGlobalKeyDown('p', { ctrl: true });
 
       expect(useAppStore.getState().commandPaletteOpen).toBe(true);
     });
 
-    it('toggles store state on Cmd+K (Mac)', () => {
+    it('toggles store state on Cmd+P (Mac)', () => {
       render(<CommandPalette commands={createMockCommands()} />);
 
       expect(useAppStore.getState().commandPaletteOpen).toBe(false);
 
-      simulateGlobalKeyDown('k', { meta: true });
+      simulateGlobalKeyDown('p', { meta: true });
 
       expect(useAppStore.getState().commandPaletteOpen).toBe(true);
     });
 
-    it('closes palette on Ctrl+K when open', () => {
+    it('closes palette on Ctrl+P when open', () => {
       useAppStore.setState({ commandPaletteOpen: true });
       render(<CommandPalette commands={createMockCommands()} />);
 
       expect(useAppStore.getState().commandPaletteOpen).toBe(true);
 
-      simulateGlobalKeyDown('k', { ctrl: true });
+      simulateGlobalKeyDown('p', { ctrl: true });
 
       expect(useAppStore.getState().commandPaletteOpen).toBe(false);
     });
 
-    it('handles uppercase K key', () => {
+    it('handles uppercase P key', () => {
       render(<CommandPalette commands={createMockCommands()} />);
 
       expect(useAppStore.getState().commandPaletteOpen).toBe(false);
 
-      simulateGlobalKeyDown('K', { ctrl: true });
+      simulateGlobalKeyDown('P', { ctrl: true });
 
       expect(useAppStore.getState().commandPaletteOpen).toBe(true);
     });
@@ -509,7 +509,17 @@ describe('CommandPalette', () => {
 
       expect(useAppStore.getState().commandPaletteOpen).toBe(false);
 
-      simulateGlobalKeyDown('k');
+      simulateGlobalKeyDown('p');
+
+      expect(useAppStore.getState().commandPaletteOpen).toBe(false);
+    });
+
+    it('does not open on Ctrl+K (reserved for SearchBar)', () => {
+      render(<CommandPalette commands={createMockCommands()} />);
+
+      expect(useAppStore.getState().commandPaletteOpen).toBe(false);
+
+      simulateGlobalKeyDown('k', { ctrl: true });
 
       expect(useAppStore.getState().commandPaletteOpen).toBe(false);
     });
