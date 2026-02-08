@@ -442,7 +442,9 @@ export function createOutlinerPlugin(
             // Prevent browser's default tab behavior (focus change)
             // The keymap handler will handle the actual indent/outdent
             event.preventDefault();
-            return false; // Let keymap handle it
+            // Return true to indicate the event was handled and should not propagate further
+            // This prevents the focus from jumping to other elements like the search bar
+            return true;
           }
           return false;
         },
