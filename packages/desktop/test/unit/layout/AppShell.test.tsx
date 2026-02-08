@@ -413,7 +413,7 @@ describe('AppShell', () => {
         </AppShell>
       );
 
-      expect(screen.getByTestId('nav-toolbar')).toBeDefined();
+      expect(screen.getByTestId('navigation-bar')).toBeDefined();
       expect(screen.getByTestId('nav-back')).toBeDefined();
       expect(screen.getByTestId('nav-forward')).toBeDefined();
     });
