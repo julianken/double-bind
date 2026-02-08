@@ -405,6 +405,110 @@ describe('AppShell', () => {
     });
   });
 
+  describe('Navigation Buttons', () => {
+    it('renders navigation toolbar with back/forward buttons', () => {
+      render(
+        <AppShell sidebar={<div>Sidebar</div>}>
+          <div>Main</div>
+        </AppShell>
+      );
+
+      expect(screen.getByTestId('nav-toolbar')).toBeDefined();
+      expect(screen.getByTestId('nav-back')).toBeDefined();
+      expect(screen.getByTestId('nav-forward')).toBeDefined();
+    });
+
+    it('back button is disabled when historyIndex is 0', () => {
+      useAppStore.setState({ historyIndex: 0, pageHistory: ['page1'] });
+
+      render(
+        <AppShell sidebar={<div>Sidebar</div>}>
+          <div>Main</div>
+        </AppShell>
+      );
+
+      const backButton = screen.getByTestId('nav-back');
+      expect(backButton).toBeInstanceOf(HTMLButtonElement);
+      expect((backButton as HTMLButtonElement).disabled).toBe(true);
+    });
+
+    it('forward button is disabled when at end of history', () => {
+      useAppStore.setState({ historyIndex: 0, pageHistory: ['page1'] });
+
+      render(
+        <AppShell sidebar={<div>Sidebar</div>}>
+          <div>Main</div>
+        </AppShell>
+      );
+
+      const forwardButton = screen.getByTestId('nav-forward');
+      expect(forwardButton).toBeInstanceOf(HTMLButtonElement);
+      expect((forwardButton as HTMLButtonElement).disabled).toBe(true);
+    });
+
+    it('back button calls goBack when enabled', async () => {
+      const user = userEvent.setup();
+      useAppStore.setState({
+        historyIndex: 1,
+        pageHistory: ['page1', 'page2'],
+        currentPageId: 'page2',
+      });
+
+      render(
+        <AppShell sidebar={<div>Sidebar</div>}>
+          <div>Main</div>
+        </AppShell>
+      );
+
+      const backButton = screen.getByTestId('nav-back');
+      expect((backButton as HTMLButtonElement).disabled).toBe(false);
+
+      await user.click(backButton);
+
+      // goBack decrements historyIndex
+      expect(useAppStore.getState().historyIndex).toBe(0);
+      expect(useAppStore.getState().currentPageId).toBe('page1');
+    });
+
+    it('forward button calls goForward when enabled', async () => {
+      const user = userEvent.setup();
+      useAppStore.setState({
+        historyIndex: 0,
+        pageHistory: ['page1', 'page2'],
+        currentPageId: 'page1',
+      });
+
+      render(
+        <AppShell sidebar={<div>Sidebar</div>}>
+          <div>Main</div>
+        </AppShell>
+      );
+
+      const forwardButton = screen.getByTestId('nav-forward');
+      expect((forwardButton as HTMLButtonElement).disabled).toBe(false);
+
+      await user.click(forwardButton);
+
+      // goForward increments historyIndex
+      expect(useAppStore.getState().historyIndex).toBe(1);
+      expect(useAppStore.getState().currentPageId).toBe('page2');
+    });
+
+    it('buttons have correct aria-labels', () => {
+      render(
+        <AppShell sidebar={<div>Sidebar</div>}>
+          <div>Main</div>
+        </AppShell>
+      );
+
+      const backButton = screen.getByTestId('nav-back');
+      const forwardButton = screen.getByTestId('nav-forward');
+
+      expect(backButton.getAttribute('aria-label')).toBe('Go back');
+      expect(forwardButton.getAttribute('aria-label')).toBe('Go forward');
+    });
+  });
+
   describe('Store Integration', () => {
     it('updates when sidebar state changes', () => {
       const { rerender } = render(

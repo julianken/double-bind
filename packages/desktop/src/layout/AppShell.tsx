@@ -12,6 +12,7 @@
  * @see docs/frontend/react-architecture.md for layout specifications
  */
 
+import { useCallback } from 'react';
 import type { ReactNode, CSSProperties } from 'react';
 import { ErrorBoundary } from '../components/ErrorBoundary.js';
 import { useAppStore } from '../stores/index.js';
@@ -184,6 +185,33 @@ const styles = {
     borderLeft: isOpen ? '1px solid #e5e7eb' : 'none',
   }),
 
+  navToolbar: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '4px',
+    padding: '4px 12px',
+    height: '32px',
+    minHeight: '32px',
+    borderBottom: '1px solid #e5e7eb',
+    backgroundColor: '#f9fafb',
+    flexShrink: 0,
+  } satisfies CSSProperties,
+
+  navButton: (disabled: boolean): CSSProperties => ({
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '24px',
+    height: '24px',
+    padding: 0,
+    border: 'none',
+    borderRadius: '4px',
+    backgroundColor: 'transparent',
+    color: disabled ? '#d1d5db' : '#374151',
+    cursor: disabled ? 'default' : 'pointer',
+    fontSize: '14px',
+  }),
+
   statusBar: {
     height: '24px',
     minHeight: '24px',
@@ -227,9 +255,48 @@ export function AppShell({
   const sidebarOpen = useAppStore((state) => state.sidebarOpen);
   const sidebarWidth = useAppStore((state) => state.sidebarWidth);
   const rightPanelOpen = useAppStore((state) => state.rightPanelOpen);
+  const goBack = useAppStore((state) => state.goBack);
+  const goForward = useAppStore((state) => state.goForward);
+  const pageHistory = useAppStore((state) => state.pageHistory);
+  const historyIndex = useAppStore((state) => state.historyIndex);
+
+  const canGoBack = historyIndex > 0;
+  const canGoForward = historyIndex < pageHistory.length - 1;
+
+  const handleGoBack = useCallback(() => {
+    if (canGoBack) goBack();
+  }, [canGoBack, goBack]);
+
+  const handleGoForward = useCallback(() => {
+    if (canGoForward) goForward();
+  }, [canGoForward, goForward]);
 
   return (
     <div style={styles.container} data-testid="app-shell">
+      {/* Navigation toolbar */}
+      <nav style={styles.navToolbar} data-testid="nav-toolbar" aria-label="Navigation">
+        <button
+          type="button"
+          style={styles.navButton(!canGoBack)}
+          onClick={handleGoBack}
+          disabled={!canGoBack}
+          aria-label="Go back"
+          data-testid="nav-back"
+        >
+          &#8592;
+        </button>
+        <button
+          type="button"
+          style={styles.navButton(!canGoForward)}
+          onClick={handleGoForward}
+          disabled={!canGoForward}
+          aria-label="Go forward"
+          data-testid="nav-forward"
+        >
+          &#8594;
+        </button>
+      </nav>
+
       {/* Main content area with three-column layout */}
       <div style={styles.contentArea}>
         {/* Sidebar - left column */}
