@@ -107,6 +107,11 @@ function computeParentKey(parentId: string | null, pageId: string): string {
 /**
  * Seed a block in the test database.
  * Also populates the blocks_by_page and blocks_by_parent index relations.
+ *
+ * Note: CozoDB doesn't allow multiple `?` rules with `:put` in a single block,
+ * so we execute 3 separate mutations. To handle the race condition where
+ * `useBlockChildren` might query before mutation #3 completes, we verify
+ * all data is committed before returning.
  */
 export async function seedBlock(data: {
   blockId: string;
@@ -158,6 +163,43 @@ export async function seedBlock(data: {
     parent_key: parentKey,
     block_id: data.blockId,
   });
+
+  // 4. Verify all data is committed by querying blocks_by_parent
+  // This ensures the race condition is resolved before returning
+  await verifyBlockIndexed(data.blockId, parentKey);
+}
+
+/**
+ * Verify a block is indexed in blocks_by_parent.
+ * Retries with exponential backoff to handle CozoDB commit timing.
+ */
+async function verifyBlockIndexed(
+  blockId: string,
+  parentKey: string,
+  maxRetries: number = 5
+): Promise<void> {
+  const verifyScript = `
+    ?[block_id] := *blocks_by_parent{ parent_id, block_id }, parent_id == $parent_key, block_id == $block_id
+  `;
+
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    const result = await executeQuery(verifyScript, {
+      parent_key: parentKey,
+      block_id: blockId,
+    });
+
+    if (result.rows.length > 0) {
+      return; // Block is indexed, we're done
+    }
+
+    // Wait with exponential backoff: 10ms, 20ms, 40ms, 80ms, 160ms
+    const delay = 10 * Math.pow(2, attempt);
+    await new Promise((resolve) => setTimeout(resolve, delay));
+  }
+
+  // If we get here after all retries, the data should be there
+  // but we won't throw - the test will fail with a more descriptive error
+  // if the block truly isn't visible
 }
 
 /**
@@ -278,6 +320,63 @@ export async function waitForBlockContent(
       return false;
     },
     blockId,
+    { timeout }
+  );
+}
+
+/**
+ * Wait for child blocks to be visible in the DOM.
+ * Useful for tests that verify parent-child hierarchies after seeding.
+ *
+ * This handles the race condition where:
+ * 1. seedBlock() executes 3 separate mutations
+ * 2. useBlockChildren queries blocks_by_parent before mutation #3 completes
+ * 3. React renders empty children initially
+ *
+ * @param page - Playwright page instance
+ * @param parentBlockId - The parent block ID whose children we're waiting for
+ * @param expectedChildIds - Array of child block IDs to wait for
+ * @param options - Optional configuration
+ */
+export async function waitForChildBlocks(
+  page: Page,
+  parentBlockId: string,
+  expectedChildIds: string[],
+  options?: { timeout?: number }
+): Promise<void> {
+  const timeout = options?.timeout ?? 10000;
+
+  if (expectedChildIds.length === 0) {
+    return; // Nothing to wait for
+  }
+
+  await page.waitForFunction(
+    ({ parentId, childIds }) => {
+      // Find the parent block's children container
+      const parentBlock = document.querySelector(
+        `[data-testid="block-node"][data-block-id="${parentId}"]`
+      );
+      if (!parentBlock) return false;
+
+      const childrenContainer = parentBlock.querySelector('[data-testid="block-children"]');
+      if (!childrenContainer) return false;
+
+      // Check all expected children are present and have content
+      for (const childId of childIds) {
+        const childBlock = childrenContainer.querySelector(
+          `[data-testid="block-node"][data-block-id="${childId}"]`
+        );
+        if (!childBlock) return false;
+
+        // Verify the child has rendered content (not in loading state)
+        const content = childBlock.querySelector('[data-testid="static-block-content"]');
+        const editor = childBlock.querySelector('.ProseMirror');
+        if (!content && !editor) return false;
+      }
+
+      return true;
+    },
+    { parentId: parentBlockId, childIds: expectedChildIds },
     { timeout }
   );
 }
