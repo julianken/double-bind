@@ -33,7 +33,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS as DndCSS } from '@dnd-kit/utilities';
 import { InlineBlockRef, InlinePageLink } from '@double-bind/ui-primitives';
-import { useCozoQuery, invalidateQueries, refetchQueries } from '../hooks/useCozoQuery.js';
+import { useCozoQuery, invalidateQueries, resetQueries } from '../hooks/useCozoQuery.js';
 import { useAppStore } from '../stores/ui-store.js';
 import { useServices } from '../providers/ServiceProvider.js';
 import { BlockEditor as RealBlockEditor } from '../editor/BlockEditor.js';
@@ -978,20 +978,23 @@ function BlockNodeComponent({ blockId, depth = 0, previousBlockId, nextBlockId }
     [setFocusedBlock]
   );
 
-  // Callback when blocks change (for query refetch)
-  // Use refetchQueries for immediate UI updates on structural changes (indent/outdent, reorder)
+  // Callback when blocks change (for cache reset)
+  // Use resetQueries to clear cache and prevent duplicates during structural changes
+  // (indent/outdent, reorder). Shows brief loading state instead of stale/duplicate data.
   const handleBlocksChanged = useCallback(() => {
     const pageId = block?.pageId;
     if (pageId) {
-      // Refetch the specific page's blocks query (used by DailyNotesView/PageView)
-      refetchQueries(['blocks', 'byPage', pageId]);
+      // Reset the specific page's blocks query (used by DailyNotesView/PageView)
+      resetQueries(['blocks', 'byPage', pageId]);
     }
-    // Refetch all block children queries to update the tree structure immediately
-    refetchQueries(['blocks', 'children']);
-    // Refetch this block's detail to get updated parentId after indent/outdent
-    refetchQueries(['block', blockId]);
-    // Refetch page-level query for PageView
-    refetchQueries(['page', 'withBlocks']);
+    // Reset all block children queries to update tree structure without duplicates
+    resetQueries(['blocks', 'children']);
+    // Reset this block's detail to get updated parentId after indent/outdent
+    resetQueries(['block', blockId]);
+    // Reset page-level query for PageView
+    resetQueries(['page', 'withBlocks']);
+    // Reset daily note query for DailyNotesView (uses ['dailyNote', 'withBlocks', date])
+    resetQueries(['dailyNote']);
   }, [block?.pageId, blockId]);
 
   // Handle activating this block for editing
