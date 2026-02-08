@@ -68,8 +68,8 @@ test.describe('Backlinks Panel', () => {
     // Wait for the page view to load
     await page.waitForSelector('[data-testid="page-view"]', { state: 'visible' });
 
-    // Verify we're on Page B
-    await expect(page.getByTestId('page-title')).toContainText('Page B');
+    // Verify we're on Page B (PageTitle renders an <input> for regular pages)
+    await expect(page.getByTestId('page-title')).toHaveValue('Page B');
 
     // The backlinks section should be visible by default
     const backlinksSection = page.getByTestId('backlinks-section');
@@ -192,8 +192,8 @@ test.describe('Backlinks Panel', () => {
 
     await page.waitForSelector('[data-testid="page-view"]', { state: 'visible' });
 
-    // Verify we're on Target Page
-    await expect(page.getByTestId('page-title')).toContainText('Target Page');
+    // Verify we're on Target Page (PageTitle renders an <input> for regular pages)
+    await expect(page.getByTestId('page-title')).toHaveValue('Target Page');
 
     // Click on the block item in the backlinks panel to navigate to source
     const blockItem = page.getByTestId('block-item-0');
@@ -201,7 +201,7 @@ test.describe('Backlinks Panel', () => {
     await blockItem.click();
 
     // Verify navigation occurred - we should now be on Source Page
-    await expect(page.getByTestId('page-title')).toContainText('Source Page');
+    await expect(page.getByTestId('page-title')).toHaveValue('Source Page');
   });
 
   test('clicking page title in backlinks navigates to that page', async ({ page }) => {
@@ -246,8 +246,8 @@ test.describe('Backlinks Panel', () => {
     await expect(pageTitleButton).toBeVisible();
     await pageTitleButton.click();
 
-    // Verify navigation occurred
-    await expect(page.getByTestId('page-title')).toContainText('Linking Page');
+    // Verify navigation occurred (PageTitle renders an <input> for regular pages)
+    await expect(page.getByTestId('page-title')).toHaveValue('Linking Page');
   });
 
   test('shows empty state when no backlinks exist', async ({ page }) => {
@@ -344,8 +344,8 @@ test.describe('Backlinks Panel', () => {
 
     await page.waitForSelector('[data-testid="page-view"]', { state: 'visible' });
 
-    // Verify we're on Page Central
-    await expect(page.getByTestId('page-title')).toContainText('Page Central');
+    // Verify we're on Page Central (PageTitle renders an <input> for regular pages)
+    await expect(page.getByTestId('page-title')).toHaveValue('Page Central');
 
     // The backlinks count should show 2
     const backlinksCount = page.getByTestId('backlinks-count');
