@@ -38,6 +38,7 @@ import { useAppStore } from '../stores/ui-store.js';
 import { useServices } from '../providers/ServiceProvider.js';
 import { BlockEditor as RealBlockEditor } from '../editor/BlockEditor.js';
 import { createDragEndHandler } from '../utils/createDragEndHandler.js';
+import styles from './BlockNode.module.css';
 
 // ============================================================================
 // Types
@@ -143,22 +144,22 @@ export interface ContentSegment {
 }
 
 /**
- * CSS class names for StaticBlockContent (BEM-style)
+ * CSS class names for StaticBlockContent using CSS modules
  */
 export const STATIC_BLOCK_CONTENT_CSS_CLASSES = {
-  container: 'static-block-content',
-  todo: 'static-block-content--todo',
-  checkbox: 'static-block-content__checkbox',
-  checkboxChecked: 'static-block-content__checkbox--checked',
-  text: 'static-block-content__text',
-  bold: 'static-block-content__bold',
-  italic: 'static-block-content__italic',
-  code: 'static-block-content__code',
-  highlight: 'static-block-content__highlight',
-  strikethrough: 'static-block-content__strikethrough',
-  pageLink: 'static-block-content__page-link',
-  blockRef: 'static-block-content__block-ref',
-  tag: 'static-block-content__tag',
+  container: styles.staticContent,
+  todo: styles['staticContent--todo'],
+  checkbox: styles.checkbox,
+  checkboxChecked: styles['checkbox--checked'],
+  text: styles.text,
+  bold: styles.bold,
+  italic: styles.italic,
+  code: styles.code,
+  highlight: styles.highlight,
+  strikethrough: styles.strikethrough,
+  pageLink: styles.pageLink,
+  blockRef: styles.blockRef,
+  tag: styles.tag,
 } as const;
 
 // ============================================================================
@@ -232,16 +233,15 @@ export function BulletHandle({
   return (
     <button
       type="button"
-      className="bullet-handle"
+      className={styles.bulletHandle}
       onClick={handleClick}
       {...dragHandleProps}
       aria-label={hasChildren ? (isCollapsed ? 'Expand' : 'Collapse') : 'Bullet'}
       aria-expanded={hasChildren ? !isCollapsed : undefined}
       data-has-children={hasChildren}
       data-collapsed={isCollapsed}
-      style={{ cursor: 'grab' }}
     >
-      <span className="bullet-icon">{hasChildren ? (isCollapsed ? '>' : 'v') : '-'}</span>
+      <span className={styles.bulletIcon}>{hasChildren ? (isCollapsed ? '▸' : '▾') : '•'}</span>
     </button>
   );
 }
@@ -1023,12 +1023,12 @@ function BlockNodeComponent({ blockId, depth = 0 }: BlockNodeProps) {
   if (showLoading) {
     return (
       <li
-        className="block-container block-loading"
+        className={`${styles.container} ${styles['container--loading']}`}
         role="treeitem"
         aria-busy="true"
         data-testid="block-node-loading"
       >
-        <div className="block-skeleton" />
+        <div className={styles.skeleton} />
       </li>
     );
   }
@@ -1036,26 +1036,28 @@ function BlockNodeComponent({ blockId, depth = 0 }: BlockNodeProps) {
   // Error state
   if (blockError || !block) {
     return (
-      <li className="block-container block-error" role="treeitem" data-testid="block-node-error">
-        <div className="block-error-content">Failed to load block</div>
+      <li className={`${styles.container} ${styles['container--error']}`} role="treeitem" data-testid="block-node-error">
+        <div className={styles.errorContent}>Failed to load block</div>
       </li>
     );
   }
 
-  // Calculate indentation and sortable transform styles
+  // Calculate sortable transform styles (dynamic values stay inline)
   const sortableStyle = {
     paddingLeft: `${depth * 24}px`,
-    contentVisibility: 'auto' as const,
-    containIntrinsicSize: 'auto 32px',
     transform: DndCSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.5 : 1,
   };
+
+  const containerClasses = [
+    styles.container,
+    isDragging && styles['container--dragging'],
+  ].filter(Boolean).join(' ');
 
   return (
     <li
       ref={setNodeRef}
-      className="block-container"
+      className={containerClasses}
       role="treeitem"
       aria-expanded={hasChildren ? !block.isCollapsed : undefined}
       aria-level={depth + 1}
@@ -1063,14 +1065,14 @@ function BlockNodeComponent({ blockId, depth = 0 }: BlockNodeProps) {
       data-testid="block-node"
       style={sortableStyle}
     >
-      <div className="block-row">
+      <div className={styles.row}>
         <BulletHandle
           isCollapsed={block.isCollapsed}
           hasChildren={hasChildren}
           onToggleCollapse={handleToggleCollapse}
           dragHandleProps={{ ...attributes, ...listeners }}
         />
-        <div className="block-content">
+        <div className={styles.content}>
           {isEditing ? (
             <RealBlockEditor
               blockId={blockId}
@@ -1108,7 +1110,7 @@ function BlockNodeComponent({ blockId, depth = 0 }: BlockNodeProps) {
               items={children.map((c) => c.blockId)}
               strategy={verticalListSortingStrategy}
             >
-              <ul className="block-children" role="group" data-testid="block-children">
+              <ul className={styles.children} role="group" data-testid="block-children">
                 {children.map((child) => (
                   <BlockNode key={child.blockId} blockId={child.blockId} depth={depth + 1} />
                 ))}
@@ -1116,7 +1118,7 @@ function BlockNodeComponent({ blockId, depth = 0 }: BlockNodeProps) {
             </SortableContext>
           </DndContext>
         ) : (
-          <ul className="block-children" role="group" data-testid="block-children">
+          <ul className={styles.children} role="group" data-testid="block-children">
             {children.map((child) => (
               <BlockNode key={child.blockId} blockId={child.blockId} depth={depth + 1} />
             ))}

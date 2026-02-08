@@ -1,0 +1,137 @@
+/**
+ * DailyNotesView Screen Styles
+ *
+ * Today's daily note display.
+ */
+
+/* ============================================================================
+ * Container
+ * ============================================================================ */
+
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: var(--bg-primary);
+  padding: var(--space-6);
+}
+
+/* ============================================================================
+ * Header
+ * ============================================================================ */
+
+.header {
+  margin-bottom: var(--space-6);
+}
+
+.title {
+  font-size: var(--text-3xl);
+  font-weight: var(--font-bold);
+  color: var(--text-primary);
+  line-height: var(--leading-tight);
+  margin: 0 0 var(--space-2);
+}
+
+.dateIso {
+  display: block;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+
+/* ============================================================================
+ * Content
+ * ============================================================================ */
+
+.content {
+  flex: 1;
+  overflow: auto;
+}
+
+/* ============================================================================
+ * Block Tree
+ * ============================================================================ */
+
+.blockTree {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.block {
+  padding: var(--space-2) 0;
+}
+
+.blockContent {
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  color: var(--text-primary);
+}
+
+/* ============================================================================
+ * Loading State
+ * ============================================================================ */
+
+.container--loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loadingIndicator {
+  color: var(--text-muted);
+  font-size: var(--text-base);
+}
+
+.blocksLoading {
+  padding: var(--space-4);
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+/* ============================================================================
+ * Error State
+ * ============================================================================ */
+
+.container--error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.error {
+  text-align: center;
+  color: var(--error);
+}
+
+.error h1 {
+  font-size: var(--text-xl);
+  font-weight: var(--font-semibold);
+  margin: 0 0 var(--space-2);
+}
+
+.error p {
+  font-size: var(--text-sm);
+  margin: 0;
+}
+
+.blocksError {
+  padding: var(--space-4);
+  color: var(--error);
+  font-size: var(--text-sm);
+}
+
+/* ============================================================================
+ * Empty State
+ * ============================================================================ */
+
+.empty {
+  padding: var(--space-8) var(--space-4);
+  text-align: center;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+.empty p {
+  margin: 0;
+}

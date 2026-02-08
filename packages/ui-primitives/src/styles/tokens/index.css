@@ -1,0 +1,12 @@
+/**
+ * Design Tokens Index
+ *
+ * Import this file to get all design tokens.
+ * Usage: @import '@double-bind/ui-primitives/styles/tokens';
+ */
+
+@import './colors.css';
+@import './typography.css';
+@import './spacing.css';
+@import './effects.css';
+@import './layout.css';

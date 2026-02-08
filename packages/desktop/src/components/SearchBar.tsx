@@ -19,6 +19,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { useSearch } from '../hooks/useSearch.js';
 import { useAppStore } from '../stores/ui-store.js';
+import styles from './SearchBar.module.css';
 
 // ============================================================================
 // Constants
@@ -87,9 +88,7 @@ function LoadingSpinner() {
       fill="none"
       aria-hidden="true"
       data-testid="search-loading-spinner"
-      style={{
-        animation: 'spin 1s linear infinite',
-      }}
+      className={styles.spinner}
     >
       <circle
         cx="7"
@@ -240,31 +239,13 @@ export function SearchBar({
 
   return (
     <form
-      className={`search-bar${className ? ` ${className}` : ''}`}
+      className={`${styles.container}${className ? ` ${className}` : ''}`}
       role="search"
       onSubmit={handleSubmit}
       data-testid="search-bar"
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        padding: '8px 12px',
-        backgroundColor: '#f3f4f6',
-        borderRadius: '6px',
-        border: '1px solid transparent',
-      }}
     >
       {/* Search icon or loading spinner */}
-      <span
-        className="search-bar-icon"
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: '#6b7280',
-          flexShrink: 0,
-        }}
-      >
+      <span className={styles.icon}>
         {isLoading ? <LoadingSpinner /> : <SearchIcon />}
       </span>
 
@@ -279,29 +260,15 @@ export function SearchBar({
         aria-label="Search pages and blocks"
         data-testid="search-bar-input"
         autoComplete="off"
-        style={{
-          flex: 1,
-          border: 'none',
-          background: 'transparent',
-          outline: 'none',
-          fontSize: '14px',
-          color: '#111827',
-          minWidth: 0,
-        }}
+        className={styles.input}
       />
 
       {/* Minimum length hint (shown when query is 1 character) */}
       {showMinLengthHint && (
         <span
-          className="search-bar-hint"
+          className={styles.hint}
           aria-live="polite"
           data-testid="search-bar-min-length-hint"
-          style={{
-            fontSize: '11px',
-            color: '#9ca3af',
-            whiteSpace: 'nowrap',
-            flexShrink: 0,
-          }}
         >
           {MIN_LENGTH_HINT}
         </span>
@@ -310,18 +277,9 @@ export function SearchBar({
       {/* Keyboard shortcut hint (shown when input is empty) */}
       {!query && (
         <span
-          className="search-bar-shortcut"
+          className={styles.shortcut}
           aria-hidden="true"
           data-testid="search-bar-shortcut"
-          style={{
-            fontSize: '11px',
-            color: '#9ca3af',
-            backgroundColor: '#e5e7eb',
-            padding: '2px 6px',
-            borderRadius: '4px',
-            fontFamily: 'monospace',
-            flexShrink: 0,
-          }}
         >
           {navigator.platform.includes('Mac') ? '\u2318K' : 'Ctrl+K'}
         </span>
@@ -334,51 +292,11 @@ export function SearchBar({
           onClick={handleClear}
           aria-label="Clear search"
           data-testid="search-bar-clear"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '4px',
-            border: 'none',
-            background: 'transparent',
-            cursor: 'pointer',
-            color: '#6b7280',
-            borderRadius: '4px',
-            flexShrink: 0,
-          }}
+          className={styles.clearButton}
         >
           <ClearIcon />
         </button>
       )}
     </form>
   );
-}
-
-// ============================================================================
-// CSS Keyframes (injected into document)
-// ============================================================================
-
-// Inject CSS for spinner animation
-if (typeof document !== 'undefined') {
-  const styleId = 'search-bar-styles';
-  if (!document.getElementById(styleId)) {
-    const style = document.createElement('style');
-    style.id = styleId;
-    style.textContent = `
-      @keyframes spin {
-        from { transform: rotate(0deg); }
-        to { transform: rotate(360deg); }
-      }
-
-      .search-bar:focus-within {
-        border-color: #3b82f6 !important;
-        background-color: #fff !important;
-      }
-
-      .search-bar-clear:hover {
-        background-color: #e5e7eb !important;
-      }
-    `;
-    document.head.appendChild(style);
-  }
 }

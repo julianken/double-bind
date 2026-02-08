@@ -39,6 +39,7 @@ import { useAppStore } from '../stores/ui-store.js';
 import { BlockNode } from '../components/BlockNode.js';
 import { createDragEndHandler } from '../utils/createDragEndHandler.js';
 import { PageTitle as RealPageTitle } from '../components/PageTitle.js';
+import styles from './PageView.module.css';
 
 // ============================================================================
 // Types
@@ -72,7 +73,7 @@ function isMacOS(): boolean {
  */
 function LoadingState() {
   return (
-    <div className="page-view-loading" data-testid="page-view-loading" role="status">
+    <div className={styles.loading} data-testid="page-view-loading" role="status">
       <p>Loading page...</p>
     </div>
   );
@@ -89,7 +90,7 @@ interface ErrorStateProps {
 
 function ErrorState({ error }: ErrorStateProps) {
   return (
-    <div className="page-view-error" data-testid="page-view-error" role="alert">
+    <div className={styles.error} data-testid="page-view-error" role="alert">
       <h2>Failed to load page</h2>
       <p>{error.message}</p>
     </div>
@@ -101,7 +102,7 @@ function ErrorState({ error }: ErrorStateProps) {
  */
 function EmptyState() {
   return (
-    <div className="page-view-empty" data-testid="page-view-empty">
+    <div className={styles.empty} data-testid="page-view-empty">
       <p>This page has no content yet. Start typing to add a block.</p>
     </div>
   );
@@ -130,68 +131,26 @@ function BacklinksSectionHeader({
     }
   };
 
+  const chevronClasses = [
+    styles.backlinksChevron,
+    isExpanded && styles['backlinksChevron--expanded'],
+  ].filter(Boolean).join(' ');
+
   return (
     <button
       type="button"
-      className="backlinks-section-header"
+      className={styles.backlinksHeader}
       onClick={onToggle}
       onKeyDown={handleKeyDown}
       aria-expanded={isExpanded}
       data-testid="backlinks-section-header"
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        padding: '12px 16px',
-        width: '100%',
-        border: 'none',
-        borderTop: '1px solid rgba(0, 0, 0, 0.1)',
-        backgroundColor: 'rgba(0, 0, 0, 0.02)',
-        cursor: 'pointer',
-        fontFamily: 'inherit',
-        fontSize: '14px',
-        fontWeight: 600,
-        color: 'inherit',
-        textAlign: 'left',
-      }}
     >
-      <span
-        style={{
-          width: 0,
-          height: 0,
-          borderStyle: 'solid',
-          borderWidth: '5px 0 5px 7px',
-          borderColor: 'transparent transparent transparent currentColor',
-          opacity: 0.6,
-          transition: 'transform 0.15s ease',
-          transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
-        }}
-        aria-hidden="true"
-      />
-      <span>Backlinks</span>
+      <span className={chevronClasses} aria-hidden="true" />
+      <span className={styles.backlinksTitle}>Backlinks</span>
       {isLoading ? (
-        <span
-          style={{
-            marginLeft: 'auto',
-            fontSize: '12px',
-            opacity: 0.6,
-          }}
-        >
-          Loading...
-        </span>
+        <span className={styles.backlinksLoading}>Loading...</span>
       ) : (
-        <span
-          style={{
-            marginLeft: 'auto',
-            padding: '2px 8px',
-            backgroundColor: 'rgba(0, 0, 0, 0.08)',
-            borderRadius: '10px',
-            fontSize: '12px',
-            fontWeight: 500,
-            opacity: 0.7,
-          }}
-          data-testid="backlinks-count"
-        >
+        <span className={styles.backlinksCount} data-testid="backlinks-count">
           {count}
         </span>
       )}
@@ -519,24 +478,12 @@ export function PageView({ pageId }: PageViewProps) {
 
   return (
     <div
-      className="page-view"
+      className={styles.container}
       data-testid="page-view"
       data-page-id={pageId}
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100%',
-      }}
     >
       {/* Page content area */}
-      <div
-        className="page-view-content"
-        style={{
-          flex: 1,
-          overflow: 'auto',
-          padding: '16px',
-        }}
-      >
+      <div className={styles.content}>
         <RealPageTitle
           pageId={pageId}
           title={page.title}
@@ -557,7 +504,7 @@ export function PageView({ pageId }: PageViewProps) {
               items={rootBlocks.map((b) => b.blockId)}
               strategy={verticalListSortingStrategy}
             >
-              <ul role="tree" className="block-tree" data-testid="block-tree">
+              <ul role="tree" className={styles.blockTree} data-testid="block-tree">
                 {rootBlocks.map((block) => (
                   <BlockNode key={block.blockId} blockId={block.blockId} depth={0} />
                 ))}
@@ -568,14 +515,7 @@ export function PageView({ pageId }: PageViewProps) {
       </div>
 
       {/* Backlinks section - collapsible bottom panel */}
-      <div
-        className="backlinks-section"
-        data-testid="backlinks-section"
-        style={{
-          flexShrink: 0,
-          borderTop: '1px solid rgba(0, 0, 0, 0.1)',
-        }}
-      >
+      <div className={styles.backlinksSection} data-testid="backlinks-section">
         <BacklinksSectionHeader
           isExpanded={backlinksExpanded}
           onToggle={toggleBacklinks}
@@ -584,15 +524,7 @@ export function PageView({ pageId }: PageViewProps) {
         />
 
         {backlinksExpanded && (
-          <div
-            className="backlinks-content"
-            data-testid="backlinks-content"
-            style={{
-              maxHeight: '300px',
-              overflow: 'auto',
-              padding: '0 16px 16px',
-            }}
-          >
+          <div className={styles.backlinksContent} data-testid="backlinks-content">
             <BacklinksPanel
               pageId={pageId}
               linkedRefs={linkedRefs}
