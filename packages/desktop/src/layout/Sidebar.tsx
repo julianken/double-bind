@@ -179,7 +179,11 @@ interface SidebarGraphSectionProps {
  * Uses MiniGraph to visualize connected pages within N hops.
  */
 function SidebarGraphSection({ onNavigate }: SidebarGraphSectionProps) {
-  const currentPageId = useAppStore((state) => state.currentPageId);
+  const currentPageIdRaw = useAppStore((state) => state.currentPageId);
+  // Extract actual page ID from route format (e.g., "page/01KGX..." -> "01KGX...")
+  const currentPageId = currentPageIdRaw?.startsWith('page/')
+    ? currentPageIdRaw.slice(5)
+    : currentPageIdRaw;
   const [isCollapsed, setIsCollapsed] = useState(() => {
     try {
       return localStorage.getItem(GRAPH_SECTION_STORAGE_KEY) === 'true';

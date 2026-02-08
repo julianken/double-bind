@@ -15,7 +15,7 @@ import { useAppStore, type ThemePreference, type ResolvedTheme } from '../stores
  * Get the system's preferred color scheme
  */
 function getSystemTheme(): ResolvedTheme {
-  if (typeof window === 'undefined') return 'light';
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return 'light';
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
 
@@ -71,6 +71,7 @@ export function useTheme() {
   // Listen for system preference changes when in 'system' mode
   useEffect(() => {
     if (themePreference !== 'system') return;
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
 
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
 
