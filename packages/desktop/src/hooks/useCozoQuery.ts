@@ -16,7 +16,7 @@
  * ```
  */
 
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { create } from 'zustand';
 
 /**
@@ -145,14 +145,20 @@ export function useCozoQuery<T>(
   const serializedKey = JSON.stringify(key);
   const enabled = options?.enabled ?? true;
 
-  // Use the queryFn directly. Callers must wrap queryFn with useCallback
-  // to ensure stability when their dependencies change.
-  // Note: Previously this used useCallback(queryFn, [serializedKey]) which
-  // caused bugs when queryFn's closure variables changed but serializedKey didn't.
-  const stableQueryFn = queryFn;
+  // Store queryFn in a ref to avoid re-running the effect when queryFn identity changes.
+  // The effect should only re-run when key, enabled, or invalidationCount change.
+  // Using a ref ensures we always call the latest queryFn without it being a dependency.
+  const queryFnRef = useRef(queryFn);
+  queryFnRef.current = queryFn;
 
+  // Select invalidationCount separately as a primitive to avoid re-renders from other queries
+  // This is the ONLY value that should trigger effect re-runs
+  const invalidationCount = useQueryStore(
+    useCallback((s) => s.entries.get(serializedKey)?.invalidationCount ?? 0, [serializedKey])
+  );
+
+  // Select the full entry for return values (this may re-render more often, but won't trigger effects)
   const entry = useQueryStore(useCallback((s) => s.entries.get(serializedKey), [serializedKey]));
-  const invalidationCount = entry?.invalidationCount ?? 0;
 
   useEffect(() => {
     if (!enabled) return;
@@ -171,7 +177,7 @@ export function useCozoQuery<T>(
     });
 
     let cancelled = false;
-    stableQueryFn().then(
+    queryFnRef.current().then(
       (data) => {
         if (!cancelled) {
           useQueryStore.setState((s) => {
@@ -200,7 +206,7 @@ export function useCozoQuery<T>(
     return () => {
       cancelled = true;
     };
-  }, [serializedKey, enabled, invalidationCount, stableQueryFn]);
+  }, [serializedKey, enabled, invalidationCount]);
 
   return {
     data: entry?.data as T | undefined,

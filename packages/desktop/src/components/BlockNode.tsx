@@ -187,15 +187,17 @@ export const STATIC_BLOCK_CONTENT_CSS_CLASSES = {
  */
 export function useBlock(blockId: BlockId) {
   const services = useSafeServices();
+  // Extract just blockService to avoid queryFn changing when other services change
+  const blockService = services?.blockService;
 
   const queryFn = useCallback(async (): Promise<Block | null> => {
-    if (!services?.blockService) {
+    if (!blockService) {
       return null;
     }
-    return services.blockService.getById(blockId);
-  }, [blockId, services]);
+    return blockService.getById(blockId);
+  }, [blockId, blockService]);
 
-  return useCozoQuery(['block', blockId], queryFn, { enabled: !!blockId && !!services });
+  return useCozoQuery(['block', blockId], queryFn, { enabled: !!blockId && !!blockService });
 }
 
 /**
@@ -208,16 +210,18 @@ export function useBlock(blockId: BlockId) {
  */
 export function useBlockChildren(blockId: BlockId, pageId: PageId | undefined) {
   const services = useSafeServices();
+  // Extract just blockService to avoid queryFn changing when other services change
+  const blockService = services?.blockService;
 
   const queryFn = useCallback(async (): Promise<Block[]> => {
-    if (!services?.blockService || !pageId) {
+    if (!blockService || !pageId) {
       return [];
     }
-    return services.blockService.getChildren(blockId, pageId);
-  }, [blockId, pageId, services]);
+    return blockService.getChildren(blockId, pageId);
+  }, [blockId, pageId, blockService]);
 
   return useCozoQuery(['blocks', 'children', blockId], queryFn, {
-    enabled: !!blockId && !!pageId && !!services,
+    enabled: !!blockId && !!pageId && !!blockService,
   });
 }
 
@@ -938,12 +942,7 @@ export const StaticBlockContent = memo(function StaticBlockContent({
  * <BlockNode blockId="01HQXYZ..." depth={0} />
  * ```
  */
-function BlockNodeComponent({
-  blockId,
-  depth = 0,
-  previousBlockId,
-  nextBlockId,
-}: BlockNodeProps) {
+function BlockNodeComponent({ blockId, depth = 0, previousBlockId, nextBlockId }: BlockNodeProps) {
   const services = useSafeServices();
   const { data: block, isLoading: blockLoading, error: blockError } = useBlock(blockId);
   const { data: children, isLoading: childrenLoading } = useBlockChildren(blockId, block?.pageId);
@@ -980,13 +979,16 @@ function BlockNodeComponent({
   );
 
   // Callback when blocks change (for query invalidation)
+  // Only invalidate page-level queries to avoid cascade of all block queries
   const handleBlocksChanged = useCallback(() => {
-    invalidateQueries(['blocks']);
-    invalidateQueries(['block']);
-    // Also invalidate the page-level query so PageView picks up new root blocks
-    // (e.g., after Enter splits a block, creating a new sibling at root level)
+    const pageId = block?.pageId;
+    if (pageId) {
+      // Invalidate the specific page's blocks query (used by DailyNotesView/PageView)
+      invalidateQueries(['blocks', 'byPage', pageId]);
+    }
+    // Invalidate page-level query for PageView
     invalidateQueries(['page', 'withBlocks']);
-  }, []);
+  }, [block?.pageId]);
 
   // Handle activating this block for editing
   const handleActivate = useCallback(() => {
@@ -1053,7 +1055,11 @@ function BlockNodeComponent({
   // Error state
   if (blockError || !block) {
     return (
-      <li className={`${styles.container} ${styles['container--error']}`} role="treeitem" data-testid="block-node-error">
+      <li
+        className={`${styles.container} ${styles['container--error']}`}
+        role="treeitem"
+        data-testid="block-node-error"
+      >
         <div className={styles.errorContent}>Failed to load block</div>
       </li>
     );
@@ -1066,10 +1072,9 @@ function BlockNodeComponent({
     transition,
   };
 
-  const containerClasses = [
-    styles.container,
-    isDragging && styles['container--dragging'],
-  ].filter(Boolean).join(' ');
+  const containerClasses = [styles.container, isDragging && styles['container--dragging']]
+    .filter(Boolean)
+    .join(' ');
 
   return (
     <li
