@@ -78,6 +78,7 @@ function Sidebar() {
         invalidateQueries(['pages']);
         navigateToPage('page/' + page.pageId);
       } catch (error) {
+        // eslint-disable-next-line no-console
         console.error('Failed to create page:', error);
       }
     };

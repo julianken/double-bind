@@ -130,15 +130,9 @@ test.describe('Graph View', () => {
       ).toBeVisible({ timeout: 5000 });
     });
 
-    test.skip('shows empty state when no pages exist', async ({ page }) => {
-      // TODO: This test has a race condition with parallel workers sharing the bridge server
-      // The bridge server is shared across all workers, so one worker's reset can affect another's test
-      // This would need to be fixed by using isolated database instances per worker
+    test('shows empty state when no pages exist', async ({ page }) => {
       // Reset to empty database (clears any seeded data from beforeEach)
       await resetDatabase();
-
-      // Re-setup mock IPC since we're starting fresh
-      await setupMockIPC(page);
 
       await page.goto('/');
       await expect(page.getByTestId('app-shell')).toBeVisible({ timeout: 10000 });
@@ -147,8 +141,9 @@ test.describe('Graph View', () => {
       await page.keyboard.press('Control+g');
 
       // Verify empty state is shown
-      await expect(page.getByTestId('graph-view-empty')).toBeVisible({ timeout: 5000 });
-      await expect(page.getByText('No pages yet')).toBeVisible();
+      const emptyState = page.getByTestId('graph-view-empty');
+      await expect(emptyState).toBeVisible({ timeout: 5000 });
+      await expect(emptyState.getByText('No pages yet')).toBeVisible();
     });
   });
 

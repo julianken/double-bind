@@ -51,6 +51,26 @@ function splitIntoStatements(script: string): string[] {
 }
 
 /**
+ * Check if a statement execution error is a ":create" conflict where the
+ * relation already exists. These errors are safe to ignore when running
+ * migrations idempotently (e.g., when schema was pre-created by E2E setup
+ * but applied_migrations metadata wasn't visible due to a race condition).
+ *
+ * @param stmt - The statement that was executed
+ * @param errorMsg - The error message from execution
+ * @returns true if this is a safe-to-ignore create conflict
+ */
+function isCreateConflict(stmt: string, errorMsg: string): boolean {
+  const trimmed = stmt.trim();
+  const isCreateStatement =
+    trimmed.startsWith(':create ') ||
+    trimmed.startsWith('::index create ') ||
+    trimmed.startsWith('::fts create ');
+  const isConflictError = errorMsg.includes('conflicts with an existing one');
+  return isCreateStatement && isConflictError;
+}
+
+/**
  * Metadata relation key for tracking applied migrations.
  */
 const MIGRATIONS_KEY = 'applied_migrations';
@@ -177,7 +197,19 @@ export async function runMigrations(db: GraphDB): Promise<MigrationResult> {
       const statements = splitIntoStatements(migration.up);
       for (let i = 0; i < statements.length; i++) {
         const stmt = statements[i]!;
-        await db.mutate(stmt);
+        try {
+          await db.mutate(stmt);
+        } catch (stmtError) {
+          // Handle idempotent :create -- if the relation already exists, skip it.
+          // This prevents "Stored relation X conflicts with an existing one" errors
+          // that occur when the schema was pre-created (e.g., E2E test bridge setup)
+          // but the applied_migrations metadata wasn't visible due to a race condition.
+          const errorMsg = stmtError instanceof Error ? stmtError.message : String(stmtError);
+          if (isCreateConflict(stmt, errorMsg)) {
+            continue;
+          }
+          throw stmtError;
+        }
       }
 
       // Record that this migration was applied

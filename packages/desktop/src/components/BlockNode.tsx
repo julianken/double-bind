@@ -181,7 +181,9 @@ export function useBlockChildren(blockId: BlockId, pageId: PageId | undefined) {
     return services.blockService.getChildren(blockId, pageId);
   }, [blockId, pageId, services]);
 
-  return useCozoQuery(['blocks', 'children', blockId], queryFn, { enabled: !!blockId && !!pageId && !!services });
+  return useCozoQuery(['blocks', 'children', blockId], queryFn, {
+    enabled: !!blockId && !!pageId && !!services,
+  });
 }
 
 // ============================================================================
@@ -926,6 +928,9 @@ function BlockNodeComponent({ blockId, depth = 0 }: BlockNodeProps) {
   const handleBlocksChanged = useCallback(() => {
     invalidateQueries(['blocks']);
     invalidateQueries(['block']);
+    // Also invalidate the page-level query so PageView picks up new root blocks
+    // (e.g., after Enter splits a block, creating a new sibling at root level)
+    invalidateQueries(['page', 'withBlocks']);
   }, []);
 
   // Handle activating this block for editing
@@ -960,8 +965,14 @@ function BlockNodeComponent({ blockId, depth = 0 }: BlockNodeProps) {
     [setFocusedBlock]
   );
 
-  // Loading state - also show loading if block exists but content is not yet populated
-  if (blockLoading || childrenLoading || (block && block.content === undefined)) {
+  // Loading state - only show skeleton when there's no cached block data.
+  // When re-fetching after invalidation, keep showing stale data to avoid
+  // unmounting ProseMirror editors (which destroys editor state and focus).
+  const showLoading =
+    (blockLoading && !block) ||
+    (childrenLoading && !children) ||
+    (block && block.content === undefined);
+  if (showLoading) {
     return (
       <li
         className="block-container block-loading"
