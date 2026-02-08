@@ -15,6 +15,7 @@ import type { PageId } from '@double-bind/types';
 import { ErrorBoundary } from '../components/ErrorBoundary.js';
 import { SearchBar } from '../components/SearchBar.js';
 import { PageList } from '../components/PageList.js';
+import { ThemeToggle } from '../components/ThemeToggle.js';
 import { useAppStore } from '../stores/ui-store.js';
 import { useNeighborhood } from '../hooks/useNeighborhood.js';
 import styles from './Sidebar.module.css';
@@ -51,13 +52,13 @@ export function QuickCapture() {
 }
 
 /**
- * SidebarFooter placeholder - displays app info and settings link.
- * TODO: Implement footer with version and settings in separate issue.
+ * SidebarFooter - displays app info and theme toggle.
  */
 export function SidebarFooter() {
   return (
     <footer className={styles.footer}>
-      <small>Double Bind</small>
+      <ThemeToggle />
+      <small className={styles.footerBrand}>Double Bind</small>
     </footer>
   );
 }
