@@ -938,11 +938,13 @@ function BlockNodeComponent({ blockId, depth = 0 }: BlockNodeProps) {
     setFocusedBlock(blockId);
   }, [blockId, setFocusedBlock]);
 
-  // Handle collapse toggle (would dispatch to store/mutation)
-  const handleToggleCollapse = useCallback(() => {
-    // TODO: Implement collapse toggle mutation
-    // For now, this is a placeholder
-  }, []);
+  // Handle collapse toggle
+  const handleToggleCollapse = useCallback(async () => {
+    if (!services?.blockService) return;
+    await services.blockService.toggleCollapse(blockId);
+    invalidateQueries(['block']);
+    invalidateQueries(['page', 'withBlocks']);
+  }, [blockId, services]);
 
   // Handle page link click - navigate to the linked page
   const handlePageLinkClick = useCallback(
