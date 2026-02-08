@@ -33,7 +33,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS as DndCSS } from '@dnd-kit/utilities';
 import { InlineBlockRef, InlinePageLink } from '@double-bind/ui-primitives';
-import { useCozoQuery, invalidateQueries } from '../hooks/useCozoQuery.js';
+import { useCozoQuery, invalidateQueries, refetchQueries } from '../hooks/useCozoQuery.js';
 import { useAppStore } from '../stores/ui-store.js';
 import { useServices } from '../providers/ServiceProvider.js';
 import { BlockEditor as RealBlockEditor } from '../editor/BlockEditor.js';
@@ -978,17 +978,21 @@ function BlockNodeComponent({ blockId, depth = 0, previousBlockId, nextBlockId }
     [setFocusedBlock]
   );
 
-  // Callback when blocks change (for query invalidation)
-  // Only invalidate page-level queries to avoid cascade of all block queries
+  // Callback when blocks change (for query refetch)
+  // Use refetchQueries for immediate UI updates on structural changes (indent/outdent, reorder)
   const handleBlocksChanged = useCallback(() => {
     const pageId = block?.pageId;
     if (pageId) {
-      // Invalidate the specific page's blocks query (used by DailyNotesView/PageView)
-      invalidateQueries(['blocks', 'byPage', pageId]);
+      // Refetch the specific page's blocks query (used by DailyNotesView/PageView)
+      refetchQueries(['blocks', 'byPage', pageId]);
     }
-    // Invalidate page-level query for PageView
-    invalidateQueries(['page', 'withBlocks']);
-  }, [block?.pageId]);
+    // Refetch all block children queries to update the tree structure immediately
+    refetchQueries(['blocks', 'children']);
+    // Refetch this block's detail to get updated parentId after indent/outdent
+    refetchQueries(['block', blockId]);
+    // Refetch page-level query for PageView
+    refetchQueries(['page', 'withBlocks']);
+  }, [block?.pageId, blockId]);
 
   // Handle activating this block for editing
   const handleActivate = useCallback(() => {
@@ -1101,6 +1105,7 @@ function BlockNodeComponent({ blockId, depth = 0, previousBlockId, nextBlockId }
               initialContent={block.content}
               blockService={services?.blockService}
               pageId={block.pageId}
+              parentId={block.parentId}
               previousBlockId={previousBlockId ?? null}
               nextBlockId={nextBlockId ?? null}
               focusBlock={focusBlock}

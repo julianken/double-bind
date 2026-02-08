@@ -76,6 +76,17 @@ export const invalidateQueries = (keyPrefix: string[]): void => {
 };
 
 /**
+ * Force immediate refetch of queries by key prefix.
+ * Unlike invalidateQueries (which just marks as stale), this triggers an immediate refetch.
+ * Use this for structural changes (indent/outdent, reorder) where the UI must update immediately.
+ *
+ * @param keyPrefix - Array of key segments to match (e.g., ['blocks'], ['backlinks'])
+ */
+export const refetchQueries = (keyPrefix: string[]): void => {
+  void queryClient.refetchQueries({ queryKey: keyPrefix });
+};
+
+/**
  * React hook for executing CozoDB queries with automatic caching and invalidation.
  *
  * Now powered by TanStack Query for stable identity guarantees.
