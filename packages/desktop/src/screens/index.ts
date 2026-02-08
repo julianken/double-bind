@@ -5,7 +5,8 @@
  * Each screen receives props from route matching (e.g., pageId).
  */
 
-export { PageView, PageTitle, type PageViewProps } from './PageView.js';
+export { PageView, type PageViewProps } from './PageView.js';
+export { PageTitle } from '../components/PageTitle.js';
 // BlockNode is exported from components, not screens
 export { BlockNode } from '../components/BlockNode.js';
 
