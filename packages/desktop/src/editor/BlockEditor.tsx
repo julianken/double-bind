@@ -23,6 +23,7 @@ import type { BlockService } from '@double-bind/core';
 import type { BlockId, PageId } from '@double-bind/types';
 
 import { schema } from './schema.js';
+import './editor-styles.css';
 import { textToDoc, docToText } from './serialization.js';
 import {
   createKeymapPlugin,
@@ -32,6 +33,7 @@ import {
   type OutlinerContext,
   type BlockService as KeymapBlockService,
 } from './plugins/index.js';
+import { highlightReferencesPlugin } from './plugins/highlight-references.js';
 
 /**
  * Props for the BlockEditor component.
@@ -404,6 +406,8 @@ export function BlockEditor({
       }),
       // Input rules for Markdown shortcuts
       createInputRulesPlugin(schema),
+      // Highlight [[page links]], ((block refs)), and #tags
+      highlightReferencesPlugin(),
     ];
 
     if (useServiceMode) {

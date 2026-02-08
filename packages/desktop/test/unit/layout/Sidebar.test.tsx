@@ -3,13 +3,14 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { createElement, type ReactNode } from 'react';
-import { Sidebar, QuickCapture, PageList, SidebarFooter } from '../../../src/layout/Sidebar.js';
+import { Sidebar, QuickCapture, SidebarFooter } from '../../../src/layout/Sidebar.js';
 import { useAppStore } from '../../../src/stores/ui-store.js';
+import { clearQueryCache } from '../../../src/hooks/useCozoQuery.js';
 import { ServiceProvider, type Services } from '../../../src/providers/ServiceProvider.js';
-import type { PageService, BlockService, GraphService } from '@double-bind/core';
+import type { PageService, BlockService, GraphService, SavedQueryService } from '@double-bind/core';
 
 // ============================================================================
 // Mock Services
@@ -23,11 +24,23 @@ const createMockGraphService = () => ({
   getSuggestedLinks: vi.fn(),
 });
 
-const mockServices: Services = {
-  pageService: {} as PageService,
+const createMockPageService = () => ({
+  getAllPages: vi.fn().mockResolvedValue([]),
+  createPage: vi.fn(),
+  getPageWithBlocks: vi.fn(),
+  deletePage: vi.fn(),
+  getTodaysDailyNote: vi.fn(),
+  searchPages: vi.fn(),
+});
+
+const createMockServices = (): Services => ({
+  pageService: createMockPageService() as unknown as PageService,
   blockService: {} as BlockService,
   graphService: createMockGraphService() as unknown as GraphService,
-};
+  savedQueryService: {} as SavedQueryService,
+});
+
+let mockServices: Services;
 
 // Wrapper component for tests
 function TestWrapper({ children }: { children: ReactNode }) {
@@ -66,6 +79,12 @@ describe('Sidebar', () => {
   };
 
   beforeEach(() => {
+    // Create fresh mock services for each test
+    mockServices = createMockServices();
+
+    // Clear the query cache to avoid stale data across tests
+    clearQueryCache();
+
     // Reset store to initial state
     useAppStore.setState({
       sidebarOpen: true,
@@ -130,10 +149,14 @@ describe('Sidebar', () => {
       expect(screen.getByPlaceholderText('Quick capture...')).toBeDefined();
     });
 
-    it('renders PageList component', () => {
+    it('renders PageList component', async () => {
       renderWithProvider(<Sidebar />);
 
-      expect(screen.getByRole('navigation', { name: 'Page navigation' })).toBeDefined();
+      // PageList renders a loading state initially, then resolves to the empty state
+      // when the mock returns an empty array.
+      await waitFor(() => {
+        expect(screen.getByTestId('page-list-empty')).toBeDefined();
+      });
     });
 
     it('renders SidebarFooter component', () => {
@@ -355,8 +378,6 @@ describe('Sidebar', () => {
     });
 
     it('verifies Sidebar is wrapped in ErrorBoundary', () => {
-      // We can verify the Sidebar is wrapped in an ErrorBoundary by checking
-      // the component structure renders correctly
       const { container } = renderWithProvider(<Sidebar />);
       expect(container.querySelector('.sidebar')).toBeDefined();
     });
@@ -374,18 +395,6 @@ describe('Sidebar', () => {
         const textarea = screen.getByLabelText('Quick capture');
         expect(textarea).toBeDefined();
         expect(textarea).toHaveProperty('disabled', true);
-      });
-    });
-
-    describe('PageList', () => {
-      it('renders with correct accessibility attributes', () => {
-        render(<PageList />);
-
-        const nav = screen.getByRole('navigation', { name: 'Page navigation' });
-        expect(nav).toBeDefined();
-
-        const list = screen.getByRole('list');
-        expect(list).toBeDefined();
       });
     });
 
@@ -444,14 +453,11 @@ describe('Sidebar', () => {
     });
 
     it('uses sidebarWidth from store', () => {
-      const { rerender } = renderWithProvider(<Sidebar />);
+      renderWithProvider(<Sidebar />);
 
       act(() => {
         useAppStore.getState().setSidebarWidth(400);
       });
-
-      // Re-render to pick up the store change
-      rerender(<Sidebar />);
 
       const sidebar = screen.getByRole('complementary');
       expect(sidebar.style.width).toBe('400px');

@@ -1,6 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { parseContent } from '../../src/parsers/content-parser.js';
 
+/** Extract just tag names from TagReference[] for simpler assertions */
+function tagNames(result: ReturnType<typeof parseContent>): string[] {
+  return result.tags.map((t) => t.tag);
+}
+
 describe('parseContent', () => {
   // ==========================================================================
   // Empty and Plain Text
@@ -186,54 +191,54 @@ describe('parseContent', () => {
   describe('tags #tag and #[[multi word tag]]', () => {
     it('extracts a simple tag', () => {
       const result = parseContent('This is #project related');
-      expect(result.tags).toEqual(['project']);
+      expect(tagNames(result)).toEqual(['project']);
     });
 
     it('extracts multiple simple tags', () => {
       const result = parseContent('#todo #urgent #important');
-      expect(result.tags).toEqual(['todo', 'urgent', 'important']);
+      expect(tagNames(result)).toEqual(['todo', 'urgent', 'important']);
     });
 
     it('extracts multi-word tag', () => {
       const result = parseContent('Tagged with #[[multi word tag]]');
-      expect(result.tags).toEqual(['multi word tag']);
+      expect(tagNames(result)).toEqual(['multi word tag']);
     });
 
     it('extracts both simple and multi-word tags', () => {
       const result = parseContent('#project #[[multi word]] #task');
-      expect(result.tags).toContain('project');
-      expect(result.tags).toContain('multi word');
-      expect(result.tags).toContain('task');
+      expect(tagNames(result)).toContain('project');
+      expect(tagNames(result)).toContain('multi word');
+      expect(tagNames(result)).toContain('task');
     });
 
     it('handles tags with hyphens', () => {
       const result = parseContent('#work-in-progress');
-      expect(result.tags).toEqual(['work-in-progress']);
+      expect(tagNames(result)).toEqual(['work-in-progress']);
     });
 
     it('handles tags with numbers', () => {
       const result = parseContent('#project2024');
-      expect(result.tags).toEqual(['project2024']);
+      expect(tagNames(result)).toEqual(['project2024']);
     });
 
     it('handles tags at start of content', () => {
       const result = parseContent('#firsttag is at start');
-      expect(result.tags).toEqual(['firsttag']);
+      expect(tagNames(result)).toEqual(['firsttag']);
     });
 
     it('handles tags at end of content', () => {
       const result = parseContent('Ends with #lasttag');
-      expect(result.tags).toEqual(['lasttag']);
+      expect(tagNames(result)).toEqual(['lasttag']);
     });
 
     it('deduplicates repeated tags', () => {
       const result = parseContent('#duplicate #duplicate #duplicate');
-      expect(result.tags).toEqual(['duplicate']);
+      expect(tagNames(result)).toEqual(['duplicate']);
     });
 
     it('trims whitespace in multi-word tags', () => {
       const result = parseContent('#[[  spaced tag  ]]');
-      expect(result.tags).toEqual(['spaced tag']);
+      expect(tagNames(result)).toEqual(['spaced tag']);
     });
 
     it('ignores hash not followed by word character', () => {
@@ -248,12 +253,12 @@ describe('parseContent', () => {
 
     it('handles tag followed by punctuation', () => {
       const result = parseContent('#tag, and more');
-      expect(result.tags).toEqual(['tag']);
+      expect(tagNames(result)).toEqual(['tag']);
     });
 
     it('handles multi-word tag with special chars inside', () => {
       const result = parseContent('#[[tag with (parens) and stuff]]');
-      expect(result.tags).toEqual(['tag with (parens) and stuff']);
+      expect(tagNames(result)).toEqual(['tag with (parens) and stuff']);
     });
   });
 
@@ -352,8 +357,8 @@ It has #project and #[[multi word]] tags.`;
       // Verify block ref is found (don't hardcode positions as they depend on content)
       expect(result.blockRefs).toHaveLength(1);
       expect(result.blockRefs[0].blockId).toBe(ulid);
-      expect(result.tags).toContain('project');
-      expect(result.tags).toContain('multi word');
+      expect(tagNames(result)).toContain('project');
+      expect(tagNames(result)).toContain('multi word');
     });
 
     it('handles page link and block ref on same line', () => {
@@ -370,7 +375,7 @@ It has #project and #[[multi word]] tags.`;
       expect(result.pageLinks).toHaveLength(1);
       expect(result.pageLinks[0].title).toBe('Page with #tag inside');
       // Tag inside brackets is still extracted
-      expect(result.tags).toContain('tag');
+      expect(tagNames(result)).toContain('tag');
     });
 
     it('handles adjacent patterns', () => {
@@ -520,12 +525,12 @@ It has #project and #[[multi word]] tags.`;
     it('handles emoji in tags (simple tags)', () => {
       // Tags require word characters to start, so emoji-only won't match
       const result = parseContent('#project🚀');
-      expect(result.tags).toContain('project');
+      expect(tagNames(result)).toContain('project');
     });
 
     it('handles emoji in multi-word tags', () => {
       const result = parseContent('#[[Launch 🚀 Project]]');
-      expect(result.tags).toContain('Launch 🚀 Project');
+      expect(tagNames(result)).toContain('Launch 🚀 Project');
     });
 
     it('handles zero-width characters', () => {
@@ -548,29 +553,29 @@ It has #project and #[[multi word]] tags.`;
   describe('tag edge cases', () => {
     it('handles tags with underscores', () => {
       const result = parseContent('#my_tag_name');
-      expect(result.tags).toContain('my_tag_name');
+      expect(tagNames(result)).toContain('my_tag_name');
     });
 
     it('handles tags starting with numbers', () => {
       // Tags must start with word char, numbers are word chars
       const result = parseContent('#2024project');
-      expect(result.tags).toContain('2024project');
+      expect(tagNames(result)).toContain('2024project');
     });
 
     it('does not extract tags ending with only hyphens', () => {
       // Trailing hyphens should be included
       const result = parseContent('#project-');
-      expect(result.tags).toContain('project-');
+      expect(tagNames(result)).toContain('project-');
     });
 
     it('handles tags with consecutive hyphens', () => {
       const result = parseContent('#project--alpha');
-      expect(result.tags).toContain('project--alpha');
+      expect(tagNames(result)).toContain('project--alpha');
     });
 
     it('handles tags immediately followed by opening bracket', () => {
       const result = parseContent('#tag[[Page]]');
-      expect(result.tags).toContain('tag');
+      expect(tagNames(result)).toContain('tag');
       // Note: [[Page]] is not a page link due to negative lookbehind
     });
 
@@ -588,28 +593,28 @@ It has #project and #[[multi word]] tags.`;
 
     it('handles tags with mixed underscores and hyphens', () => {
       const result = parseContent('#my_tag-name_here');
-      expect(result.tags).toContain('my_tag-name_here');
+      expect(tagNames(result)).toContain('my_tag-name_here');
     });
 
     it('handles tag immediately before page link', () => {
       const result = parseContent('#tag[[Page]]');
-      expect(result.tags).toContain('tag');
+      expect(tagNames(result)).toContain('tag');
       // [[Page]] after # becomes part of multi-word tag pattern, not page link
     });
 
     it('preserves tag case sensitivity', () => {
       const result = parseContent('#CamelCase #lowercase #UPPERCASE');
-      expect(result.tags).toContain('CamelCase');
-      expect(result.tags).toContain('lowercase');
-      expect(result.tags).toContain('UPPERCASE');
+      expect(tagNames(result)).toContain('CamelCase');
+      expect(tagNames(result)).toContain('lowercase');
+      expect(tagNames(result)).toContain('UPPERCASE');
       expect(result.tags).toHaveLength(3);
     });
 
     it('handles tag followed by comma without space', () => {
       const result = parseContent('Tags: #one,#two,#three');
-      expect(result.tags).toContain('one');
-      expect(result.tags).toContain('two');
-      expect(result.tags).toContain('three');
+      expect(tagNames(result)).toContain('one');
+      expect(tagNames(result)).toContain('two');
+      expect(tagNames(result)).toContain('three');
     });
   });
 
@@ -676,9 +681,9 @@ It has #project and #[[multi word]] tags.`;
       const result = parseContent('hashtags:: #one #two #three');
       expect(result.properties).toEqual([{ key: 'hashtags', value: '#one #two #three' }]);
       // Tags in property values are still extracted
-      expect(result.tags).toContain('one');
-      expect(result.tags).toContain('two');
-      expect(result.tags).toContain('three');
+      expect(tagNames(result)).toContain('one');
+      expect(tagNames(result)).toContain('two');
+      expect(tagNames(result)).toContain('three');
     });
   });
 
@@ -752,7 +757,7 @@ It has #project and #[[multi word]] tags.`;
 
     it('handles tag in property key position (should not match property)', () => {
       const result = parseContent('#tag:: value');
-      expect(result.tags).toContain('tag');
+      expect(tagNames(result)).toContain('tag');
       expect(result.properties).toEqual([]);
     });
 
@@ -762,7 +767,7 @@ It has #project and #[[multi word]] tags.`;
       expect(result.properties).toHaveLength(1);
       expect(result.pageLinks).toHaveLength(1);
       expect(result.blockRefs).toHaveLength(1);
-      expect(result.tags).toContain('tag');
+      expect(tagNames(result)).toContain('tag');
     });
 
     it('handles page link containing property-like syntax', () => {
@@ -774,7 +779,7 @@ It has #project and #[[multi word]] tags.`;
     it('handles deeply nested pattern in text', () => {
       const result = parseContent('Text with [[Page A containing #tag]] and more');
       expect(result.pageLinks).toHaveLength(1);
-      expect(result.tags).toContain('tag');
+      expect(tagNames(result)).toContain('tag');
     });
 
     it('handles all pattern types in single line and multiline', () => {

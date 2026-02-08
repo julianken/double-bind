@@ -123,6 +123,9 @@ describe('E2E Integration Tests', () => {
       getPropsByEntitySpy.mockResolvedValue([]);
       addTagSpy.mockResolvedValue(undefined);
 
+      // createPage internally creates an initial empty block, consuming one mock
+      createBlockSpy.mockResolvedValueOnce('initial-empty-block');
+
       createBlockSpy.mockResolvedValueOnce(blockId1);
       getBlockByIdSpy.mockResolvedValueOnce(block1);
 
@@ -356,6 +359,9 @@ describe('E2E Integration Tests', () => {
       getPropsByEntitySpy.mockResolvedValue([]);
       createLinkSpy.mockResolvedValue(undefined);
 
+      // createPage internally creates an initial empty block, consuming one mock
+      createBlockSpy.mockResolvedValueOnce('initial-empty-block');
+
       createBlockSpy.mockResolvedValueOnce(blockId);
       getBlockByIdSpy.mockResolvedValueOnce(block);
 
@@ -419,6 +425,9 @@ describe('E2E Integration Tests', () => {
       getTagsByEntitySpy.mockResolvedValue([]);
       getPropsByEntitySpy.mockResolvedValue([]);
       createBlockRefSpy.mockResolvedValue(undefined);
+
+      // createPage internally creates an initial empty block, consuming one mock
+      createBlockSpy.mockResolvedValueOnce('initial-empty-block');
 
       createBlockSpy.mockResolvedValueOnce(sourceBlockId);
       getBlockByIdSpy.mockResolvedValueOnce(sourceBlock);

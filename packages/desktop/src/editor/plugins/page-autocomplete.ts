@@ -149,7 +149,9 @@ function findTriggerFromTransaction(tr: Transaction): { pos: number; query: stri
 }
 
 /**
- * Insert a page link at the trigger position
+ * Insert a page link at the trigger position.
+ * Creates a text node with the pageLink mark for visual highlighting
+ * when the mark type is available in the schema.
  */
 function insertPageLink(view: EditorView, triggerPos: number, title: string, query: string): void {
   const { state, dispatch } = view;
@@ -159,11 +161,17 @@ function insertPageLink(view: EditorView, triggerPos: number, title: string, que
   // +2 for [[ and query length
   const to = triggerPos + 2 + query.length;
 
-  // Create the replacement text
+  // Create the replacement text, with pageLink mark if available
   const linkText = `[[${title}]]`;
+  const pageLinkMarkType = state.schema.marks.pageLink;
+  // TODO: Resolve pageId from title at insertion time. Currently empty because
+  // page resolution is async and autocomplete insertion is synchronous.
+  const textNode = pageLinkMarkType
+    ? state.schema.text(linkText, [pageLinkMarkType.create({ pageId: '', title })])
+    : state.schema.text(linkText);
 
   // Create transaction
-  const tr = state.tr.replaceWith(from, to, state.schema.text(linkText));
+  const tr = state.tr.replaceWith(from, to, textNode);
 
   // Move cursor after the link
   const newPos = from + linkText.length;
