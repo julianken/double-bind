@@ -17,6 +17,7 @@ import { render, screen, waitFor, cleanup } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { SearchBar } from '../../../src/components/SearchBar.js';
 import { useAppStore } from '../../../src/stores/ui-store.js';
+import { useSearchStore } from '../../../src/stores/search-store.js';
 
 // ============================================================================
 // Test Utilities
@@ -53,10 +54,15 @@ describe('SearchBar', () => {
       pageHistory: [],
       historyIndex: -1,
     });
+
+    // Reset search store state (DBB-337: shared search state)
+    useSearchStore.getState().clearSearch();
   });
 
   afterEach(() => {
     cleanup();
+    // Also reset search store after each test to ensure clean state
+    useSearchStore.getState().clearSearch();
   });
 
   // ============================================================================

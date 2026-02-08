@@ -6,6 +6,7 @@
  * - 300ms debouncing to prevent excessive database queries
  * - Minimum query length validation (default: 2 characters)
  * - AbortController to cancel in-flight requests when new keystrokes arrive
+ * - Shared state via Zustand store (state persists across navigation)
  *
  * Note: The actual SearchService doesn't exist yet - this hook uses a mock
  * implementation. The real service will be built in DBB-3.
@@ -13,7 +14,8 @@
  * @see docs/frontend/state-management.md for state architecture
  */
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useCallback, useRef, useEffect } from 'react';
+import { useSearchStore } from '../stores/search-store.js';
 
 // ============================================================================
 // Constants
@@ -185,6 +187,7 @@ async function mockSearch(query: string, signal?: AbortSignal): Promise<SearchRe
  * - Minimum query length validation (default: 2 characters)
  * - Automatic cancellation of in-flight requests when query changes
  * - Race condition prevention
+ * - Shared state via Zustand (state persists across navigation)
  *
  * @param options - Configuration options
  * @returns Search state and actions
@@ -226,12 +229,20 @@ export function useSearch(options: UseSearchOptions = {}): UseSearchResult {
     onError,
   } = options;
 
-  // State
-  const [query, setQueryState] = useState('');
-  const [debouncedQuery, setDebouncedQuery] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [results, setResults] = useState<SearchResult[]>([]);
-  const [error, setError] = useState<Error | null>(null);
+  // Get state from shared Zustand store
+  const query = useSearchStore((state) => state.query);
+  const debouncedQuery = useSearchStore((state) => state.debouncedQuery);
+  const isLoading = useSearchStore((state) => state.isLoading);
+  const results = useSearchStore((state) => state.results);
+  const error = useSearchStore((state) => state.error);
+
+  // Get actions from store
+  const storeSetQuery = useSearchStore((state) => state.setQuery);
+  const storeSetDebouncedQuery = useSearchStore((state) => state.setDebouncedQuery);
+  const storeSetIsLoading = useSearchStore((state) => state.setIsLoading);
+  const storeSetResults = useSearchStore((state) => state.setResults);
+  const storeSetError = useSearchStore((state) => state.setError);
+  const storeClearSearch = useSearchStore((state) => state.clearSearch);
 
   // Refs for managing async operations
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -268,8 +279,8 @@ export function useSearch(options: UseSearchOptions = {}): UseSearchResult {
     async (searchQuery: string, requestId: number) => {
       // Don't search if query is too short
       if (searchQuery.length < minQueryLength) {
-        setResults([]);
-        setIsLoading(false);
+        storeSetResults([]);
+        storeSetIsLoading(false);
         return;
       }
 
@@ -280,8 +291,8 @@ export function useSearch(options: UseSearchOptions = {}): UseSearchResult {
       const abortController = new AbortController();
       abortControllerRef.current = abortController;
 
-      setIsLoading(true);
-      setError(null);
+      storeSetIsLoading(true);
+      storeSetError(null);
       onSearchStart?.();
 
       try {
@@ -289,9 +300,9 @@ export function useSearch(options: UseSearchOptions = {}): UseSearchResult {
 
         // Only update if this is still the latest request
         if (requestId === latestRequestId.current && !abortController.signal.aborted) {
-          setResults(searchResults);
+          storeSetResults(searchResults);
           onResults?.(searchResults);
-          setIsLoading(false);
+          storeSetIsLoading(false);
         }
       } catch (err) {
         // Ignore abort errors - they're expected when cancelling
@@ -302,13 +313,22 @@ export function useSearch(options: UseSearchOptions = {}): UseSearchResult {
         // Only update if this is still the latest request
         if (requestId === latestRequestId.current) {
           const error = err instanceof Error ? err : new Error('Search failed');
-          setError(error);
+          storeSetError(error);
           onError?.(error);
-          setIsLoading(false);
+          storeSetIsLoading(false);
         }
       }
     },
-    [minQueryLength, onResults, onSearchStart, onError, cancelInFlightRequest]
+    [
+      minQueryLength,
+      onResults,
+      onSearchStart,
+      onError,
+      cancelInFlightRequest,
+      storeSetResults,
+      storeSetIsLoading,
+      storeSetError,
+    ]
   );
 
   /**
@@ -318,10 +338,10 @@ export function useSearch(options: UseSearchOptions = {}): UseSearchResult {
     async (searchQuery: string) => {
       cancelDebounce();
       const requestId = ++latestRequestId.current;
-      setDebouncedQuery(searchQuery);
+      storeSetDebouncedQuery(searchQuery);
       await executeSearch(searchQuery, requestId);
     },
-    [executeSearch, cancelDebounce]
+    [executeSearch, cancelDebounce, storeSetDebouncedQuery]
   );
 
   /**
@@ -329,7 +349,7 @@ export function useSearch(options: UseSearchOptions = {}): UseSearchResult {
    */
   const setQuery = useCallback(
     (newQuery: string) => {
-      setQueryState(newQuery);
+      storeSetQuery(newQuery);
 
       // Cancel any pending debounce timer
       cancelDebounce();
@@ -339,23 +359,33 @@ export function useSearch(options: UseSearchOptions = {}): UseSearchResult {
 
       // If query is too short, clear results immediately (no debounce)
       if (newQuery.length < minQueryLength) {
-        setDebouncedQuery(newQuery);
-        setResults([]);
-        setIsLoading(false);
+        storeSetDebouncedQuery(newQuery);
+        storeSetResults([]);
+        storeSetIsLoading(false);
         return;
       }
 
       // Set loading state immediately for better UX feedback
-      setIsLoading(true);
+      storeSetIsLoading(true);
 
       // Debounce the actual search
       debounceTimerRef.current = setTimeout(() => {
         const requestId = ++latestRequestId.current;
-        setDebouncedQuery(newQuery);
+        storeSetDebouncedQuery(newQuery);
         executeSearch(newQuery, requestId);
       }, debounceMs);
     },
-    [executeSearch, cancelDebounce, cancelInFlightRequest, minQueryLength, debounceMs]
+    [
+      executeSearch,
+      cancelDebounce,
+      cancelInFlightRequest,
+      minQueryLength,
+      debounceMs,
+      storeSetQuery,
+      storeSetDebouncedQuery,
+      storeSetResults,
+      storeSetIsLoading,
+    ]
   );
 
   /**
@@ -365,12 +395,8 @@ export function useSearch(options: UseSearchOptions = {}): UseSearchResult {
     cancelDebounce();
     cancelInFlightRequest();
     latestRequestId.current++;
-    setQueryState('');
-    setDebouncedQuery('');
-    setResults([]);
-    setError(null);
-    setIsLoading(false);
-  }, [cancelDebounce, cancelInFlightRequest]);
+    storeClearSearch();
+  }, [cancelDebounce, cancelInFlightRequest, storeClearSearch]);
 
   // Cleanup on unmount
   useEffect(() => {
