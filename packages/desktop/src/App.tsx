@@ -19,6 +19,7 @@ import { PageView as RealPageView } from './screens/PageView.js';
 import { GraphViewScreen } from './screens/GraphViewScreen.js';
 import { SearchResultsView as RealSearchResultsView } from './screens/SearchResultsView.js';
 import { DailyNotesView as RealDailyNotesView } from './screens/DailyNotesView.js';
+import { QueryViewScreen as RealQueryViewScreen } from './screens/QueryViewScreen.js';
 import { Sidebar as FullSidebar } from './layout/Sidebar.js';
 import { AppShell } from './layout/AppShell.js';
 import { invalidateQueries } from './hooks/useCozoQuery.js';
@@ -180,13 +181,32 @@ function SearchView({ params }: { params: Record<string, string> }) {
   );
 }
 
-function QueryView() {
+/**
+ * PlaceholderQueryView for unit tests (when ServiceProvider is not available)
+ */
+function PlaceholderQueryView() {
   return (
     <div className="view query-view" data-testid="query-view">
       <h1>Datalog Query Editor</h1>
       <p>Query editor will appear here.</p>
     </div>
   );
+}
+
+/**
+ * QueryView - Uses real QueryViewScreen when ServiceProvider is available,
+ * otherwise renders a placeholder for unit testing without services.
+ */
+function QueryView() {
+  const services = useContext(ServiceContext);
+
+  // When ServiceProvider is present, use the real QueryViewScreen
+  if (services) {
+    return <RealQueryViewScreen params={{}} />;
+  }
+
+  // Placeholder for unit tests without ServiceProvider
+  return <PlaceholderQueryView />;
 }
 
 /**
