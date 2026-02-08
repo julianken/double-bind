@@ -72,6 +72,11 @@ export {
 } from './autocomplete.js';
 
 export {
+  highlightReferencesPlugin,
+  highlightReferencesPluginKey,
+} from './highlight-references.js';
+
+export {
   createAutocompletePlugin as createPageAutocompletePlugin,
   autocompletePluginKey as pageAutocompletePluginKey,
   getAutocompleteState as getPageAutocompleteState,

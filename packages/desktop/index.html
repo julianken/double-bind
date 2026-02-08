@@ -4,6 +4,54 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Double Bind</title>
+    <style>
+      /* ================================================================
+       * Editor Reference Highlighting (DBB-189)
+       *
+       * Decoration-based styles for [[page links]], ((block refs)), and #tags.
+       * Applied via the highlight-references ProseMirror plugin.
+       * ================================================================ */
+
+      /* Page links: blue underlined text */
+      .ProseMirror .highlight-page-link {
+        color: #2563eb;
+        text-decoration: underline;
+        cursor: pointer;
+      }
+
+      /* Block references: purple with subtle background */
+      .ProseMirror .highlight-block-ref {
+        color: #7c3aed;
+        background-color: rgba(124, 58, 237, 0.08);
+        border-radius: 2px;
+        padding: 0 2px;
+      }
+
+      /* Tags: green with medium weight */
+      .ProseMirror .highlight-tag {
+        color: #059669;
+        font-weight: 500;
+      }
+
+      /* Mark-based styles (from schema toDOM) */
+      .ProseMirror .page-link {
+        color: #2563eb;
+        text-decoration: underline;
+        cursor: pointer;
+      }
+
+      .ProseMirror .block-ref {
+        color: #7c3aed;
+        background-color: rgba(124, 58, 237, 0.08);
+        border-radius: 2px;
+        padding: 0 2px;
+      }
+
+      .ProseMirror .tag {
+        color: #059669;
+        font-weight: 500;
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>

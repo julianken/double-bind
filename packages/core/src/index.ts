@@ -67,6 +67,7 @@ export {
   type ParsedContent,
   type PageLink,
   type BlockReference,
+  type TagReference,
   type ParsedProperty,
 } from './parsers/index.js';
 

@@ -41,6 +41,19 @@ export interface BlockReference {
 }
 
 /**
+ * A tag reference extracted from content.
+ * Position indices are for the entire match including the # prefix.
+ */
+export interface TagReference {
+  /** The tag name (without # prefix) */
+  tag: string;
+  /** Start index of the match (inclusive, includes #) */
+  startIndex: number;
+  /** End index of the match (exclusive) */
+  endIndex: number;
+}
+
+/**
  * A property extracted from content.
  * Properties must appear at the start of a line.
  */
@@ -60,7 +73,7 @@ export interface ParsedContent {
   /** Block references found in content: ((ULID)) */
   blockRefs: BlockReference[];
   /** Tags found in content: #tag or #[[multi word tag]] */
-  tags: string[];
+  tags: TagReference[];
   /** Properties found in content: key:: value */
   properties: ParsedProperty[];
 }
@@ -211,10 +224,11 @@ function parseBlockRefs(content: string): BlockReference[] {
 
 /**
  * Extract tags from content.
- * Returns deduplicated array of tag names (without #).
+ * Returns deduplicated array of tag references with position information.
  */
-function parseTags(content: string): string[] {
-  const tags = new Set<string>();
+function parseTags(content: string): TagReference[] {
+  const seen = new Set<string>();
+  const tags: TagReference[] = [];
   const regex = new RegExp(PATTERNS.tag.source, 'g');
 
   let match: RegExpExecArray | null;
@@ -222,11 +236,19 @@ function parseTags(content: string): string[] {
     // Group 1 is multi-word tag, Group 2 is simple tag
     const tag = match[1] || match[2];
     if (tag && tag.trim().length > 0) {
-      tags.add(tag.trim());
+      const trimmedTag = tag.trim();
+      if (!seen.has(trimmedTag)) {
+        seen.add(trimmedTag);
+        tags.push({
+          tag: trimmedTag,
+          startIndex: match.index,
+          endIndex: match.index + match[0].length,
+        });
+      }
     }
   }
 
-  return Array.from(tags);
+  return tags;
 }
 
 /**
