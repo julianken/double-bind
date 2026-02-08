@@ -162,7 +162,7 @@ export function AppShell({
   return (
     <div className={styles.container} data-testid="app-shell">
       {/* Navigation toolbar */}
-      <nav className={styles.navToolbar} data-testid="nav-toolbar" aria-label="Navigation">
+      <nav className={styles.navToolbar} data-testid="navigation-bar" aria-label="Navigation">
         <button
           type="button"
           className={styles.navButton}
