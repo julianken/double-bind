@@ -2,8 +2,8 @@
  * Tests for BlockNode component
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
 import { act } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { Block, PageService, BlockService } from '@double-bind/core';
@@ -17,11 +17,13 @@ import { ServiceProvider } from '../../../src/providers/ServiceProvider.js';
 import { useAppStore } from '../../../src/stores/ui-store.js';
 import { clearQueryCache } from '../../../src/hooks/useCozoQuery.js';
 
-// Create a QueryClient for testing
+// Shared QueryClient for testing - created fresh per test in beforeEach
+let testQueryClient: QueryClient;
+
 const createTestQueryClient = () =>
   new QueryClient({
     defaultOptions: {
-      queries: { retry: false, staleTime: 0, gcTime: Infinity },
+      queries: { retry: false, staleTime: 0, gcTime: 0 },
       mutations: { retry: false },
     },
   });
@@ -84,9 +86,9 @@ function TestWrapper({
   blockService?: BlockService;
   pageService?: PageService;
 }) {
-  const queryClient = createTestQueryClient();
+  // Use the shared QueryClient created in beforeEach
   return (
-    <QueryClientProvider client={queryClient}>
+    <QueryClientProvider client={testQueryClient}>
       <ServiceProvider services={{ blockService, pageService }}>{children}</ServiceProvider>
     </QueryClientProvider>
   );
@@ -97,13 +99,45 @@ function TestWrapper({
 // ============================================================================
 
 beforeEach(() => {
-  // Reset store to initial state before each test
+  // Create a fresh QueryClient for each test
+  testQueryClient = createTestQueryClient();
+
+  // Reset store to initial state before each test (all state fields)
   useAppStore.setState({
+    // Sidebar
+    sidebarOpen: true,
+    sidebarWidth: 240,
+    // Right Panel
+    rightPanelOpen: false,
+    rightPanelContent: null,
+    // Focus
     focusedBlockId: null,
+    // Selection
     selectedBlockIds: new Set(),
+    // Command Palette
+    commandPaletteOpen: false,
+    // Navigation
+    currentPageId: null,
+    pageHistory: [],
+    historyIndex: -1,
+    // Theme
+    themePreference: 'system',
   });
   // Clear query cache to ensure fresh data
   clearQueryCache();
+});
+
+afterEach(() => {
+  // Clean up rendered components
+  cleanup();
+  // Clear the test QueryClient's cache
+  testQueryClient.clear();
+  // Clear the global query cache
+  clearQueryCache();
+  // Clear all mock function state
+  vi.clearAllMocks();
+  // Reset all mock implementations
+  vi.resetAllMocks();
 });
 
 // ============================================================================
@@ -959,7 +993,14 @@ describe('BlockNode Integration', () => {
         if (id === 'child-3') return Promise.resolve(child3);
         return Promise.resolve(null);
       });
-      blockService.getChildren = vi.fn().mockResolvedValue([child1, child2, child3]);
+      // IMPORTANT: Only return children for the parent block, not for child blocks
+      // Otherwise this creates infinite recursion (each child queries for children -> gets same 3 children -> repeat)
+      blockService.getChildren = vi.fn().mockImplementation((blockId: string) => {
+        if (blockId === 'parent-block') {
+          return Promise.resolve([child1, child2, child3]);
+        }
+        return Promise.resolve([]);
+      });
 
       render(
         <TestWrapper blockService={blockService}>
