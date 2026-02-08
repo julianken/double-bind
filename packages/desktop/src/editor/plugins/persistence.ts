@@ -89,6 +89,8 @@ export function createPersistencePlugin(options: PersistencePluginOptions): Plug
   let isSaving = false;
   // Store the pending content to save
   let pendingContent: string | null = null;
+  // Track the last saved content to detect if invalidation is needed on blur
+  let lastSavedContent: string | null = null;
 
   /**
    * Cancel any pending debounced save.
@@ -113,6 +115,8 @@ export function createPersistencePlugin(options: PersistencePluginOptions): Plug
     isSaving = true;
     try {
       await blockService.updateContent(blockId, content);
+      // Track what we saved so we can detect changes on blur
+      lastSavedContent = content;
     } finally {
       isSaving = false;
 
@@ -142,19 +146,29 @@ export function createPersistencePlugin(options: PersistencePluginOptions): Plug
    */
   const flushPendingSave = async (view: EditorView): Promise<void> => {
     // Cancel the debounce timer
+    const hadPendingTimer = debounceTimer !== null;
     cancelDebounce();
 
     // Get current content from the editor
     const content = view.state.doc.textContent;
 
-    // Save immediately
-    await saveContent(content);
+    // Only save and invalidate if there were actual changes:
+    // 1. There was a pending debounce timer (user was typing), OR
+    // 2. Content differs from last saved (if we've saved before)
+    // If lastSavedContent is null, we haven't saved yet, so only save if there was typing
+    const contentChanged = lastSavedContent !== null && content !== lastSavedContent;
+    const shouldSaveAndInvalidate = hadPendingTimer || contentChanged;
 
-    // Invalidate queries only on blur (not during typing)
-    invalidateQueries(['blocks']);
-    invalidateQueries(['backlinks']);
-    invalidateQueries(['search']);
-    invalidateQueries(['links']);
+    if (shouldSaveAndInvalidate) {
+      // Save immediately
+      await saveContent(content);
+
+      // Invalidate queries only when content actually changed
+      invalidateQueries(['blocks']);
+      invalidateQueries(['backlinks']);
+      invalidateQueries(['search']);
+      invalidateQueries(['links']);
+    }
 
     // Invoke the onBlur callback if provided
     onBlur?.();
