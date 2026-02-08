@@ -48,14 +48,20 @@ export function createDragEndHandler(siblings: Block[], blockService: BlockServi
           ? siblings[overIndex - 1]!.blockId
           : undefined;
 
-    await blockService.moveBlock(
-      activeId as BlockId,
-      activeBlock.parentId,
-      afterBlockId as BlockId | undefined
-    );
-
-    invalidateQueries(['blocks']);
-    invalidateQueries(['block']);
-    invalidateQueries(['page', 'withBlocks']);
+    try {
+      await blockService.moveBlock(
+        activeId as BlockId,
+        activeBlock.parentId,
+        afterBlockId as BlockId | undefined
+      );
+    } catch {
+      // moveBlock may throw BLOCK_NOT_FOUND or DB_MUTATION_FAILED
+      // Visual state resets automatically via @dnd-kit
+    } finally {
+      // Always invalidate to sync UI with actual DB state
+      invalidateQueries(['blocks']);
+      invalidateQueries(['block']);
+      invalidateQueries(['page', 'withBlocks']);
+    }
   };
 }

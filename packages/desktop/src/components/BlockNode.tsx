@@ -17,9 +17,21 @@
 import { memo, useCallback, useMemo, useState, useEffect } from 'react';
 import type { Block, BlockId, PageId } from '@double-bind/types';
 import { parseContent } from '@double-bind/core';
-import { DndContext, closestCenter } from '@dnd-kit/core';
-import { useSortable, SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
+import {
+  DndContext,
+  closestCenter,
+  useSensors,
+  useSensor,
+  PointerSensor,
+  KeyboardSensor,
+} from '@dnd-kit/core';
+import {
+  useSortable,
+  SortableContext,
+  verticalListSortingStrategy,
+  sortableKeyboardCoordinates,
+} from '@dnd-kit/sortable';
+import { CSS as DndCSS } from '@dnd-kit/utilities';
 import { InlineBlockRef, InlinePageLink } from '@double-bind/ui-primitives';
 import { useCozoQuery, invalidateQueries } from '../hooks/useCozoQuery.js';
 import { useAppStore } from '../stores/ui-store.js';
@@ -929,6 +941,12 @@ function BlockNodeComponent({ blockId, depth = 0 }: BlockNodeProps) {
   const setFocusedBlock = useAppStore((s) => s.setFocusedBlock);
   const navigateToPage = useAppStore((s) => s.navigateToPage);
 
+  // DnD sensors: pointer (mouse/touch) + keyboard for accessibility
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
   // Disable drag when this block's editor is focused
   const isDragDisabled = focusedBlockId === blockId;
 
@@ -1032,7 +1050,7 @@ function BlockNodeComponent({ blockId, depth = 0 }: BlockNodeProps) {
     paddingLeft: `${depth * 24}px`,
     contentVisibility: 'auto' as const,
     containIntrinsicSize: 'auto 32px',
-    transform: CSS.Transform.toString(transform),
+    transform: DndCSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
   };
@@ -1080,20 +1098,33 @@ function BlockNodeComponent({ blockId, depth = 0 }: BlockNodeProps) {
       </div>
 
       {/* Render children recursively if not collapsed */}
-      {!block.isCollapsed && hasChildren && children && handleChildDragEnd && (
-        <DndContext collisionDetection={closestCenter} onDragEnd={handleChildDragEnd}>
-          <SortableContext
-            items={children.map((c) => c.blockId)}
-            strategy={verticalListSortingStrategy}
+      {!block.isCollapsed &&
+        hasChildren &&
+        children &&
+        (handleChildDragEnd ? (
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleChildDragEnd}
           >
-            <ul className="block-children" role="group" data-testid="block-children">
-              {children.map((child) => (
-                <BlockNode key={child.blockId} blockId={child.blockId} depth={depth + 1} />
-              ))}
-            </ul>
-          </SortableContext>
-        </DndContext>
-      )}
+            <SortableContext
+              items={children.map((c) => c.blockId)}
+              strategy={verticalListSortingStrategy}
+            >
+              <ul className="block-children" role="group" data-testid="block-children">
+                {children.map((child) => (
+                  <BlockNode key={child.blockId} blockId={child.blockId} depth={depth + 1} />
+                ))}
+              </ul>
+            </SortableContext>
+          </DndContext>
+        ) : (
+          <ul className="block-children" role="group" data-testid="block-children">
+            {children.map((child) => (
+              <BlockNode key={child.blockId} blockId={child.blockId} depth={depth + 1} />
+            ))}
+          </ul>
+        ))}
     </li>
   );
 }
