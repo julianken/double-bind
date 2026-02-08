@@ -70,7 +70,6 @@ export function PageTitle({ title }: PageTitleProps) {
   );
 }
 
-
 /**
  * LoadingState - Shown while page data is being fetched.
  */
@@ -471,8 +470,10 @@ export function PageView({ pageId }: PageViewProps) {
     return () => window.removeEventListener('keydown', handleMultiBlockDelete);
   }, [selectedBlockIds, blockService, rootBlocks.length, clearSelection]);
 
-  // Loading state
-  if (isLoading) {
+  // Loading state - only show loading spinner when there's no cached data.
+  // When re-fetching after invalidation, keep showing stale data to avoid
+  // unmounting the block tree (which destroys ProseMirror editors).
+  if (isLoading && !data) {
     return <LoadingState />;
   }
 

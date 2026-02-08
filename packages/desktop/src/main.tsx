@@ -11,6 +11,7 @@ import { tauriGraphDB, httpGraphDB, isInTauri, createServices } from '@double-bi
 import { runMigrations } from '@double-bind/migrations';
 import { ServiceProvider } from './providers/ServiceProvider.js';
 import { App } from './App.js';
+import { invalidateQueries } from './hooks/useCozoQuery.js';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -37,6 +38,11 @@ async function initializeApp() {
 
   // Expose services on window for E2E testing/debugging
   (window as unknown as { __SERVICES__: typeof services }).__SERVICES__ = services;
+
+  // Expose invalidateQueries on window for E2E testing
+  (
+    window as unknown as { __INVALIDATE_QUERIES__: typeof invalidateQueries }
+  ).__INVALIDATE_QUERIES__ = invalidateQueries;
 
   createRoot(root).render(
     <StrictMode>
