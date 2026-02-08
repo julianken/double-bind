@@ -41,7 +41,7 @@ async function initializeApp() {
   }
 
   // Create services from the GraphDB
-  const services = createServices(graphDB);
+  const services = { ...createServices(graphDB), graphDB };
 
   // Expose services on window for E2E testing/debugging
   (window as unknown as { __SERVICES__: typeof services }).__SERVICES__ = services;

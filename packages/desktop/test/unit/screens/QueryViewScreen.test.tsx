@@ -1,0 +1,427 @@
+/**
+ * Tests for QueryViewScreen component
+ */
+
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { render, screen, cleanup, fireEvent, waitFor } from '@testing-library/react';
+import type { GraphDB, QueryResult } from '@double-bind/types';
+import type { Services } from '../../../src/providers/ServiceProvider.js';
+import { ServiceProvider } from '../../../src/providers/ServiceProvider.js';
+import { QueryViewScreen } from '../../../src/screens/QueryViewScreen.js';
+import { useQueryHistoryStore } from '../../../src/stores/query-history-store.js';
+import { useAppStore } from '../../../src/stores/ui-store.js';
+
+// Mock GraphDB
+function createMockGraphDB(): GraphDB {
+  return {
+    query: vi.fn().mockResolvedValue({
+      headers: ['page_id', 'title'],
+      rows: [
+        ['page-1', 'Test Page 1'],
+        ['page-2', 'Test Page 2'],
+      ],
+    } satisfies QueryResult),
+    mutate: vi.fn().mockResolvedValue({ headers: [], rows: [] }),
+    importRelations: vi.fn().mockResolvedValue(undefined),
+    exportRelations: vi.fn().mockResolvedValue({}),
+    backup: vi.fn().mockResolvedValue(undefined),
+  };
+}
+
+// Mock services
+function createMockServices(graphDB: GraphDB): Services {
+  return {
+    pageService: {
+      createPage: vi.fn(),
+      getById: vi.fn(),
+      getAll: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
+      getWithBlocks: vi.fn(),
+      getBacklinks: vi.fn(),
+      getOrCreateDailyNote: vi.fn(),
+    } as unknown as Services['pageService'],
+    blockService: {
+      create: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
+      getByPage: vi.fn(),
+      getBacklinks: vi.fn(),
+    } as unknown as Services['blockService'],
+    graphService: {
+      getFullGraph: vi.fn(),
+      getNeighborhood: vi.fn(),
+      getPageRank: vi.fn(),
+      getCommunities: vi.fn(),
+      getSuggestedLinks: vi.fn(),
+    } as unknown as Services['graphService'],
+    savedQueryService: {
+      create: vi.fn(),
+      getById: vi.fn(),
+      list: vi.fn().mockResolvedValue([]),
+      search: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
+      getByName: vi.fn(),
+      nameExists: vi.fn(),
+    } as unknown as Services['savedQueryService'],
+    graphDB,
+  };
+}
+
+describe('QueryViewScreen', () => {
+  let mockGraphDB: GraphDB;
+  let mockServices: Services;
+
+  beforeEach(() => {
+    // Reset stores
+    useAppStore.setState({
+      sidebarOpen: true,
+      sidebarWidth: 240,
+      rightPanelOpen: false,
+      rightPanelContent: null,
+      focusedBlockId: null,
+      selectedBlockIds: new Set(),
+      commandPaletteOpen: false,
+      currentPageId: 'query',
+      pageHistory: ['query'],
+      historyIndex: 0,
+    });
+
+    useQueryHistoryStore.setState({
+      entries: [],
+    });
+
+    mockGraphDB = createMockGraphDB();
+    mockServices = createMockServices(mockGraphDB);
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+  });
+
+  // ==========================================================================
+  // Basic Rendering
+  // ==========================================================================
+
+  describe('Basic Rendering', () => {
+    it('renders the query view container', () => {
+      render(
+        <ServiceProvider services={mockServices}>
+          <QueryViewScreen params={{}} />
+        </ServiceProvider>
+      );
+      expect(screen.getByTestId('query-view')).toBeDefined();
+    });
+
+    it('renders the toolbar', () => {
+      render(
+        <ServiceProvider services={mockServices}>
+          <QueryViewScreen params={{}} />
+        </ServiceProvider>
+      );
+      expect(screen.getByTestId('query-toolbar')).toBeDefined();
+    });
+
+    it('renders mode toggle buttons', () => {
+      render(
+        <ServiceProvider services={mockServices}>
+          <QueryViewScreen params={{}} />
+        </ServiceProvider>
+      );
+      expect(screen.getByTestId('mode-visual')).toBeDefined();
+      expect(screen.getByTestId('mode-raw')).toBeDefined();
+    });
+
+    it('renders execute button', () => {
+      render(
+        <ServiceProvider services={mockServices}>
+          <QueryViewScreen params={{}} />
+        </ServiceProvider>
+      );
+      expect(screen.getByTestId('execute-query')).toBeDefined();
+    });
+
+    it('renders save button', () => {
+      render(
+        <ServiceProvider services={mockServices}>
+          <QueryViewScreen params={{}} />
+        </ServiceProvider>
+      );
+      expect(screen.getByTestId('save-query-button')).toBeDefined();
+    });
+
+    it('renders side panel with tabs', () => {
+      render(
+        <ServiceProvider services={mockServices}>
+          <QueryViewScreen params={{}} />
+        </ServiceProvider>
+      );
+      expect(screen.getByTestId('query-side-panel')).toBeDefined();
+      expect(screen.getByTestId('tab-saved')).toBeDefined();
+      expect(screen.getByTestId('tab-history')).toBeDefined();
+    });
+
+    it('renders editor pane', () => {
+      render(
+        <ServiceProvider services={mockServices}>
+          <QueryViewScreen params={{}} />
+        </ServiceProvider>
+      );
+      expect(screen.getByTestId('query-editor-pane')).toBeDefined();
+    });
+
+    it('renders results pane', () => {
+      render(
+        <ServiceProvider services={mockServices}>
+          <QueryViewScreen params={{}} />
+        </ServiceProvider>
+      );
+      expect(screen.getByTestId('query-results-pane')).toBeDefined();
+    });
+  });
+
+  // ==========================================================================
+  // Mode Switching
+  // ==========================================================================
+
+  describe('Mode Switching', () => {
+    it('starts in visual mode by default', () => {
+      render(
+        <ServiceProvider services={mockServices}>
+          <QueryViewScreen params={{}} />
+        </ServiceProvider>
+      );
+
+      const visualButton = screen.getByTestId('mode-visual');
+      expect(visualButton.getAttribute('aria-pressed')).toBe('true');
+    });
+
+    it('switches to raw mode when clicked', () => {
+      render(
+        <ServiceProvider services={mockServices}>
+          <QueryViewScreen params={{}} />
+        </ServiceProvider>
+      );
+
+      const rawButton = screen.getByTestId('mode-raw');
+      fireEvent.click(rawButton);
+
+      expect(rawButton.getAttribute('aria-pressed')).toBe('true');
+      expect(screen.getByTestId('raw-query-editor')).toBeDefined();
+    });
+
+    it('shows visual query builder in visual mode', () => {
+      render(
+        <ServiceProvider services={mockServices}>
+          <QueryViewScreen params={{}} />
+        </ServiceProvider>
+      );
+
+      expect(screen.getByTestId('visual-query-builder')).toBeDefined();
+    });
+
+    it('shows code editor in raw mode', () => {
+      render(
+        <ServiceProvider services={mockServices}>
+          <QueryViewScreen params={{}} />
+        </ServiceProvider>
+      );
+
+      fireEvent.click(screen.getByTestId('mode-raw'));
+
+      expect(screen.getByTestId('raw-query-editor')).toBeDefined();
+    });
+  });
+
+  // ==========================================================================
+  // Query Execution
+  // ==========================================================================
+
+  describe('Query Execution', () => {
+    it('executes query when execute button clicked in raw mode', async () => {
+      render(
+        <ServiceProvider services={mockServices}>
+          <QueryViewScreen params={{}} />
+        </ServiceProvider>
+      );
+
+      // Switch to raw mode
+      fireEvent.click(screen.getByTestId('mode-raw'));
+
+      // Click execute
+      fireEvent.click(screen.getByTestId('execute-query'));
+
+      await waitFor(() => {
+        expect(mockGraphDB.query).toHaveBeenCalled();
+      });
+    });
+
+    it('displays results after execution', async () => {
+      render(
+        <ServiceProvider services={mockServices}>
+          <QueryViewScreen params={{}} />
+        </ServiceProvider>
+      );
+
+      // Switch to raw mode
+      fireEvent.click(screen.getByTestId('mode-raw'));
+
+      // Click execute
+      fireEvent.click(screen.getByTestId('execute-query'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('query-result-table')).toBeDefined();
+      });
+    });
+
+    it('displays error when query fails', async () => {
+      const errorGraphDB = createMockGraphDB();
+      (errorGraphDB.query as ReturnType<typeof vi.fn>).mockRejectedValue(
+        new Error('Query syntax error')
+      );
+
+      const errorServices = createMockServices(errorGraphDB);
+
+      render(
+        <ServiceProvider services={errorServices}>
+          <QueryViewScreen params={{}} />
+        </ServiceProvider>
+      );
+
+      // Switch to raw mode
+      fireEvent.click(screen.getByTestId('mode-raw'));
+
+      // Click execute
+      fireEvent.click(screen.getByTestId('execute-query'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('query-error')).toBeDefined();
+      });
+    });
+
+    it('adds executed query to history', async () => {
+      render(
+        <ServiceProvider services={mockServices}>
+          <QueryViewScreen params={{}} />
+        </ServiceProvider>
+      );
+
+      // Switch to raw mode
+      fireEvent.click(screen.getByTestId('mode-raw'));
+
+      // Click execute
+      fireEvent.click(screen.getByTestId('execute-query'));
+
+      await waitFor(() => {
+        const history = useQueryHistoryStore.getState().entries;
+        expect(history.length).toBeGreaterThan(0);
+      });
+    });
+  });
+
+  // ==========================================================================
+  // Side Panel
+  // ==========================================================================
+
+  describe('Side Panel', () => {
+    it('shows saved queries tab by default', () => {
+      render(
+        <ServiceProvider services={mockServices}>
+          <QueryViewScreen params={{}} />
+        </ServiceProvider>
+      );
+
+      expect(screen.getByTestId('saved-queries-list')).toBeDefined();
+    });
+
+    it('switches to history tab when clicked', () => {
+      render(
+        <ServiceProvider services={mockServices}>
+          <QueryViewScreen params={{}} />
+        </ServiceProvider>
+      );
+
+      fireEvent.click(screen.getByTestId('tab-history'));
+
+      // History panel should now be visible
+      expect(
+        screen.getByTestId('query-history-panel-empty') ||
+          screen.getByTestId('query-history-panel')
+      ).toBeDefined();
+    });
+  });
+
+  // ==========================================================================
+  // Save Query Modal
+  // ==========================================================================
+
+  describe('Save Query Modal', () => {
+    it('opens save modal when save button clicked', () => {
+      render(
+        <ServiceProvider services={mockServices}>
+          <QueryViewScreen params={{}} />
+        </ServiceProvider>
+      );
+
+      fireEvent.click(screen.getByTestId('save-query-button'));
+
+      expect(screen.getByTestId('save-query-modal')).toBeDefined();
+    });
+
+    it('closes modal when cancel clicked', () => {
+      render(
+        <ServiceProvider services={mockServices}>
+          <QueryViewScreen params={{}} />
+        </ServiceProvider>
+      );
+
+      fireEvent.click(screen.getByTestId('save-query-button'));
+      expect(screen.getByTestId('save-query-modal')).toBeDefined();
+
+      fireEvent.click(screen.getByText('Cancel'));
+
+      expect(screen.queryByTestId('save-query-modal')).toBeNull();
+    });
+
+    it('has name input in modal', () => {
+      render(
+        <ServiceProvider services={mockServices}>
+          <QueryViewScreen params={{}} />
+        </ServiceProvider>
+      );
+
+      fireEvent.click(screen.getByTestId('save-query-button'));
+
+      expect(screen.getByTestId('save-query-name-input')).toBeDefined();
+    });
+
+    it('has description input in modal', () => {
+      render(
+        <ServiceProvider services={mockServices}>
+          <QueryViewScreen params={{}} />
+        </ServiceProvider>
+      );
+
+      fireEvent.click(screen.getByTestId('save-query-button'));
+
+      expect(screen.getByTestId('save-query-description-input')).toBeDefined();
+    });
+  });
+
+  // ==========================================================================
+  // Without Services
+  // ==========================================================================
+
+  describe('Without Services', () => {
+    it('shows placeholder message when no services available', () => {
+      render(<QueryViewScreen params={{}} />);
+
+      expect(screen.getByTestId('query-view')).toBeDefined();
+      expect(
+        screen.getByText('Query editor is not available in this context.')
+      ).toBeDefined();
+    });
+  });
+});
