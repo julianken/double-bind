@@ -13,9 +13,10 @@
  */
 
 import { useCallback } from 'react';
-import type { ReactNode, CSSProperties } from 'react';
+import type { ReactNode } from 'react';
 import { ErrorBoundary } from '../components/ErrorBoundary.js';
 import { useAppStore } from '../stores/index.js';
+import styles from './AppShell.module.css';
 
 // ============================================================================
 // Types
@@ -65,30 +66,14 @@ function SidebarErrorFallback({ reset }: { reset: () => void }) {
     <div
       role="alert"
       aria-labelledby="sidebar-error-title"
-      style={{
-        padding: '16px',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        height: '100%',
-        backgroundColor: '#fef2f2',
-        color: '#991b1b',
-      }}
+      className={styles.errorFallback}
     >
-      <p id="sidebar-error-title" style={{ margin: '0 0 12px 0', fontWeight: 500 }}>
+      <p id="sidebar-error-title" className={styles.errorFallback__title}>
         Sidebar unavailable
       </p>
       <button
         onClick={reset}
-        style={{
-          padding: '6px 12px',
-          backgroundColor: '#fff',
-          border: '1px solid #991b1b',
-          borderRadius: '4px',
-          cursor: 'pointer',
-          color: '#991b1b',
-        }}
+        className={`${styles.errorFallback__button} ${styles['errorFallback__button--secondary']}`}
       >
         Retry
       </button>
@@ -104,127 +89,20 @@ function MainContentErrorFallback({ reset }: { reset: () => void }) {
     <div
       role="alert"
       aria-labelledby="main-error-title"
-      style={{
-        padding: '24px',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        height: '100%',
-        backgroundColor: '#fef2f2',
-      }}
+      className={styles.errorFallback}
     >
-      <h2 id="main-error-title" style={{ margin: '0 0 8px 0', color: '#991b1b' }}>
+      <h2 id="main-error-title" className={styles.errorFallback__title}>
         Failed to load page
       </h2>
-      <p style={{ margin: '0 0 16px 0', color: '#7f1d1d' }}>
+      <p className={styles.errorFallback__description}>
         Something went wrong while loading this content.
       </p>
-      <button
-        onClick={reset}
-        style={{
-          padding: '8px 16px',
-          backgroundColor: '#991b1b',
-          color: '#fff',
-          border: 'none',
-          borderRadius: '4px',
-          cursor: 'pointer',
-        }}
-      >
+      <button onClick={reset} className={styles.errorFallback__button}>
         Try Again
       </button>
     </div>
   );
 }
-
-// ============================================================================
-// Styles
-// ============================================================================
-
-const styles = {
-  container: {
-    display: 'flex',
-    flexDirection: 'column',
-    height: '100vh',
-    width: '100vw',
-    overflow: 'hidden',
-  } satisfies CSSProperties,
-
-  contentArea: {
-    display: 'flex',
-    flexDirection: 'row',
-    flex: 1,
-    overflow: 'hidden',
-  } satisfies CSSProperties,
-
-  sidebar: (width: number, isOpen: boolean): CSSProperties => ({
-    width: isOpen ? `${width}px` : '0px',
-    minWidth: isOpen ? `${width}px` : '0px',
-    maxWidth: isOpen ? `${width}px` : '0px',
-    height: '100%',
-    overflow: 'hidden',
-    transition: 'width 0.2s ease-in-out, min-width 0.2s ease-in-out, max-width 0.2s ease-in-out',
-    flexShrink: 0,
-  }),
-
-  mainContent: {
-    flex: 1,
-    height: '100%',
-    overflow: 'auto',
-    minWidth: 0, // Prevent flex item from overflowing
-  } satisfies CSSProperties,
-
-  rightPanel: (isOpen: boolean): CSSProperties => ({
-    width: isOpen ? '300px' : '0px',
-    minWidth: isOpen ? '300px' : '0px',
-    maxWidth: isOpen ? '300px' : '0px',
-    height: '100%',
-    overflow: 'hidden',
-    transition: 'width 0.2s ease-in-out, min-width 0.2s ease-in-out, max-width 0.2s ease-in-out',
-    flexShrink: 0,
-    borderLeft: isOpen ? '1px solid #e5e7eb' : 'none',
-  }),
-
-  navToolbar: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '4px',
-    padding: '4px 12px',
-    height: '32px',
-    minHeight: '32px',
-    borderBottom: '1px solid #e5e7eb',
-    backgroundColor: '#f9fafb',
-    flexShrink: 0,
-  } satisfies CSSProperties,
-
-  navButton: (disabled: boolean): CSSProperties => ({
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: '24px',
-    height: '24px',
-    padding: 0,
-    border: 'none',
-    borderRadius: '4px',
-    backgroundColor: 'transparent',
-    color: disabled ? '#d1d5db' : '#374151',
-    cursor: disabled ? 'default' : 'pointer',
-    fontSize: '14px',
-  }),
-
-  statusBar: {
-    height: '24px',
-    minHeight: '24px',
-    borderTop: '1px solid #e5e7eb',
-    display: 'flex',
-    alignItems: 'center',
-    padding: '0 12px',
-    fontSize: '12px',
-    color: '#6b7280',
-    backgroundColor: '#f9fafb',
-    flexShrink: 0,
-  } satisfies CSSProperties,
-};
 
 // ============================================================================
 // Component
@@ -271,13 +149,23 @@ export function AppShell({
     if (canGoForward) goForward();
   }, [canGoForward, goForward]);
 
+  // Dynamic styles for sidebar width (CSS custom property approach)
+  const sidebarStyle = sidebarOpen
+    ? { width: `${sidebarWidth}px`, minWidth: `${sidebarWidth}px`, maxWidth: `${sidebarWidth}px` }
+    : undefined;
+
+  // Dynamic styles for right panel width
+  const rightPanelStyle = rightPanelOpen
+    ? { width: '300px', minWidth: '300px', maxWidth: '300px' }
+    : undefined;
+
   return (
-    <div style={styles.container} data-testid="app-shell">
+    <div className={styles.container} data-testid="app-shell">
       {/* Navigation toolbar */}
-      <nav style={styles.navToolbar} data-testid="nav-toolbar" aria-label="Navigation">
+      <nav className={styles.navToolbar} data-testid="nav-toolbar" aria-label="Navigation">
         <button
           type="button"
-          style={styles.navButton(!canGoBack)}
+          className={styles.navButton}
           onClick={handleGoBack}
           disabled={!canGoBack}
           aria-label="Go back"
@@ -287,7 +175,7 @@ export function AppShell({
         </button>
         <button
           type="button"
-          style={styles.navButton(!canGoForward)}
+          className={styles.navButton}
           onClick={handleGoForward}
           disabled={!canGoForward}
           aria-label="Go forward"
@@ -298,10 +186,11 @@ export function AppShell({
       </nav>
 
       {/* Main content area with three-column layout */}
-      <div style={styles.contentArea}>
+      <div className={styles.contentArea}>
         {/* Sidebar - left column */}
         <aside
-          style={styles.sidebar(sidebarWidth, sidebarOpen)}
+          className={`${styles.sidebar} ${!sidebarOpen ? styles['sidebar--closed'] : ''}`}
+          style={sidebarStyle}
           data-testid="app-shell-sidebar"
           aria-label="Sidebar"
         >
@@ -313,7 +202,7 @@ export function AppShell({
         </aside>
 
         {/* Main content - center column */}
-        <main style={styles.mainContent} data-testid="app-shell-main" aria-label="Main content">
+        <main className={styles.mainContent} data-testid="app-shell-main" aria-label="Main content">
           <ErrorBoundary
             fallback={(_error, reset) =>
               mainContentFallback ?? <MainContentErrorFallback reset={reset} />
@@ -326,7 +215,8 @@ export function AppShell({
         {/* Right panel - right column (optional) */}
         {rightPanel && (
           <aside
-            style={styles.rightPanel(rightPanelOpen)}
+            className={`${styles.rightPanel} ${!rightPanelOpen ? styles['rightPanel--closed'] : ''}`}
+            style={rightPanelStyle}
             data-testid="app-shell-right-panel"
             aria-label="Right panel"
             aria-hidden={!rightPanelOpen}
@@ -337,7 +227,7 @@ export function AppShell({
       </div>
 
       {/* Status bar - bottom */}
-      <footer style={styles.statusBar} data-testid="app-shell-status-bar">
+      <footer className={styles.statusBar} data-testid="app-shell-status-bar">
         {statusBar}
       </footer>
     </div>

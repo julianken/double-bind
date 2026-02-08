@@ -1,0 +1,263 @@
+/**
+ * BlockNode Component Styles
+ *
+ * Outliner block with bullet handle, content, and recursive children.
+ */
+
+/* ============================================================================
+ * Block Container
+ * ============================================================================ */
+
+.container {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 32px;
+}
+
+.container--loading {
+  opacity: 0.5;
+}
+
+.container--error {
+  opacity: 0.7;
+}
+
+.container--dragging {
+  opacity: 0.5;
+}
+
+/* ============================================================================
+ * Block Row (Bullet + Content)
+ * ============================================================================ */
+
+.row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-1);
+  min-height: var(--block-min-height, 24px);
+  padding: var(--space-0-5) 0;
+}
+
+/* ============================================================================
+ * Bullet Handle
+ * ============================================================================ */
+
+.bulletHandle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  margin-top: 2px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: grab;
+  flex-shrink: 0;
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.bulletHandle:hover {
+  background-color: var(--bg-hover);
+  color: var(--text-secondary);
+}
+
+.bulletHandle:active {
+  cursor: grabbing;
+}
+
+.bulletHandle[data-has-children="true"] {
+  color: var(--text-secondary);
+}
+
+.bulletHandle[data-collapsed="true"] .bulletIcon {
+  transform: rotate(-90deg);
+}
+
+.bulletIcon {
+  font-size: var(--text-sm);
+  line-height: 1;
+  transition: transform var(--transition-normal);
+}
+
+/* ============================================================================
+ * Block Content Area
+ * ============================================================================ */
+
+.content {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ============================================================================
+ * Static Block Content (Read-only Mode)
+ * ============================================================================ */
+
+.staticContent {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-1) 0;
+  cursor: text;
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  color: var(--text-primary);
+  border-radius: var(--radius-sm);
+  transition: background-color var(--transition-fast);
+}
+
+.staticContent:hover {
+  background-color: var(--bg-hover);
+}
+
+.staticContent:focus {
+  outline: none;
+  background-color: var(--bg-hover);
+}
+
+.staticContent:focus-visible {
+  outline: var(--ring-width) solid var(--ring-color);
+  outline-offset: 2px;
+}
+
+/* Todo checkbox */
+.staticContent--todo .checkbox {
+  font-size: var(--text-lg);
+  line-height: 1;
+}
+
+.checkbox {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.checkbox--checked {
+  color: var(--accent-primary);
+}
+
+/* Text content */
+.text {
+  flex: 1;
+  min-width: 0;
+  word-wrap: break-word;
+}
+
+/* ============================================================================
+ * Inline Formatting
+ * ============================================================================ */
+
+.bold {
+  font-weight: var(--font-bold);
+}
+
+.italic {
+  font-style: italic;
+}
+
+.code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  padding: 0.1em 0.3em;
+  background-color: var(--bg-tertiary);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+}
+
+.highlight {
+  background-color: var(--warning);
+  color: var(--text-primary);
+  padding: 0.1em 0.2em;
+  border-radius: var(--radius-sm);
+}
+
+.strikethrough {
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+
+/* ============================================================================
+ * Links and References
+ * ============================================================================ */
+
+.pageLink {
+  color: var(--accent-primary);
+  cursor: pointer;
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-color var(--transition-fast);
+}
+
+.pageLink:hover {
+  border-bottom-color: var(--accent-primary);
+}
+
+.blockRef {
+  font-size: 0.95em;
+  padding: 0.1em 0.4em;
+  background-color: var(--accent-muted);
+  border-radius: var(--radius-sm);
+  color: var(--accent-primary);
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+
+.blockRef:hover {
+  background-color: var(--accent-primary);
+  color: white;
+}
+
+.tag {
+  color: var(--accent-primary);
+  cursor: pointer;
+}
+
+.tag:hover {
+  text-decoration: underline;
+}
+
+/* ============================================================================
+ * Children List
+ * ============================================================================ */
+
+.children {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  padding-left: var(--block-indent, 24px);
+}
+
+/* ============================================================================
+ * Loading & Error States
+ * ============================================================================ */
+
+.skeleton {
+  height: var(--block-min-height, 24px);
+  background: linear-gradient(
+    90deg,
+    var(--bg-tertiary) 25%,
+    var(--bg-hover) 50%,
+    var(--bg-tertiary) 75%
+  );
+  background-size: 200% 100%;
+  border-radius: var(--radius-sm);
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.errorContent {
+  color: var(--error);
+  font-size: var(--text-sm);
+  padding: var(--space-2);
+}

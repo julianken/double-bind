@@ -1,0 +1,136 @@
+/**
+ * ThemeToggle Component Styles
+ *
+ * Dropdown menu for theme selection (Light, Dark, System).
+ */
+
+/* ============================================================================
+ * Container
+ * ============================================================================ */
+
+.container {
+  position: relative;
+  width: 100%;
+}
+
+/* ============================================================================
+ * Toggle Button
+ * ============================================================================ */
+
+.button {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  background-color: transparent;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  transition: background-color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.button:hover {
+  background-color: var(--bg-hover);
+  border-color: var(--border-strong);
+}
+
+.button:focus-visible {
+  outline: var(--ring-width) solid var(--ring-color);
+  outline-offset: 2px;
+}
+
+.buttonIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+}
+
+.buttonLabel {
+  flex: 1;
+  text-align: left;
+}
+
+.chevron {
+  display: flex;
+  align-items: center;
+  color: var(--text-muted);
+  transition: transform var(--transition-fast);
+}
+
+.chevron--open {
+  transform: rotate(180deg);
+}
+
+/* ============================================================================
+ * Dropdown Menu
+ * ============================================================================ */
+
+.menu {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  right: 0;
+  margin-bottom: var(--space-1);
+  padding: var(--space-1);
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  z-index: var(--z-dropdown);
+}
+
+/* ============================================================================
+ * Menu Item
+ * ============================================================================ */
+
+.menuItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  background-color: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  text-align: left;
+  transition: background-color var(--transition-fast);
+}
+
+.menuItem:hover {
+  background-color: var(--bg-hover);
+}
+
+.menuItem:focus-visible {
+  outline: var(--ring-width) solid var(--ring-color);
+  outline-offset: -2px;
+}
+
+.menuItem--active {
+  color: var(--accent-primary);
+  font-weight: var(--font-medium);
+}
+
+.menuItemIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.menuItemLabel {
+  flex: 1;
+}
+
+.checkmark {
+  display: flex;
+  align-items: center;
+  color: var(--accent-primary);
+}

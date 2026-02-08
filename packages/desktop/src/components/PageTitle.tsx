@@ -24,6 +24,7 @@
  */
 
 import { useState, useRef, useCallback, useEffect } from 'react';
+import styles from './PageTitle.module.css';
 
 // ============================================================================
 // Types
@@ -244,7 +245,7 @@ export function PageTitle({
   if (isDailyNote) {
     return (
       <h1
-        className="page-title page-title--daily"
+        className={`${styles.title} ${styles['title--daily']}`}
         data-testid="page-title"
         data-page-id={pageId}
         data-daily-note="true"
@@ -258,7 +259,7 @@ export function PageTitle({
   return (
     <input
       type="text"
-      className="page-title page-title--editable"
+      className={styles['title--editable']}
       data-testid="page-title"
       data-page-id={pageId}
       data-saving={isSaving}

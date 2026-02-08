@@ -19,6 +19,8 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 // ============================================================================
 
 export type RightPanelContent = 'backlinks' | 'properties' | 'graph' | null;
+export type ThemePreference = 'light' | 'dark' | 'system';
+export type ResolvedTheme = 'light' | 'dark';
 
 export interface AppStore {
   // === Sidebar ===
@@ -54,6 +56,10 @@ export interface AppStore {
   navigateToPage: (pageId: string) => void;
   goBack: () => void;
   goForward: () => void;
+
+  // === Theme ===
+  themePreference: ThemePreference;
+  setThemePreference: (preference: ThemePreference) => void;
 }
 
 // ============================================================================
@@ -158,6 +164,10 @@ const store = create<AppStore>()(
             historyIndex: newIndex,
           };
         }),
+
+      // === Theme ===
+      themePreference: 'system',
+      setThemePreference: (preference: ThemePreference) => set({ themePreference: preference }),
     }),
     {
       name: 'double-bind-ui',
@@ -165,6 +175,7 @@ const store = create<AppStore>()(
       partialize: (state) => ({
         sidebarOpen: state.sidebarOpen,
         sidebarWidth: state.sidebarWidth,
+        themePreference: state.themePreference,
       }),
     }
   )
