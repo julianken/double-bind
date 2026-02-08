@@ -12,9 +12,13 @@ import { runMigrations } from '@double-bind/migrations';
 import { ServiceProvider } from './providers/ServiceProvider.js';
 import { App } from './App.js';
 import { invalidateQueries } from './hooks/useCozoQuery.js';
+import { initializeTheme } from './hooks/useTheme.js';
 
 // Design system - tokens, reset, and global styles
 import '@double-bind/ui-primitives/styles';
+
+// Initialize theme before React renders to prevent flash
+initializeTheme();
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
