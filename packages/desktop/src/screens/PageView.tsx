@@ -18,12 +18,26 @@
 import { useCallback, useMemo, useState, useEffect } from 'react';
 import type { BlockId, PageId } from '@double-bind/types';
 import type { PageWithBlocks } from '@double-bind/core';
+import {
+  DndContext,
+  closestCenter,
+  useSensors,
+  useSensor,
+  PointerSensor,
+  KeyboardSensor,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  sortableKeyboardCoordinates,
+} from '@dnd-kit/sortable';
 import { BacklinksPanel } from '@double-bind/ui-primitives';
 import { useCozoQuery, invalidateQueries } from '../hooks/useCozoQuery.js';
 import { useBacklinks } from '../hooks/useBacklinks.js';
 import { useServices } from '../providers/ServiceProvider.js';
 import { useAppStore } from '../stores/ui-store.js';
 import { BlockNode } from '../components/BlockNode.js';
+import { createDragEndHandler } from '../utils/createDragEndHandler.js';
 import { PageTitle as RealPageTitle } from '../components/PageTitle.js';
 
 // ============================================================================
@@ -220,6 +234,12 @@ export function PageView({ pageId }: PageViewProps) {
   const clearSelection = useAppStore((state) => state.clearSelection);
   const setFocusedBlock = useAppStore((state) => state.setFocusedBlock);
 
+  // DnD sensors: pointer (mouse/touch) + keyboard for accessibility
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
   // Backlinks panel expanded state (persisted in component state)
   const [backlinksExpanded, setBacklinksExpanded] = useState(true);
 
@@ -244,6 +264,14 @@ export function PageView({ pageId }: PageViewProps) {
       .sort((a, b) => a.order.localeCompare(b.order));
   }, [data?.blocks]);
 
+  // Handle drag-and-drop reordering of root-level blocks.
+  // Uses the shared createDragEndHandler so nested levels (in BlockNode)
+  // share the same reordering logic.
+  const handleDragEnd = useMemo(
+    () => createDragEndHandler(rootBlocks, blockService),
+    [rootBlocks, blockService]
+  );
+
   // Save page title
   const handleSaveTitle = useCallback(
     async (newTitle: string) => {
@@ -260,7 +288,6 @@ export function PageView({ pageId }: PageViewProps) {
       setFocusedBlock(rootBlocks[0]!.blockId);
     }
   }, [rootBlocks, setFocusedBlock]);
-
   // Toggle backlinks panel
   const toggleBacklinks = useCallback(() => {
     setBacklinksExpanded((prev) => !prev);
@@ -521,11 +548,22 @@ export function PageView({ pageId }: PageViewProps) {
         {rootBlocks.length === 0 ? (
           <EmptyState />
         ) : (
-          <ul role="tree" className="block-tree" data-testid="block-tree">
-            {rootBlocks.map((block) => (
-              <BlockNode key={block.blockId} blockId={block.blockId} depth={0} />
-            ))}
-          </ul>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={rootBlocks.map((b) => b.blockId)}
+              strategy={verticalListSortingStrategy}
+            >
+              <ul role="tree" className="block-tree" data-testid="block-tree">
+                {rootBlocks.map((block) => (
+                  <BlockNode key={block.blockId} blockId={block.blockId} depth={0} />
+                ))}
+              </ul>
+            </SortableContext>
+          </DndContext>
         )}
       </div>
 
