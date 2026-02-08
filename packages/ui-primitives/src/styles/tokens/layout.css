@@ -1,0 +1,40 @@
+/**
+ * Layout Tokens - Design System Foundation
+ *
+ * Component dimensions and z-index scale.
+ */
+
+:root {
+  /* Sidebar dimensions */
+  --sidebar-width: 260px;
+  --sidebar-collapsed: 48px;
+  --sidebar-padding: var(--space-3);
+
+  /* Header dimensions */
+  --header-height: 48px;
+
+  /* Content area */
+  --content-max-width: 720px;
+  --content-padding: var(--space-6);
+
+  /* Block editor */
+  --block-indent: 24px;
+  --block-gap: var(--space-1);
+  --block-min-height: 24px;
+
+  /* Z-index scale */
+  --z-base: 0;
+  --z-dropdown: 100;
+  --z-sticky: 200;
+  --z-overlay: 300;
+  --z-modal: 400;
+  --z-popover: 500;
+  --z-tooltip: 600;
+  --z-toast: 700;
+
+  /* Breakpoints (for reference, use in media queries) */
+  /* --screen-sm: 640px; */
+  /* --screen-md: 768px; */
+  /* --screen-lg: 1024px; */
+  /* --screen-xl: 1280px; */
+}

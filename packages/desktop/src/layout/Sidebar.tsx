@@ -17,6 +17,7 @@ import { SearchBar } from '../components/SearchBar.js';
 import { PageList } from '../components/PageList.js';
 import { useAppStore } from '../stores/ui-store.js';
 import { useNeighborhood } from '../hooks/useNeighborhood.js';
+import styles from './Sidebar.module.css';
 
 // ============================================================================
 // Constants
@@ -37,13 +38,17 @@ const LOCAL_STORAGE_KEY = 'sidebar-width';
  */
 export function QuickCapture() {
   return (
-    <div className="sidebar-quick-capture">
-      <textarea placeholder="Quick capture..." aria-label="Quick capture" disabled rows={2} />
+    <div className={styles.quickCapture}>
+      <textarea
+        className={styles.quickCaptureInput}
+        placeholder="Quick capture..."
+        aria-label="Quick capture"
+        disabled
+        rows={2}
+      />
     </div>
   );
 }
-
-// PageList imported from components/PageList.tsx
 
 /**
  * SidebarFooter placeholder - displays app info and settings link.
@@ -51,7 +56,7 @@ export function QuickCapture() {
  */
 export function SidebarFooter() {
   return (
-    <footer className="sidebar-footer">
+    <footer className={styles.footer}>
       <small>Double Bind</small>
     </footer>
   );
@@ -63,14 +68,12 @@ export function SidebarFooter() {
 
 function SidebarErrorFallback(_error: Error, reset: () => void) {
   return (
-    <aside className="sidebar sidebar-error" role="complementary">
-      <div className="sidebar-error-content">
-        <h2>Sidebar unavailable</h2>
-        <p>An error occurred loading the sidebar.</p>
-        <button onClick={reset} type="button">
-          Try Again
-        </button>
-      </div>
+    <aside className={styles.error} role="complementary">
+      <h2 className={styles.errorTitle}>Sidebar unavailable</h2>
+      <p className={styles.errorDescription}>An error occurred loading the sidebar.</p>
+      <button onClick={reset} type="button" className={styles.errorButton}>
+        Try Again
+      </button>
     </aside>
   );
 }
@@ -145,7 +148,6 @@ function useSidebarKeyboard() {
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
       // Ctrl+\ (backslash) toggles sidebar
-      // Note: event.key for backslash is '\\'
       if (event.ctrlKey && event.key === '\\') {
         event.preventDefault();
         toggleSidebar();
@@ -204,16 +206,7 @@ function SidebarGraphSection({ onNavigate }: SidebarGraphSectionProps) {
   const renderContent = () => {
     if (!currentPageId) {
       return (
-        <div
-          className="sidebar-graph-empty"
-          data-testid="sidebar-graph-empty"
-          style={{
-            padding: '12px',
-            color: '#6b7280',
-            fontSize: '12px',
-            textAlign: 'center',
-          }}
-        >
+        <div className={styles.graphEmpty} data-testid="sidebar-graph-empty">
           No page selected
         </div>
       );
@@ -222,16 +215,9 @@ function SidebarGraphSection({ onNavigate }: SidebarGraphSectionProps) {
     if (isLoading) {
       return (
         <div
-          className="sidebar-graph-loading"
+          className={styles.graphLoading}
           data-testid="sidebar-graph-loading"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            height: GRAPH_HEIGHT,
-            color: '#6b7280',
-            fontSize: '12px',
-          }}
+          style={{ height: GRAPH_HEIGHT }}
         >
           Loading graph...
         </div>
@@ -242,18 +228,9 @@ function SidebarGraphSection({ onNavigate }: SidebarGraphSectionProps) {
     if (nodes.length <= 1) {
       return (
         <div
-          className="sidebar-graph-isolated"
+          className={styles.graphIsolated}
           data-testid="sidebar-graph-isolated"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            height: GRAPH_HEIGHT,
-            color: '#6b7280',
-            fontSize: '12px',
-            textAlign: 'center',
-            padding: '12px',
-          }}
+          style={{ height: GRAPH_HEIGHT }}
         >
           No connections
         </div>
@@ -261,7 +238,7 @@ function SidebarGraphSection({ onNavigate }: SidebarGraphSectionProps) {
     }
 
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', padding: '8px 0' }}>
+      <div className={styles.graphContent}>
         <MiniGraph
           centerNodeId={currentPageId}
           nodes={nodes}
@@ -275,44 +252,19 @@ function SidebarGraphSection({ onNavigate }: SidebarGraphSectionProps) {
   };
 
   return (
-    <section
-      className="sidebar-graph-section"
-      data-testid="sidebar-graph-section"
-      style={{
-        borderTop: '1px solid #e5e7eb',
-        marginTop: '8px',
-      }}
-    >
+    <section className={styles.graphSection} data-testid="sidebar-graph-section">
       <button
         type="button"
-        className="sidebar-graph-toggle"
+        className={styles.graphToggle}
         onClick={handleToggle}
         aria-expanded={!isCollapsed}
         aria-controls="sidebar-graph-content"
         data-testid="sidebar-graph-toggle"
-        style={{
-          width: '100%',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '8px 12px',
-          background: 'none',
-          border: 'none',
-          cursor: 'pointer',
-          fontSize: '12px',
-          fontWeight: 500,
-          color: '#374151',
-          textAlign: 'left',
-        }}
       >
         <span>Graph</span>
         <span
-          style={{
-            transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)',
-            transition: 'transform 0.2s ease',
-          }}
+          className={`${styles.graphToggleIcon} ${isCollapsed ? styles['graphToggleIcon--collapsed'] : ''}`}
         >
-          {/* Down chevron */}
           <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
             <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="1.5" fill="none" />
           </svg>
@@ -372,19 +324,11 @@ function ResizeHandle({ onResize, sidebarRef }: ResizeHandleProps) {
 
   return (
     <div
-      className="sidebar-resize-handle"
+      className={styles.resizeHandle}
       role="separator"
       aria-orientation="vertical"
       aria-label="Resize sidebar"
       onMouseDown={handleMouseDown}
-      style={{
-        width: '4px',
-        cursor: 'col-resize',
-        position: 'absolute',
-        right: 0,
-        top: 0,
-        bottom: 0,
-      }}
     />
   );
 }
@@ -423,23 +367,19 @@ function SidebarContent({ onNewPage }: SidebarProps) {
   return (
     <aside
       ref={sidebarRef}
-      className="sidebar"
+      className={styles.sidebar}
       data-testid="sidebar"
       role="complementary"
       aria-label="Application sidebar"
-      style={{
-        width: `${sidebarWidth}px`,
-        position: 'relative',
-        flexShrink: 0,
-      }}
+      style={{ width: `${sidebarWidth}px` }}
     >
-      <div className="sidebar-content">
+      <div className={styles.content}>
         <SearchBar />
         <QuickCapture />
 
         <button
           type="button"
-          className="sidebar-new-page-button"
+          className={styles.newPageButton}
           onClick={onNewPage}
           disabled={!onNewPage}
           aria-label="Create new page"
@@ -449,7 +389,7 @@ function SidebarContent({ onNewPage }: SidebarProps) {
 
         <button
           type="button"
-          className="sidebar-graph-view-button"
+          className={styles.graphViewButton}
           onClick={() => navigateToPage('graph')}
           aria-label="Graph View"
         >

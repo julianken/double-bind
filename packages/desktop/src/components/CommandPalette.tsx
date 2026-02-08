@@ -21,10 +21,10 @@ import {
   useRef,
   useCallback,
   useMemo,
-  type CSSProperties,
   type KeyboardEvent as ReactKeyboardEvent,
 } from 'react';
 import { useAppStore } from '../stores/ui-store.js';
+import styles from './CommandPalette.module.css';
 
 // ============================================================================
 // Types
@@ -80,7 +80,6 @@ interface FuzzyMatchResult {
 // ============================================================================
 
 const PLACEHOLDER_TEXT = 'Type a command...';
-const MIN_TOUCH_TARGET = 44; // WCAG 2.1 AA minimum
 
 // ============================================================================
 // Icons
@@ -334,15 +333,7 @@ function HighlightedText({
 
     // Add highlighted match
     parts.push(
-      <mark
-        key={`match-${match.start}`}
-        style={{
-          backgroundColor: 'rgba(59, 130, 246, 0.3)',
-          color: 'inherit',
-          borderRadius: '2px',
-          padding: '0 1px',
-        }}
-      >
+      <mark key={`match-${match.start}`} className={styles.highlight}>
         {text.slice(match.start, match.end)}
       </mark>
     );
@@ -442,148 +433,6 @@ export function createDefaultCommands(
     },
   ];
 }
-
-// ============================================================================
-// Styles
-// ============================================================================
-
-const backdropStyle: CSSProperties = {
-  position: 'fixed',
-  top: 0,
-  left: 0,
-  right: 0,
-  bottom: 0,
-  backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  zIndex: 1000,
-  display: 'flex',
-  alignItems: 'flex-start',
-  justifyContent: 'center',
-  paddingTop: '15vh',
-};
-
-const containerStyle: CSSProperties = {
-  width: '100%',
-  maxWidth: '560px',
-  backgroundColor: 'var(--bg-primary, #1a1a1a)',
-  borderRadius: '12px',
-  boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
-  border: '1px solid var(--border-color, #333)',
-  overflow: 'hidden',
-};
-
-const inputContainerStyle: CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  padding: '12px 16px',
-  gap: '12px',
-  borderBottom: '1px solid var(--border-color, #333)',
-};
-
-const inputIconStyle: CSSProperties = {
-  color: 'var(--text-muted, #888)',
-  flexShrink: 0,
-};
-
-const inputStyle: CSSProperties = {
-  flex: 1,
-  border: 'none',
-  background: 'transparent',
-  outline: 'none',
-  fontSize: '16px',
-  color: 'var(--text-primary, #e0e0e0)',
-  fontFamily: 'inherit',
-};
-
-const listContainerStyle: CSSProperties = {
-  maxHeight: '400px',
-  overflowY: 'auto',
-};
-
-const sectionHeaderStyle: CSSProperties = {
-  padding: '8px 16px',
-  fontSize: '11px',
-  fontWeight: 600,
-  textTransform: 'uppercase',
-  letterSpacing: '0.05em',
-  color: 'var(--text-muted, #888)',
-  backgroundColor: 'var(--bg-secondary, #1e1e1e)',
-  borderBottom: '1px solid var(--border-color-light, #2a2a2a)',
-};
-
-const commandItemStyle: CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  padding: '10px 16px',
-  minHeight: `${MIN_TOUCH_TARGET}px`,
-  gap: '12px',
-  cursor: 'pointer',
-  borderBottom: '1px solid var(--border-color-light, #2a2a2a)',
-};
-
-const commandIconStyle: CSSProperties = {
-  flexShrink: 0,
-  color: 'var(--text-muted, #888)',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-};
-
-const commandContentStyle: CSSProperties = {
-  flex: 1,
-  minWidth: 0,
-};
-
-const commandNameStyle: CSSProperties = {
-  fontSize: '14px',
-  color: 'var(--text-primary, #e0e0e0)',
-  marginBottom: '2px',
-};
-
-const commandDescStyle: CSSProperties = {
-  fontSize: '12px',
-  color: 'var(--text-muted, #888)',
-  whiteSpace: 'nowrap',
-  overflow: 'hidden',
-  textOverflow: 'ellipsis',
-};
-
-const shortcutStyle: CSSProperties = {
-  flexShrink: 0,
-  fontSize: '11px',
-  fontFamily: 'monospace',
-  padding: '4px 8px',
-  backgroundColor: 'var(--bg-secondary, #2a2a2a)',
-  borderRadius: '4px',
-  border: '1px solid var(--border-color, #444)',
-  color: 'var(--text-muted, #888)',
-};
-
-const emptyStateStyle: CSSProperties = {
-  padding: '32px 16px',
-  textAlign: 'center',
-  color: 'var(--text-muted, #888)',
-  fontSize: '14px',
-};
-
-const footerStyle: CSSProperties = {
-  display: 'flex',
-  gap: '16px',
-  padding: '8px 16px',
-  fontSize: '11px',
-  color: 'var(--text-muted, #666)',
-  backgroundColor: 'var(--bg-secondary, #1e1e1e)',
-  borderTop: '1px solid var(--border-color, #333)',
-};
-
-const kbdStyle: CSSProperties = {
-  display: 'inline-block',
-  padding: '2px 6px',
-  fontSize: '10px',
-  fontFamily: 'monospace',
-  backgroundColor: 'var(--bg-tertiary, #2a2a2a)',
-  borderRadius: '3px',
-  border: '1px solid var(--border-color, #444)',
-};
 
 // ============================================================================
 // Component
@@ -777,18 +626,17 @@ export function CommandPalette({
 
   return (
     <div
-      className={`command-palette ${className}`}
-      style={backdropStyle}
+      className={`${styles.backdrop} ${className}`}
       onClick={handleBackdropClick}
       data-testid={testId}
       role="dialog"
       aria-label="Command palette"
       aria-modal="true"
     >
-      <div style={containerStyle} role="presentation">
+      <div className={styles.container} role="presentation">
         {/* Search Input */}
-        <div style={inputContainerStyle}>
-          <span style={inputIconStyle}>
+        <div className={styles.inputContainer}>
+          <span className={styles.inputIcon}>
             <SearchIcon />
           </span>
           <input
@@ -798,7 +646,7 @@ export function CommandPalette({
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
             placeholder={PLACEHOLDER_TEXT}
-            style={inputStyle}
+            className={styles.input}
             aria-label="Search commands"
             aria-controls="command-list"
             aria-activedescendant={
@@ -818,13 +666,13 @@ export function CommandPalette({
         <div
           ref={listRef}
           id="command-list"
-          style={listContainerStyle}
+          className={styles.listContainer}
           role="listbox"
           aria-label="Commands"
           data-testid={`${testId}-list`}
         >
           {flatResults.length === 0 ? (
-            <div style={emptyStateStyle} data-testid={`${testId}-empty`}>
+            <div className={styles.emptyState} data-testid={`${testId}-empty`}>
               No commands found for &quot;{query}&quot;
             </div>
           ) : (
@@ -832,7 +680,7 @@ export function CommandPalette({
               <div key={section} role="group" aria-labelledby={`section-${section}`}>
                 <div
                   id={`section-${section}`}
-                  style={sectionHeaderStyle}
+                  className={styles.sectionHeader}
                   data-testid={`${testId}-section-${section.toLowerCase()}`}
                 >
                   {section}
@@ -841,6 +689,11 @@ export function CommandPalette({
                   const index = currentFlatIndex++;
                   const isSelected = index === selectedIndex;
 
+                  const itemClasses = [
+                    styles.commandItem,
+                    isSelected && styles['commandItem--selected'],
+                  ].filter(Boolean).join(' ');
+
                   return (
                     <div
                       key={result.command.id}
@@ -848,27 +701,22 @@ export function CommandPalette({
                       id={`command-${result.command.id}`}
                       role="option"
                       aria-selected={isSelected}
-                      style={{
-                        ...commandItemStyle,
-                        backgroundColor: isSelected
-                          ? 'var(--bg-accent, rgba(59, 130, 246, 0.2))'
-                          : 'transparent',
-                      }}
+                      className={itemClasses}
                       onClick={() => handleCommandClick(result.command)}
                       onMouseEnter={() => setSelectedIndex(index)}
                       data-testid={`${testId}-item-${result.command.id}`}
                     >
                       {result.command.icon && (
-                        <span style={commandIconStyle}>{result.command.icon}</span>
+                        <span className={styles.commandIcon}>{result.command.icon}</span>
                       )}
-                      <div style={commandContentStyle}>
-                        <div style={commandNameStyle}>
+                      <div className={styles.commandContent}>
+                        <div className={styles.commandName}>
                           <HighlightedText text={result.command.name} matches={result.matches} />
                         </div>
-                        <div style={commandDescStyle}>{result.command.description}</div>
+                        <div className={styles.commandDesc}>{result.command.description}</div>
                       </div>
                       {result.command.shortcut && (
-                        <span style={shortcutStyle}>{result.command.shortcut}</span>
+                        <span className={styles.shortcut}>{result.command.shortcut}</span>
                       )}
                     </div>
                   );
@@ -879,16 +727,16 @@ export function CommandPalette({
         </div>
 
         {/* Footer with keyboard hints */}
-        <div style={footerStyle} data-testid={`${testId}-footer`}>
+        <div className={styles.footer} data-testid={`${testId}-footer`}>
           <span>
-            <kbd style={kbdStyle}>↑</kbd>
-            <kbd style={kbdStyle}>↓</kbd> navigate
+            <kbd className={styles.kbd}>↑</kbd>
+            <kbd className={styles.kbd}>↓</kbd> navigate
           </span>
           <span>
-            <kbd style={kbdStyle}>Enter</kbd> select
+            <kbd className={styles.kbd}>Enter</kbd> select
           </span>
           <span>
-            <kbd style={kbdStyle}>Esc</kbd> close
+            <kbd className={styles.kbd}>Esc</kbd> close
           </span>
         </div>
       </div>

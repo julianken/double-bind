@@ -13,6 +13,9 @@ import { ServiceProvider } from './providers/ServiceProvider.js';
 import { App } from './App.js';
 import { invalidateQueries } from './hooks/useCozoQuery.js';
 
+// Design system - tokens, reset, and global styles
+import '@double-bind/ui-primitives/styles';
+
 const rootElement = document.getElementById('root');
 if (!rootElement) {
   throw new Error('Failed to find root element');

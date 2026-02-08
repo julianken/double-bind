@@ -14,6 +14,7 @@ import type { Page, Block } from '@double-bind/types';
 import { useServices } from '../providers/index.js';
 import { useCozoQuery } from '../hooks/index.js';
 import type { RouteComponentProps } from '../components/Router.js';
+import styles from './DailyNotesView.module.css';
 
 // ============================================================================
 // Types
@@ -138,13 +139,13 @@ export function DailyNotesView(_props: DailyNotesViewProps): React.ReactElement 
   if (loadingState === 'loading' || loadingState === 'idle') {
     return (
       <div
-        className="daily-notes-view daily-notes-view--loading"
+        className={`${styles.container} ${styles['container--loading']}`}
         data-testid="daily-notes-loading"
         role="main"
         aria-busy="true"
         aria-label="Loading today's daily note"
       >
-        <div className="daily-notes-view__loading-indicator">
+        <div className={styles.loadingIndicator}>
           Loading today&apos;s daily note...
         </div>
       </div>
@@ -158,12 +159,12 @@ export function DailyNotesView(_props: DailyNotesViewProps): React.ReactElement 
   if (loadingState === 'error' || error) {
     return (
       <div
-        className="daily-notes-view daily-notes-view--error"
+        className={`${styles.container} ${styles['container--error']}`}
         data-testid="daily-notes-error"
         role="main"
         aria-label="Error loading daily note"
       >
-        <div className="daily-notes-view__error">
+        <div className={styles.error}>
           <h1>Failed to load daily note</h1>
           <p>{error?.message ?? 'An unknown error occurred'}</p>
         </div>
@@ -182,19 +183,19 @@ export function DailyNotesView(_props: DailyNotesViewProps): React.ReactElement 
 
   return (
     <div
-      className="daily-notes-view"
+      className={styles.container}
       data-testid="daily-notes-view"
       role="main"
       aria-label={`Daily note for ${displayDate}`}
     >
       {/* Page Title */}
-      <header className="daily-notes-view__header">
-        <h1 className="daily-notes-view__title" data-testid="daily-notes-title">
+      <header className={styles.header}>
+        <h1 className={styles.title} data-testid="daily-notes-title">
           {displayDate}
         </h1>
         {dailyNote?.dailyNoteDate && (
           <time
-            className="daily-notes-view__date-iso"
+            className={styles.dateIso}
             dateTime={dailyNote.dailyNoteDate}
             data-testid="daily-notes-date-iso"
           >
@@ -205,29 +206,29 @@ export function DailyNotesView(_props: DailyNotesViewProps): React.ReactElement 
 
       {/* Block Tree Content */}
       <section
-        className="daily-notes-view__content"
+        className={styles.content}
         data-testid="daily-notes-content"
         aria-label="Daily note content"
       >
         {blocksLoading ? (
-          <div className="daily-notes-view__blocks-loading">Loading blocks...</div>
+          <div className={styles.blocksLoading}>Loading blocks...</div>
         ) : blocksError ? (
-          <div className="daily-notes-view__blocks-error">
+          <div className={styles.blocksError}>
             Failed to load blocks: {blocksError.message}
           </div>
         ) : blocks && blocks.length > 0 ? (
-          <ul className="daily-notes-view__block-tree" role="tree" aria-label="Block tree">
+          <ul className={styles.blockTree} role="tree" aria-label="Block tree">
             {blocks
               .filter((block) => block.parentId === null)
               .sort((a, b) => a.order.localeCompare(b.order))
               .map((block) => (
                 <li
                   key={block.blockId}
-                  className="daily-notes-view__block"
+                  className={styles.block}
                   role="treeitem"
                   data-testid={`block-${block.blockId}`}
                 >
-                  <div className="daily-notes-view__block-content">
+                  <div className={styles.blockContent}>
                     {block.content || '(empty block)'}
                   </div>
                   {/* Child blocks would be rendered recursively here */}
@@ -236,7 +237,7 @@ export function DailyNotesView(_props: DailyNotesViewProps): React.ReactElement 
               ))}
           </ul>
         ) : (
-          <div className="daily-notes-view__empty" data-testid="daily-notes-empty">
+          <div className={styles.empty} data-testid="daily-notes-empty">
             <p>Start writing in today&apos;s daily note...</p>
           </div>
         )}
