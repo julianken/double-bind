@@ -343,10 +343,13 @@ describe('Persistence Plugin', () => {
         blockId: 'block-1',
         blockService,
         onBlur,
-        initialContent: 'Test',
+        initialContent: '',
       });
 
-      // Trigger blur
+      // Type content to create a pending change
+      view.dispatch(view.state.tr.insertText('Test'));
+
+      // Trigger blur before debounce fires
       const blurEvent = new FocusEvent('blur', { bubbles: true });
       view.dom.dispatchEvent(blurEvent);
 
@@ -356,7 +359,7 @@ describe('Persistence Plugin', () => {
       // onBlur should have been called
       expect(onBlur).toHaveBeenCalledTimes(1);
 
-      // onBlur should be called after save
+      // Content should be saved on blur (flushing pending changes)
       expect(blockService.updateContent).toHaveBeenCalled();
       const saveCallOrder = blockService.updateContent.mock.invocationCallOrder[0];
       const onBlurCallOrder = onBlur.mock.invocationCallOrder[0];
@@ -365,7 +368,7 @@ describe('Persistence Plugin', () => {
       view.destroy();
     });
 
-    it('does not invalidate queries during debounced saves', async () => {
+    it('invalidates queries after every save for real-time sync', async () => {
       const blockService = createMockBlockService();
       const view = createEditorView({
         blockId: 'block-1',
@@ -382,8 +385,9 @@ describe('Persistence Plugin', () => {
       // Save should have been called
       expect(blockService.updateContent).toHaveBeenCalled();
 
-      // But invalidateQueries should NOT have been called (only on blur)
-      expect(invalidateQueries).not.toHaveBeenCalled();
+      // Queries should be invalidated after save for real-time UI sync
+      // (This changed from blur-only to every-save for better UX)
+      expect(invalidateQueries).toHaveBeenCalled();
 
       view.destroy();
     });
