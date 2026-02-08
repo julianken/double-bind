@@ -135,22 +135,25 @@ export function DailyNotesView(_props: DailyNotesViewProps): React.ReactElement 
     };
   }, [pageService]);
 
+  // Extract pageId for stable dependency (avoid re-creating callback on dailyNote object changes)
+  const dailyNotePageId = dailyNote?.pageId;
+
   // Query function for fetching blocks (only when we have a daily note)
   const blocksQueryFn = useCallback(async (): Promise<Block[]> => {
-    if (!dailyNote) {
+    if (!dailyNotePageId) {
       return [];
     }
-    const { blocks } = await pageService.getPageWithBlocks(dailyNote.pageId);
+    const { blocks } = await pageService.getPageWithBlocks(dailyNotePageId);
     return blocks;
-  }, [pageService, dailyNote]);
+  }, [pageService, dailyNotePageId]);
 
   // Fetch blocks for the daily note
   const {
     data: blocks,
     isLoading: blocksLoading,
     error: blocksError,
-  } = useCozoQuery<Block[]>(['blocks', 'byPage', dailyNote?.pageId ?? ''], blocksQueryFn, {
-    enabled: !!dailyNote,
+  } = useCozoQuery<Block[]>(['blocks', 'byPage', dailyNotePageId ?? ''], blocksQueryFn, {
+    enabled: !!dailyNotePageId,
   });
 
   // Get root-level blocks (parentId === null) - the BlockNode component handles children
