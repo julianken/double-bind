@@ -42,6 +42,8 @@ export function GraphScreen({ navigation }: Props): React.ReactElement {
 
   // Load graph data from database
   useEffect(() => {
+    let isMounted = true;
+
     async function loadGraphData() {
       if (!db || status !== 'ready') return;
 
@@ -57,21 +59,32 @@ export function GraphScreen({ navigation }: Props): React.ReactElement {
         // Query all links - returns [sourceId, targetId] rows
         const linksResult = await db.query(`?[sourceId, targetId] := *link{sourceId, targetId}`);
 
-        // Transform to graph format
-        const graphNodes: MobileGraphNode[] = pagesResult.rows.map((row) => {
-          const [pageId, title] = row as [string, string];
-          return {
-            id: pageId,
-            title: title || 'Untitled',
-          };
-        });
+        // Abort if component unmounted during async operations
+        if (!isMounted) return;
+
+        // Transform to graph format with validation
+        const graphNodes: MobileGraphNode[] = pagesResult.rows
+          .filter((row): row is [string, string] => {
+            return Array.isArray(row) && row.length >= 2 && typeof row[0] === 'string';
+          })
+          .map((row) => {
+            const [pageId, title] = row;
+            return {
+              id: pageId,
+              title: title || 'Untitled',
+            };
+          });
 
         // Create edge map to detect bidirectional links
         const edgeSet = new Set<string>();
         const graphEdges: MobileGraphEdge[] = [];
 
         for (const row of linksResult.rows) {
-          const [sourceId, targetId] = row as [string, string];
+          // Validate row structure before processing
+          if (!Array.isArray(row) || row.length < 2 || typeof row[0] !== 'string' || typeof row[1] !== 'string') {
+            continue;
+          }
+          const [sourceId, targetId] = row;
           const key = `${sourceId}-${targetId}`;
           const reverseKey = `${targetId}-${sourceId}`;
 
@@ -93,21 +106,32 @@ export function GraphScreen({ navigation }: Props): React.ReactElement {
           }
         }
 
-        setNodes(graphNodes);
-        setEdges(graphEdges);
+        if (isMounted) {
+          setNodes(graphNodes);
+          setEdges(graphEdges);
 
-        // Set center node to the first page (or a specific one if available)
-        if (graphNodes.length > 0) {
-          setCenterNodeId(graphNodes[0].id);
+          // Set center node to the first page (or a specific one if available)
+          const firstNode = graphNodes[0];
+          if (firstNode) {
+            setCenterNodeId(firstNode.id);
+          }
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Unknown error');
+        if (isMounted) {
+          setError(err instanceof Error ? err.message : 'Unknown error');
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     }
 
     void loadGraphData();
+
+    return () => {
+      isMounted = false;
+    };
   }, [db, status]);
 
   // Handle node press - navigate to node details
