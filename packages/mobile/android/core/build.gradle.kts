@@ -35,22 +35,19 @@ android {
 }
 
 dependencies {
-    // CozoDB Android binding - SQLite storage engine for mobile
+    // CozoDB Android native library
     implementation("io.github.cozodb:cozo_android:0.7.2")
 
-    // Kotlin coroutines for async database operations
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
+    // Kotlin coroutines for async operations
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.0")
 
-    // Kotlin serialization for JSON handling
+    // Kotlin serialization for JSON parsing
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
 
-    // AndroidX core
-    implementation("androidx.core:core-ktx:1.13.1")
-
-    // Testing dependencies (for future DBB-374)
+    // Testing dependencies (for DBB-374)
     testImplementation("junit:junit:4.13.2")
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
-    androidTestImplementation("androidx.test.ext:junit:1.2.1")
-    androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.0")
+    androidTestImplementation("androidx.test.ext:junit:1.1.5")
+    androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
 }
