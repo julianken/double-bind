@@ -10,10 +10,10 @@ import type { PageFetcher, PaginatedResult } from '@double-bind/types';
 describe('usePaginatedQuery', () => {
   type TestItem = { id: string; name: string };
 
-  let mockFetcher: ReturnType<typeof vi.fn<PageFetcher<TestItem>>>;
+  let mockFetcher: PageFetcher<TestItem>;
 
   beforeEach(() => {
-    mockFetcher = vi.fn();
+    mockFetcher = vi.fn() as unknown as PageFetcher<TestItem>;
   });
 
   it('should initialize with empty state', () => {
