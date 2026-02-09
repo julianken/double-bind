@@ -6,7 +6,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
 import { AppState } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
-import { useSyncManager, type UseSyncManagerOptions } from '../useSyncManager';
+import { useSyncManager, type UseSyncManagerOptions } from '../../../src/hooks/useSyncManager';
 import type { MobileGraphDB } from '@double-bind/mobile';
 
 // ─────────────────────────────────────────────────────────────────────────────
