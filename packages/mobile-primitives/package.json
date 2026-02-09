@@ -16,6 +16,11 @@
     "test": "vitest run",
     "test:run": "vitest run",
     "test:watch": "vitest",
+    "test:e2e": "echo 'E2E tests require Detox installation. See test/e2e/README.md'",
+    "test:e2e:ios": "echo 'Detox not installed. Run: pnpm add -D detox @types/detox'",
+    "test:e2e:android": "echo 'Detox not installed. Run: pnpm add -D detox @types/detox'",
+    "test:e2e:build:ios": "echo 'Detox not installed. See test/e2e/README.md'",
+    "test:e2e:build:android": "echo 'Detox not installed. See test/e2e/README.md'",
     "lint": "eslint src/",
     "typecheck": "tsc --noEmit"
   },
