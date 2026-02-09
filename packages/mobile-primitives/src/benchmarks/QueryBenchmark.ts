@@ -43,6 +43,7 @@ export class QueryBenchmark {
   private executions: QueryExecution[] = [];
   private startTime: number;
   private config: Required<QueryBenchmarkConfig>;
+  private errorCount = 0;
 
   constructor(config: QueryBenchmarkConfig = {}) {
     this.startTime = Date.now();
@@ -85,9 +86,12 @@ export class QueryBenchmark {
       } else if (result && typeof result === 'object') {
         resultCount = 1;
       }
-    } catch {
-      // Query failed or timed out
+    } catch (error) {
+      // Query failed or timed out - track errors for analysis
+      this.errorCount++;
       resultCount = 0;
+      // Errors are tracked but don't fail the benchmark
+      // The execution is still recorded with resultCount = 0
     }
 
     const executionTime = Date.now() - start;
@@ -146,11 +150,21 @@ export class QueryBenchmark {
   }
 
   /**
+   * Get the number of query errors encountered.
+   *
+   * @returns Number of failed or timed out queries
+   */
+  getErrorCount(): number {
+    return this.errorCount;
+  }
+
+  /**
    * Reset the benchmark for a new measurement.
    */
   reset(): void {
     this.executions = [];
     this.startTime = Date.now();
+    this.errorCount = 0;
   }
 
   /**

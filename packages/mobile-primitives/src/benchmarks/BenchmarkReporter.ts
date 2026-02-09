@@ -383,7 +383,7 @@ export function generateQuickSummary(results: BenchmarkResults): string {
 
   if (results.memory) {
     lines.push(
-      `Memory: ${formatBytesHelper(results.memory.memoryGrowth)} growth, ${results.memory.leaks.length} leaks (${results.memory.severity})`
+      `Memory: ${formatBytes(results.memory.memoryGrowth)} growth, ${results.memory.leaks.length} leaks (${results.memory.severity})`
     );
   }
 
@@ -399,7 +399,7 @@ export function generateQuickSummary(results: BenchmarkResults): string {
 /**
  * Helper to format bytes.
  */
-function formatBytesHelper(bytes: number): string {
+function formatBytes(bytes: number): string {
   const units = ['B', 'KB', 'MB', 'GB'];
   let value = bytes;
   let unitIndex = 0;
