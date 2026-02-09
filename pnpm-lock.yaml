@@ -252,6 +252,9 @@ importers:
 
   packages/mobile-app:
     dependencies:
+      '@double-bind/core':
+        specifier: workspace:*
+        version: link:../core
       '@double-bind/mobile':
         specifier: workspace:*
         version: link:../mobile
@@ -265,6 +268,9 @@ importers:
       '@testing-library/react-hooks':
         specifier: ^8.0.1
         version: 8.0.1(@types/react@18.3.28)(react-test-renderer@18.3.1(react@18.3.1))(react@18.3.1)
+      '@testing-library/react-native':
+        specifier: ^12.4.0
+        version: 12.9.0(react-native@0.73.11(@babel/core@7.29.0)(@babel/preset-env@7.29.0(@babel/core@7.29.0))(react@18.3.1))(react-test-renderer@18.3.1(react@18.3.1))(react@18.3.1)
       '@types/react':
         specifier: ^18.2.0
         version: 18.3.28
