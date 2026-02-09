@@ -25,6 +25,7 @@
     "@double-bind/core": "workspace:*",
     "@double-bind/mobile": "workspace:*",
     "@double-bind/types": "workspace:*",
+    "@react-native-community/netinfo": "^11.5.2",
     "react-native-webview": "^13.6.0"
   },
   "devDependencies": {
