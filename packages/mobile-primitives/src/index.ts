@@ -53,3 +53,6 @@ export * from './memory';
 
 // iOS platform utilities
 export * from './ios';
+
+// Android platform utilities
+export * from './android';
