@@ -1,20 +1,22 @@
-# CozoDB JNI - Keep native methods
--keep class org.cozodb.CozoDB { *; }
+# ProGuard rules for Double-Bind Android core module
 
-# Keep GraphDB interface and implementation
--keep class com.doublebind.core.GraphDB { *; }
+# Keep CozoDB JNI classes
+-keep class org.cozodb.** { *; }
+
+# Keep React Native module classes
+-keep class com.doublebind.core.CozoModule { *; }
+-keep class com.doublebind.core.CozoPackage { *; }
 -keep class com.doublebind.core.CozoGraphDB { *; }
--keep class com.doublebind.core.QueryResult { *; }
--keep class com.doublebind.core.MutationResult { *; }
--keep class com.doublebind.core.GraphDBConfig { *; }
--keep class com.doublebind.core.CozoDBException { *; }
 
-# Kotlinx serialization
--keepattributes *Annotation*, InnerClasses
--dontnote kotlinx.serialization.AnnotationsKt
--keepclassmembers class kotlinx.serialization.json.** {
-    *** Companion;
+# Keep @ReactMethod annotated methods
+-keepclassmembers class * {
+    @com.facebook.react.bridge.ReactMethod <methods>;
 }
--keepclasseswithmembers class kotlinx.serialization.json.** {
-    kotlinx.serialization.KSerializer serializer(...);
+
+# Keep ReactPackage implementations
+-keep class * implements com.facebook.react.ReactPackage { *; }
+
+# Keep native module constructors
+-keepclassmembers class * extends com.facebook.react.bridge.ReactContextBaseJavaModule {
+    <init>(...);
 }
