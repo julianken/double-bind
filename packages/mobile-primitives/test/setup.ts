@@ -44,6 +44,7 @@ vi.mock('react-native', () => ({
   },
   View: 'View',
   Text: 'Text',
+  TextInput: 'TextInput',
   ScrollView: 'ScrollView',
   FlatList: 'FlatList',
   TouchableOpacity: 'TouchableOpacity',
@@ -85,10 +86,29 @@ vi.mock('react-native-gesture-handler', () => ({
       maxDistance: vi.fn().mockReturnThis(),
       onEnd: vi.fn().mockReturnThis(),
     })),
+    Pan: vi.fn(() => ({
+      activeOffsetX: vi.fn().mockReturnThis(),
+      onUpdate: vi.fn().mockReturnThis(),
+      onEnd: vi.fn().mockReturnThis(),
+    })),
     Exclusive: vi.fn((...gestures) => gestures),
   },
   GestureDetector: 'GestureDetector',
   Pressable: 'Pressable',
+}));
+
+// Mock react-native-reanimated
+vi.mock('react-native-reanimated', () => ({
+  default: {
+    View: 'Animated.View',
+    Text: 'Animated.Text',
+    ScrollView: 'Animated.ScrollView',
+  },
+  useSharedValue: vi.fn((initialValue) => ({ value: initialValue })),
+  useAnimatedStyle: vi.fn((updater) => updater()),
+  withSpring: vi.fn((value) => value),
+  withTiming: vi.fn((value) => value),
+  runOnJS: vi.fn((fn) => fn),
 }));
 
 // Mock react-native-safe-area-context
