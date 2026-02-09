@@ -196,6 +196,131 @@ public extension GraphDB {
     }
 }
 
+// MARK: - GraphDBProvider Protocol
+
+/// Configuration options for database initialization.
+/// Mirrors TypeScript `GraphDBProviderConfig` in packages/core/src/providers/graph-db-provider.ts.
+public struct GraphDBProviderConfig {
+    /// Path to the database file or directory.
+    /// For iOS: typically a path within the app's Documents or Library directory.
+    public let dbPath: String?
+
+    /// Whether to run migrations automatically on initialize.
+    /// Default: true
+    public let runMigrations: Bool
+
+    /// Additional platform-specific options.
+    public let options: [String: Any]?
+
+    public init(
+        dbPath: String? = nil,
+        runMigrations: Bool = true,
+        options: [String: Any]? = nil
+    ) {
+        self.dbPath = dbPath
+        self.runMigrations = runMigrations
+        self.options = options
+    }
+}
+
+/// Result of database initialization.
+/// Mirrors TypeScript `GraphDBProviderInitResult` in packages/core/src/providers/graph-db-provider.ts.
+public struct GraphDBProviderInitResult {
+    /// Whether initialization was successful.
+    public let success: Bool
+
+    /// Schema version after initialization (post-migrations).
+    public let schemaVersion: Int?
+
+    /// Error message if initialization failed.
+    public let error: String?
+
+    /// Number of migrations applied during initialization.
+    public let migrationsApplied: Int?
+
+    public init(
+        success: Bool,
+        schemaVersion: Int? = nil,
+        error: String? = nil,
+        migrationsApplied: Int? = nil
+    ) {
+        self.success = success
+        self.schemaVersion = schemaVersion
+        self.error = error
+        self.migrationsApplied = migrationsApplied
+    }
+}
+
+/// Platform-agnostic interface for database lifecycle management.
+/// Mirrors TypeScript `GraphDBProvider` in packages/core/src/providers/graph-db-provider.ts.
+///
+/// Implementations of this protocol handle:
+/// 1. Database initialization (opening connection, running migrations)
+/// 2. Providing access to the GraphDB instance
+/// 3. Cleanup on shutdown (closing connections, releasing resources)
+///
+/// The provider follows a lifecycle:
+/// - Created (not initialized)
+/// - Initialized (ready for use)
+/// - Closed (no longer usable)
+///
+/// Calling `getDatabase()` before `initialize()` or after `close()` throws an error.
+public protocol GraphDBProvider: AnyObject {
+
+    /// Initialize the database connection and run migrations if configured.
+    ///
+    /// This method must be called before `getDatabase()`.
+    /// Calling `initialize()` multiple times is safe; subsequent calls are no-ops.
+    ///
+    /// - Parameter config: Configuration options for initialization
+    /// - Returns: Result indicating success/failure and metadata
+    /// - Note: Never throws; errors are returned in the result object
+    func initialize(config: GraphDBProviderConfig?) async -> GraphDBProviderInitResult
+
+    /// Get the GraphDB instance for executing queries and mutations.
+    ///
+    /// - Returns: The initialized GraphDB instance
+    /// - Throws: `GraphDBProviderError.notInitialized` if called before `initialize()`
+    /// - Throws: `GraphDBProviderError.alreadyClosed` if called after `close()`
+    func getDatabase() throws -> GraphDB
+
+    /// Check if the provider has been initialized and is ready for use.
+    ///
+    /// - Returns: `true` if `initialize()` has been called successfully
+    func isInitialized() -> Bool
+
+    /// Close the database connection and release resources.
+    ///
+    /// After calling `close()`, the provider cannot be used again.
+    /// Calling `close()` multiple times is safe; subsequent calls are no-ops.
+    ///
+    /// - Returns: Resolves when cleanup is complete
+    func close() async
+
+    /// Get the current schema version of the database.
+    ///
+    /// - Returns: The schema version, or `nil` if not initialized
+    func getSchemaVersion() -> Int?
+}
+
+/// Errors specific to GraphDBProvider operations.
+public enum GraphDBProviderError: Error, LocalizedError {
+    case notInitialized
+    case alreadyClosed
+    case initializationFailed(String)
+
+    public var errorDescription: String? {
+        switch self {
+        case .notInitialized:
+            return "Provider has not been initialized. Call initialize() first."
+        case .alreadyClosed:
+            return "Provider has been closed and cannot be used."
+        case .initializationFailed(let reason):
+            return "Initialization failed: \(reason)"
+        }
+    }
+}
+
 // MARK: - Errors
 
 /// Errors that can occur during GraphDB operations.
