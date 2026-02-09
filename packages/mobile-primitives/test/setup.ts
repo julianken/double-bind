@@ -45,6 +45,7 @@ vi.mock('react-native', () => ({
   View: 'View',
   Text: 'Text',
   ScrollView: 'ScrollView',
+  FlatList: 'FlatList',
   TouchableOpacity: 'TouchableOpacity',
   ActivityIndicator: 'ActivityIndicator',
   RefreshControl: 'RefreshControl',
@@ -79,4 +80,21 @@ vi.mock('react-native-safe-area-context', () => ({
     bottom: 34,
     left: 0,
   })),
+}));
+
+// Mock react-native-gesture-handler
+vi.mock('react-native-gesture-handler', () => ({
+  Pressable: 'Pressable',
+  GestureDetector: 'GestureDetector',
+  Gesture: {
+    Tap: () => ({
+      numberOfTaps: () => ({ maxDuration: () => ({ onEnd: () => ({}) }) }),
+      requireExternalGestureToFail: () => {},
+    }),
+    LongPress: () => ({
+      minDuration: () => ({ maxDistance: () => ({ onEnd: () => ({}) }) }),
+    }),
+    Exclusive: (...args: unknown[]) => args,
+  },
+  FlatList: 'FlatList',
 }));

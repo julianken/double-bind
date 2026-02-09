@@ -11,6 +11,7 @@
 // Block Components
 export { BlockView, type BlockViewProps } from './BlockView';
 export { BlockList, type BlockListProps, type BlockListItem } from './BlockList';
+export { BlockReference, type BlockReferenceProps } from './BlockReference';
 
 // Layout components and utilities
 export * from './layout';
