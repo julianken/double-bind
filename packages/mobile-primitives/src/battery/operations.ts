@@ -34,7 +34,7 @@ export function debounce<T extends (...args: unknown[]) => unknown>(
   fn: T,
   wait: number
 ): (...args: Parameters<T>) => void {
-  let timeoutId: NodeJS.Timeout | undefined;
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
 
   return function debounced(...args: Parameters<T>) {
     if (timeoutId) {
@@ -59,7 +59,7 @@ export function debounceAsync<T extends (...args: unknown[]) => Promise<unknown>
   fn: T,
   wait: number
 ): ((...args: Parameters<T>) => Promise<ReturnType<T>>) & { cancel: () => void } {
-  let timeoutId: NodeJS.Timeout | undefined;
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
   let resolvers: Array<{
     resolve: (value: ReturnType<T>) => void;
     reject: (reason: unknown) => void;
@@ -153,7 +153,7 @@ export function createBatcher<T>(
   size: () => number;
 } {
   let batch: T[] = [];
-  let timeoutId: NodeJS.Timeout | undefined;
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
   let processing = false;
   let pendingResolvers: Array<{
     resolve: () => void;
@@ -165,12 +165,13 @@ export function createBatcher<T>(
   /**
    * Process the current batch.
    */
-  async function processBatch(): Promise<void> {
+  async function processBatch(force = false): Promise<void> {
     if (processing || batch.length === 0) {
       return;
     }
 
-    if (batch.length < minBatchSize && batch.length < options.maxBatchSize) {
+    // Don't process if minBatchSize not met, unless forced (flush) or maxBatchSize reached
+    if (!force && batch.length < minBatchSize && batch.length < options.maxBatchSize) {
       // Not enough items yet, wait longer
       return;
     }
@@ -223,7 +224,11 @@ export function createBatcher<T>(
       // Process immediately if batch is full
       if (batch.length >= options.maxBatchSize) {
         processBatch();
-      } else if (!timeoutId) {
+      } else if (batch.length >= minBatchSize && !timeoutId) {
+        // Start timer when minBatchSize is reached
+        scheduleNextBatch();
+      } else if (minBatchSize === 1 && !timeoutId) {
+        // For minBatchSize=1, schedule on first item
         scheduleNextBatch();
       }
     });
@@ -237,7 +242,7 @@ export function createBatcher<T>(
       clearTimeout(timeoutId);
       timeoutId = undefined;
     }
-    await processBatch();
+    await processBatch(true);
   }
 
   /**
@@ -294,7 +299,7 @@ export function throttle<T extends (...args: unknown[]) => unknown>(
   limit: number
 ): (...args: Parameters<T>) => void {
   let lastRun = 0;
-  let timeoutId: NodeJS.Timeout | undefined;
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
 
   return function throttled(...args: Parameters<T>) {
     const now = Date.now();
@@ -333,14 +338,17 @@ export function rateLimit<T extends (...args: unknown[]) => Promise<unknown>>(
   limit: number
 ): (...args: Parameters<T>) => Promise<ReturnType<T>> {
   let lastRun = 0;
-  let queue: Array<{
+  const queue: Array<{
     args: Parameters<T>;
     resolve: (value: ReturnType<T>) => void;
     reject: (reason: unknown) => void;
   }> = [];
   let processing = false;
+  let scheduled = false;
 
-  async function processQueue(): Promise<void> {
+  async function processNext(): Promise<void> {
+    scheduled = false;
+
     if (processing || queue.length === 0) {
       return;
     }
@@ -348,9 +356,12 @@ export function rateLimit<T extends (...args: unknown[]) => Promise<unknown>>(
     const now = Date.now();
     const timeSinceLastRun = now - lastRun;
 
-    if (timeSinceLastRun < limit) {
-      // Wait before processing
-      setTimeout(processQueue, limit - timeSinceLastRun);
+    if (lastRun > 0 && timeSinceLastRun < limit) {
+      // Need to wait before processing
+      if (!scheduled) {
+        scheduled = true;
+        setTimeout(processNext, limit - timeSinceLastRun);
+      }
       return;
     }
 
@@ -366,8 +377,10 @@ export function rateLimit<T extends (...args: unknown[]) => Promise<unknown>>(
     } finally {
       processing = false;
 
-      if (queue.length > 0) {
-        setTimeout(processQueue, limit);
+      // Schedule processing of next item if there are any
+      if (queue.length > 0 && !scheduled) {
+        scheduled = true;
+        setTimeout(processNext, limit);
       }
     }
   }
@@ -375,7 +388,11 @@ export function rateLimit<T extends (...args: unknown[]) => Promise<unknown>>(
   return function rateLimited(...args: Parameters<T>): Promise<ReturnType<T>> {
     return new Promise((resolve, reject) => {
       queue.push({ args, resolve, reject });
-      processQueue();
+
+      // Try to schedule processing if not already processing or scheduled
+      if (!processing && !scheduled) {
+        processNext();
+      }
     });
   };
 }
