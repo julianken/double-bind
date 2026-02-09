@@ -166,8 +166,7 @@ function useSidebarKeyboard() {
 
 const GRAPH_SECTION_STORAGE_KEY = 'sidebar-graph-collapsed';
 const GRAPH_HOPS = 2;
-const GRAPH_WIDTH = 220;
-const GRAPH_HEIGHT = 180;
+const MIN_GRAPH_HEIGHT = 120; // Minimum height before graph becomes unusable
 
 interface SidebarGraphSectionProps {
   /** Callback when a node is clicked for navigation */
@@ -191,6 +190,34 @@ function SidebarGraphSection({ onNavigate }: SidebarGraphSectionProps) {
       return false;
     }
   });
+
+  // Dynamic sizing with ResizeObserver
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [dimensions, setDimensions] = useState<{ width: number; height: number } | null>(null);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    // Get initial dimensions synchronously
+    const rect = container.getBoundingClientRect();
+    if (rect.width > 0 && rect.height >= MIN_GRAPH_HEIGHT) {
+      setDimensions({ width: rect.width, height: rect.height });
+    }
+
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (entry) {
+        const { width, height } = entry.contentRect;
+        if (width > 0 && height >= MIN_GRAPH_HEIGHT) {
+          setDimensions({ width, height });
+        }
+      }
+    });
+
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, [isCollapsed]); // Re-observe when collapsed state changes
 
   const { nodes, edges, isLoading } = useNeighborhood(currentPageId, GRAPH_HOPS);
 
@@ -222,7 +249,6 @@ function SidebarGraphSection({ onNavigate }: SidebarGraphSectionProps) {
         <div
           className={styles.graphLoading}
           data-testid="sidebar-graph-loading"
-          style={{ height: GRAPH_HEIGHT }}
         >
           Loading graph...
         </div>
@@ -235,7 +261,6 @@ function SidebarGraphSection({ onNavigate }: SidebarGraphSectionProps) {
         <div
           className={styles.graphIsolated}
           data-testid="sidebar-graph-isolated"
-          style={{ height: GRAPH_HEIGHT }}
         >
           No connections
         </div>
@@ -243,15 +268,17 @@ function SidebarGraphSection({ onNavigate }: SidebarGraphSectionProps) {
     }
 
     return (
-      <div className={styles.graphContent}>
-        <MiniGraph
-          centerNodeId={currentPageId}
-          nodes={nodes}
-          edges={edges}
-          width={GRAPH_WIDTH}
-          height={GRAPH_HEIGHT}
-          onNodeClick={onNavigate}
-        />
+      <div ref={containerRef} className={styles.graphContent}>
+        {dimensions && (
+          <MiniGraph
+            centerNodeId={currentPageId}
+            nodes={nodes}
+            edges={edges}
+            width={dimensions.width}
+            height={dimensions.height}
+            onNodeClick={onNavigate}
+          />
+        )}
       </div>
     );
   };
@@ -276,7 +303,7 @@ function SidebarGraphSection({ onNavigate }: SidebarGraphSectionProps) {
         </span>
       </button>
       {!isCollapsed && (
-        <div id="sidebar-graph-content" data-testid="sidebar-graph-content">
+        <div id="sidebar-graph-content" data-testid="sidebar-graph-content" style={{ display: 'flex', flex: 1, minHeight: 0 }}>
           {renderContent()}
         </div>
       )}

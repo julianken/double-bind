@@ -130,6 +130,10 @@
  * ============================================================================ */
 
 .graphSection {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0; /* Allow shrinking below content size */
   border-top: 1px solid var(--border-default);
   margin-top: var(--space-2);
 }
@@ -164,7 +168,10 @@
 
 .graphContent {
   display: flex;
+  flex: 1;
+  min-height: 0;
   justify-content: center;
+  align-items: center;
   padding: var(--space-2) 0;
 }
 
@@ -172,20 +179,13 @@
 .graphLoading,
 .graphIsolated {
   display: flex;
+  flex: 1;
   align-items: center;
   justify-content: center;
   padding: var(--space-3);
   color: var(--text-muted);
   font-size: var(--text-xs);
   text-align: center;
-}
-
-.graphLoading {
-  height: 180px;
-}
-
-.graphIsolated {
-  height: 180px;
 }
 
 /* ============================================================================
