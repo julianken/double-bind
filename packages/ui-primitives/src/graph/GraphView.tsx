@@ -140,9 +140,6 @@ const HIGHLIGHT_RADIUS_MULTIPLIER = 1.5;
 /** Arrow head length in pixels */
 const ARROW_LENGTH = 4.5;
 
-/** Arrow position relative to target (0=source, 1=target) */
-const ARROW_REL_POS = 1.25;
-
 /** Curvature for bidirectional links to separate arrows */
 const BIDIRECTIONAL_CURVATURE = 0.15;
 
@@ -159,6 +156,53 @@ const COMMUNITY_COLORS: readonly string[] = [
   '#84cc16', // lime
   '#06b6d4', // cyan
 ] as const;
+
+// ============================================================================
+// Helper Functions
+// ============================================================================
+
+/**
+ * Calculates the relative position (0-1) where an arrow should end along a link.
+ * Adjusts arrow position to stop at the edge of the target node, accounting for
+ * variable node sizes (PageRank-based sizing, highlighted nodes).
+ *
+ * @param link - The link object containing source and target nodes
+ * @param getNodeRadius - Function to get the radius of a node
+ * @returns A value between 0 (at source) and 1 (at target center), representing
+ *          where the arrow should end. Returns a value < 1 to stop at the target's edge.
+ *
+ * @example
+ * // For a link where target has 15px radius and nodes are 100px apart:
+ * // Arrow will stop at position 0.85 (100-15)/100
+ * calculateArrowPosition(link, getNodeRadius)
+ */
+function calculateArrowPosition(
+  link: InternalLink,
+  getNodeRadius: (node: InternalNode) => number
+): number {
+  const targetNode = typeof link.target === 'object' ? link.target : null;
+  const sourceNode = typeof link.source === 'object' ? link.source : null;
+
+  // Fallback if nodes aren't resolved objects yet
+  if (!targetNode || !sourceNode) return 1;
+
+  const targetRadius = getNodeRadius(targetNode);
+
+  // Calculate distance between source and target
+  const dx = (targetNode.x ?? 0) - (sourceNode.x ?? 0);
+  const dy = (targetNode.y ?? 0) - (sourceNode.y ?? 0);
+  const distance = Math.sqrt(dx * dx + dy * dy);
+
+  // Avoid division by zero for overlapping nodes
+  if (distance < 0.001) return 1;
+
+  // Calculate position where arrow should stop (at edge of target node)
+  // Position = 1 - (radius / distance)
+  const relPos = 1 - (targetRadius / distance);
+
+  // Clamp to valid range [0, 1]
+  return Math.min(1, Math.max(0, relPos));
+}
 
 // ============================================================================
 // Internal Types
@@ -412,7 +456,9 @@ export const GraphView = memo(
           linkColor={() => EDGE_COLOR}
           linkWidth={1}
           linkDirectionalArrowLength={ARROW_LENGTH}
-          linkDirectionalArrowRelPos={ARROW_REL_POS}
+          linkDirectionalArrowRelPos={(link: InternalLink) =>
+            calculateArrowPosition(link, getNodeRadius)
+          }
           linkDirectionalArrowColor={() => EDGE_COLOR}
           linkCurvature={(link: InternalLink) => {
             // For bidirectional links, curve slightly to separate the arrows

@@ -155,6 +155,53 @@ const SIZES = {
 } as const;
 
 // ============================================================================
+// Helper Functions
+// ============================================================================
+
+/**
+ * Calculates the relative position (0-1) where an arrow should end along a link.
+ * Adjusts arrow position to stop at the edge of the target node, accounting for
+ * variable node sizes.
+ *
+ * @param link - The link object containing source and target nodes
+ * @param getNodeRadius - Function to get the radius of a node
+ * @returns A value between 0 (at source) and 1 (at target center), representing
+ *          where the arrow should end. Returns a value < 1 to stop at the target's edge.
+ *
+ * @example
+ * // For a link where target has 8px radius and nodes are 100px apart:
+ * // Arrow will stop at position 0.92 (100-8)/100
+ * calculateArrowPosition(link, (node) => node.isCenter ? 8 : 5)
+ */
+function calculateArrowPosition(
+  link: GraphLink,
+  getNodeRadius: (node: GraphNode) => number
+): number {
+  const targetNode = typeof link.target === 'object' ? link.target : null;
+  const sourceNode = typeof link.source === 'object' ? link.source : null;
+
+  // Fallback if nodes aren't resolved objects yet
+  if (!targetNode || !sourceNode) return 1;
+
+  const targetRadius = getNodeRadius(targetNode);
+
+  // Calculate distance between source and target
+  const dx = (targetNode.x ?? 0) - (sourceNode.x ?? 0);
+  const dy = (targetNode.y ?? 0) - (sourceNode.y ?? 0);
+  const distance = Math.sqrt(dx * dx + dy * dy);
+
+  // Avoid division by zero for overlapping nodes
+  if (distance < 0.001) return 1;
+
+  // Calculate position where arrow should stop (at edge of target node)
+  // Position = 1 - (radius / distance)
+  const relPos = 1 - (targetRadius / distance);
+
+  // Clamp to valid range [0, 1]
+  return Math.min(1, Math.max(0, relPos));
+}
+
+// ============================================================================
 // Styles
 // ============================================================================
 
@@ -353,7 +400,11 @@ export const MiniGraph = memo(function MiniGraph({
         linkColor={() => linkColor}
         linkWidth={SIZES.linkWidth}
         linkDirectionalArrowLength={SIZES.arrowSize}
-        linkDirectionalArrowRelPos={1}
+        linkDirectionalArrowRelPos={(link: GraphLink) =>
+          calculateArrowPosition(link, (node) =>
+            node.isCenter ? SIZES.centerNodeRadius : SIZES.normalNodeRadius
+          )
+        }
         linkDirectionalArrowColor={() => linkColor}
         linkCurvature={(link: GraphLink) => link.isBidirectional ? 0.15 : 0}
         // Centering and zoom
