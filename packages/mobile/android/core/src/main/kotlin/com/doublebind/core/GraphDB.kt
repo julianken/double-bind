@@ -1,25 +1,22 @@
 /**
- * GraphDB interface for Android.
+ * GraphDB interface and result types for CozoDB interactions.
  *
- * This interface mirrors the TypeScript GraphDB interface from packages/types/src/graph-db.ts
- * to ensure cross-platform compatibility. The implementation uses CozoDB with SQLite storage.
+ * This Kotlin interface mirrors the TypeScript GraphDB interface defined in
+ * packages/types/src/graph-db.ts. All implementations must be thread-safe.
  *
- * Thread Safety: All methods are suspend functions and should be called from a coroutine context.
- * Database operations are performed on Dispatchers.IO to avoid blocking the main thread.
- *
- * Resource Management: Implementations must call close() when the database is no longer needed
- * to release native resources. Use Kotlin's `use {}` block for automatic cleanup.
+ * @see <a href="../../../../../../types/src/graph-db.ts">TypeScript GraphDB</a>
  */
 package com.doublebind.core
 
-import kotlinx.serialization.Serializable
 import java.io.Closeable
 
 /**
  * Result from a read-only query operation.
  * Headers contain column names, rows contain the data.
+ *
+ * @property headers Column names from the query result
+ * @property rows Data rows, where each row is a list of values
  */
-@Serializable
 data class QueryResult<T>(
     val headers: List<String>,
     val rows: List<List<T>>
@@ -29,43 +26,39 @@ data class QueryResult<T>(
  * Result from a mutation operation (insert, update, delete).
  * Structure matches QueryResult but mutations typically return
  * operation metadata rather than domain data.
+ *
+ * @property headers Column names from the mutation result
+ * @property rows Data rows containing operation metadata
  */
-@Serializable
 data class MutationResult(
     val headers: List<String>,
-    val rows: List<List<String>>
+    val rows: List<List<Any?>>
 )
 
 /**
  * Configuration for database initialization.
  * Platform implementations use this to create appropriate connections.
+ *
+ * @property engine Storage engine to use:
+ *   - "sqlite": Universal embedded storage (recommended for mobile)
+ *   - "mem": In-memory, non-persistent (testing)
+ * @property path Path to the database file. Ignored for "mem" engine.
  */
-@Serializable
 data class GraphDBConfig(
-    /**
-     * Storage engine to use.
-     * - "sqlite": Universal embedded storage (recommended for mobile)
-     * - "mem": In-memory, non-persistent (testing)
-     *
-     * Note: RocksDB is not available on Android without custom NDK builds.
-     */
     val engine: String,
-
-    /**
-     * Path to the database file.
-     * Ignored for "mem" engine.
-     */
     val path: String
 )
 
 /**
  * Database interface for graph operations.
- *
- * Abstracts CozoDB to allow mocking in tests and ensure cross-platform
- * compatibility (desktop, iOS, Android).
+ * Abstracts CozoDB to allow mocking in tests and cross-platform
+ * implementations (desktop, iOS, Android).
  *
  * All implementations must be thread-safe. Query results should
  * be considered immutable after return.
+ *
+ * IMPORTANT: The [close] method MUST be called when done with the database.
+ * Use Kotlin's [use] block pattern for automatic resource cleanup.
  */
 interface GraphDB : Closeable {
 
@@ -125,6 +118,9 @@ interface GraphDB : Closeable {
      * Restore the database from a backup file.
      * The current database must be empty (no relations with data).
      *
+     * The backup format is portable across storage engines:
+     * a RocksDB backup can be restored to SQLite and vice versa.
+     *
      * @param path File path to the backup
      */
     suspend fun restore(path: String)
@@ -140,36 +136,42 @@ interface GraphDB : Closeable {
      */
     suspend fun importRelationsFromBackup(path: String, relations: List<String>)
 
-    // ─────────────────────────────────────────────────────────────────────────────
-    // Mobile Lifecycle Methods
-    // These methods support Android lifecycle events.
-    // ─────────────────────────────────────────────────────────────────────────────
+    // -------------------------------------------------------------------------
+    // Mobile Lifecycle Methods (optional implementations)
+    // These methods support mobile platform lifecycle events.
+    // -------------------------------------------------------------------------
 
     /**
-     * Called when the app transitions to the background.
+     * Called when the app transitions to the background (mobile).
      * Implementations should flush pending writes and prepare for suspension.
      * This ensures data integrity if the OS terminates the app while backgrounded.
      *
-     * Called during onPause/onStop in Activity lifecycle.
+     * Android: Called during onPause/onStop
      */
-    suspend fun suspend()
+    suspend fun suspend() {
+        // Default no-op implementation
+    }
 
     /**
-     * Called when the app returns to the foreground.
+     * Called when the app returns to the foreground (mobile).
      * Implementations may refresh connections or validate database state.
      *
-     * Called during onResume in Activity lifecycle.
+     * Android: Called during onResume
      */
-    suspend fun resume()
+    suspend fun resume() {
+        // Default no-op implementation
+    }
 
     /**
-     * Called when the system signals memory pressure.
+     * Called when the system signals memory pressure (mobile).
      * Implementations should release non-essential caches and resources.
      * This helps prevent the OS from terminating the app.
      *
-     * Called during onTrimMemory with TRIM_MEMORY_RUNNING_LOW or higher.
+     * Android: Called during onTrimMemory with TRIM_MEMORY_RUNNING_LOW or higher
      */
-    suspend fun onLowMemory()
+    suspend fun onLowMemory() {
+        // Default no-op implementation
+    }
 
     /**
      * Close the database and release native resources.

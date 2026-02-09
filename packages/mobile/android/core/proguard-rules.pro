@@ -1,6 +1,20 @@
-# ProGuard rules for double-bind-core Android library
-# Note: Consumer-facing rules are in consumer-rules.pro and are
-# automatically applied when this library is consumed as a dependency.
+# CozoDB JNI - Keep native methods
+-keep class org.cozodb.CozoDB { *; }
 
-# This file is for library-internal build rules only.
-# Currently empty as all rules needed by consumers are in consumer-rules.pro.
+# Keep GraphDB interface and implementation
+-keep class com.doublebind.core.GraphDB { *; }
+-keep class com.doublebind.core.CozoGraphDB { *; }
+-keep class com.doublebind.core.QueryResult { *; }
+-keep class com.doublebind.core.MutationResult { *; }
+-keep class com.doublebind.core.GraphDBConfig { *; }
+-keep class com.doublebind.core.CozoDBException { *; }
+
+# Kotlinx serialization
+-keepattributes *Annotation*, InnerClasses
+-dontnote kotlinx.serialization.AnnotationsKt
+-keepclassmembers class kotlinx.serialization.json.** {
+    *** Companion;
+}
+-keepclasseswithmembers class kotlinx.serialization.json.** {
+    kotlinx.serialization.KSerializer serializer(...);
+}
