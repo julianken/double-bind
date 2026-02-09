@@ -13,10 +13,21 @@ export { BlockView, type BlockViewProps } from './BlockView';
 export { EditableBlockView, type EditableBlockViewProps } from './EditableBlockView';
 export { BlockList, type BlockListProps, type BlockListItem } from './BlockList';
 export { BlockReference, type BlockReferenceProps } from './BlockReference';
+export { EditableBlockView, type EditableBlockViewProps } from './EditableBlockView';
 
 // Rich Text Components
 export { WikiLink, type WikiLinkProps } from './WikiLink';
 export { RichText, type RichTextProps } from './RichText';
+
+// Hooks
+export {
+  useBlockOperations,
+  type BlockService,
+  type BlockOperationsResult,
+  type CreateBlockOptions,
+  type UndoableOperation,
+  type OperationType,
+} from './hooks/useBlockOperations';
 
 // Layout components and utilities
 export * from './layout';

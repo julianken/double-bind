@@ -320,6 +320,9 @@ importers:
       react-native-gesture-handler:
         specifier: ^2.14.0
         version: 2.30.0(react-native@0.73.11(@babel/core@7.29.0)(@babel/preset-env@7.29.0(@babel/core@7.29.0))(react@18.3.1))(react@18.3.1)
+      react-native-reanimated:
+        specifier: ^3.6.0
+        version: 3.19.5(@babel/core@7.29.0)(react-native@0.73.11(@babel/core@7.29.0)(@babel/preset-env@7.29.0(@babel/core@7.29.0))(react@18.3.1))(react@18.3.1)
       react-test-renderer:
         specifier: ^18.2.0
         version: 18.3.1(react@18.3.1)
@@ -4354,6 +4357,19 @@ packages:
   react-native-gesture-handler@2.30.0:
     resolution: {integrity: sha512-5YsnKHGa0X9C8lb5oCnKm0fLUPM6CRduvUUw2Bav4RIj/C3HcFh4RIUnF8wgG6JQWCL1//gRx4v+LVWgcIQdGA==}
     peerDependencies:
+      react: '*'
+      react-native: '*'
+
+  react-native-is-edge-to-edge@1.1.7:
+    resolution: {integrity: sha512-EH6i7E8epJGIcu7KpfXYXiV2JFIYITtq+rVS8uEb+92naMRBdxhTuS8Wn2Q7j9sqyO0B+Xbaaf9VdipIAmGW4w==}
+    peerDependencies:
+      react: '*'
+      react-native: '*'
+
+  react-native-reanimated@3.19.5:
+    resolution: {integrity: sha512-bd4AwIkBAaY4BjrgpSoKjEaRG/tXD756F5nGuiH5IMBSKN8tRdUEA8hWZCyIo/R6/kha/tVSoCqodVUACh7ZWw==}
+    peerDependencies:
+      '@babel/core': ^7.0.0-0
       react: '*'
       react-native: '*'
 
@@ -9524,6 +9540,31 @@ snapshots:
       invariant: 2.2.4
       react: 18.3.1
       react-native: 0.73.11(@babel/core@7.29.0)(@babel/preset-env@7.29.0(@babel/core@7.29.0))(react@18.3.1)
+
+  react-native-is-edge-to-edge@1.1.7(react-native@0.73.11(@babel/core@7.29.0)(@babel/preset-env@7.29.0(@babel/core@7.29.0))(react@18.3.1))(react@18.3.1):
+    dependencies:
+      react: 18.3.1
+      react-native: 0.73.11(@babel/core@7.29.0)(@babel/preset-env@7.29.0(@babel/core@7.29.0))(react@18.3.1)
+
+  react-native-reanimated@3.19.5(@babel/core@7.29.0)(react-native@0.73.11(@babel/core@7.29.0)(@babel/preset-env@7.29.0(@babel/core@7.29.0))(react@18.3.1))(react@18.3.1):
+    dependencies:
+      '@babel/core': 7.29.0
+      '@babel/plugin-transform-arrow-functions': 7.27.1(@babel/core@7.29.0)
+      '@babel/plugin-transform-class-properties': 7.28.6(@babel/core@7.29.0)
+      '@babel/plugin-transform-classes': 7.28.6(@babel/core@7.29.0)
+      '@babel/plugin-transform-nullish-coalescing-operator': 7.28.6(@babel/core@7.29.0)
+      '@babel/plugin-transform-optional-chaining': 7.28.6(@babel/core@7.29.0)
+      '@babel/plugin-transform-shorthand-properties': 7.27.1(@babel/core@7.29.0)
+      '@babel/plugin-transform-template-literals': 7.27.1(@babel/core@7.29.0)
+      '@babel/plugin-transform-unicode-regex': 7.27.1(@babel/core@7.29.0)
+      '@babel/preset-typescript': 7.28.5(@babel/core@7.29.0)
+      convert-source-map: 2.0.0
+      invariant: 2.2.4
+      react: 18.3.1
+      react-native: 0.73.11(@babel/core@7.29.0)(@babel/preset-env@7.29.0(@babel/core@7.29.0))(react@18.3.1)
+      react-native-is-edge-to-edge: 1.1.7(react-native@0.73.11(@babel/core@7.29.0)(@babel/preset-env@7.29.0(@babel/core@7.29.0))(react@18.3.1))(react@18.3.1)
+    transitivePeerDependencies:
+      - supports-color
 
   react-native-safe-area-context@4.14.1(react-native@0.73.11(@babel/core@7.29.0)(@babel/preset-env@7.29.0(@babel/core@7.29.0))(react@18.3.1))(react@18.3.1):
     dependencies:
