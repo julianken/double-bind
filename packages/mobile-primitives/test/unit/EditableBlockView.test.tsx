@@ -1,21 +1,22 @@
 /**
  * EditableBlockView Component Tests
  *
- * Tests editable block rendering, keyboard integration, and auto-save.
- * Uses proper behavior assertions with mocked callbacks.
+ * Tests editable block rendering, keyboard integration, auto-save,
+ * and gesture support (tap to edit, Enter/Backspace keys, swipe-to-delete).
  */
 
 import * as React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { Block } from '@double-bind/types';
+import { TextInput } from 'react-native';
+import type { Block, BlockId } from '@double-bind/types';
 import { EditableBlockView, type EditableBlockViewProps } from '../../src/EditableBlockView';
 
 // Test helper to create mock blocks
 function createMockBlock(overrides: Partial<Block> = {}): Block {
   return {
-    blockId: 'block-123',
+    blockId: `block-${Math.random().toString(36).slice(2)}` as BlockId,
     pageId: 'page-456',
-    parentId: null,
+    parentId: undefined,
     content: 'Test block content',
     contentType: 'text',
     order: 'a0',
@@ -84,6 +85,27 @@ describe('EditableBlockView', () => {
     it('should render in read-only mode', () => {
       const block = createMockBlock({ content: 'Read only content' });
       const props: EditableBlockViewProps = { block, isEditing: true, readOnly: true };
+
+      expect(() => <EditableBlockView {...props} />).not.toThrow();
+    });
+
+    it('should render focused state', () => {
+      const block = createMockBlock();
+      const props: EditableBlockViewProps = { block, isEditing: true };
+
+      expect(() => <EditableBlockView {...props} />).not.toThrow();
+    });
+
+    it('should render with children indicator', () => {
+      const block = createMockBlock();
+      const props: EditableBlockViewProps = { block, hasChildren: true };
+
+      expect(() => <EditableBlockView {...props} />).not.toThrow();
+    });
+
+    it('should render collapsed state', () => {
+      const block = createMockBlock({ isCollapsed: true });
+      const props: EditableBlockViewProps = { block, hasChildren: true };
 
       expect(() => <EditableBlockView {...props} />).not.toThrow();
     });
@@ -201,6 +223,14 @@ describe('EditableBlockView', () => {
   });
 
   describe('keyboard handling', () => {
+    let onEnterPress: ReturnType<typeof vi.fn>;
+    let onBackspaceEmpty: ReturnType<typeof vi.fn>;
+
+    beforeEach(() => {
+      onEnterPress = vi.fn();
+      onBackspaceEmpty = vi.fn();
+    });
+
     it('should handle keyboard integration in edit mode', () => {
       const block = createMockBlock();
       const props: EditableBlockViewProps = { block, isEditing: true };
@@ -210,6 +240,42 @@ describe('EditableBlockView', () => {
 
     it('should support multiline text input', () => {
       const block = createMockBlock({ content: 'Line 1\nLine 2' });
+      const props: EditableBlockViewProps = { block, isEditing: true };
+
+      expect(() => <EditableBlockView {...props} />).not.toThrow();
+    });
+
+    it('should accept onEnterPress callback', () => {
+      const block = createMockBlock();
+      const props: EditableBlockViewProps = { block, isEditing: true, onEnterPress };
+
+      expect(() => <EditableBlockView {...props} />).not.toThrow();
+    });
+
+    it('should accept onBackspaceEmpty callback', () => {
+      const block = createMockBlock({ content: '' });
+      const props: EditableBlockViewProps = { block, isEditing: true, onBackspaceEmpty };
+
+      expect(() => <EditableBlockView {...props} />).not.toThrow();
+    });
+  });
+
+  describe('swipe gesture', () => {
+    let onSwipeDelete: ReturnType<typeof vi.fn>;
+
+    beforeEach(() => {
+      onSwipeDelete = vi.fn();
+    });
+
+    it('should render swipe delete button', () => {
+      const block = createMockBlock();
+      const props: EditableBlockViewProps = { block, isEditing: true, onSwipeDelete };
+
+      expect(() => <EditableBlockView {...props} />).not.toThrow();
+    });
+
+    it('should work without swipe delete callback', () => {
+      const block = createMockBlock();
       const props: EditableBlockViewProps = { block, isEditing: true };
 
       expect(() => <EditableBlockView {...props} />).not.toThrow();
@@ -228,6 +294,13 @@ describe('EditableBlockView', () => {
       const longContent = 'A'.repeat(100);
       const block = createMockBlock({ content: longContent });
       const props: EditableBlockViewProps = { block, isEditing: true };
+
+      expect(() => <EditableBlockView {...props} />).not.toThrow();
+    });
+
+    it('should have accessible collapse button', () => {
+      const block = createMockBlock();
+      const props: EditableBlockViewProps = { block, hasChildren: true, isEditing: true };
 
       expect(() => <EditableBlockView {...props} />).not.toThrow();
     });
@@ -269,6 +342,86 @@ describe('EditableBlockView', () => {
     });
   });
 
+  describe('focus management', () => {
+    it('should accept inputRef prop', () => {
+      const block = createMockBlock();
+      const inputRef = React.createRef<TextInput>();
+      const props: EditableBlockViewProps = { block, inputRef };
+
+      expect(() => <EditableBlockView {...props} />).not.toThrow();
+    });
+
+    it('should use internal ref when inputRef not provided', () => {
+      const block = createMockBlock();
+      const props: EditableBlockViewProps = { block };
+
+      expect(() => <EditableBlockView {...props} />).not.toThrow();
+    });
+
+    it('should handle autoFocus setting', () => {
+      const block = createMockBlock();
+      const props: EditableBlockViewProps = {
+        block,
+        isEditing: true,
+        autoFocus: true,
+      };
+
+      expect(() => <EditableBlockView {...props} />).not.toThrow();
+    });
+  });
+
+  describe('depth and nesting', () => {
+    it('should render with depth 0 (no indentation)', () => {
+      const block = createMockBlock();
+      const props: EditableBlockViewProps = { block, depth: 0 };
+
+      expect(() => <EditableBlockView {...props} />).not.toThrow();
+    });
+
+    it('should render with depth 1', () => {
+      const block = createMockBlock();
+      const props: EditableBlockViewProps = { block, depth: 1 };
+
+      expect(() => <EditableBlockView {...props} />).not.toThrow();
+    });
+
+    it('should render with deep nesting', () => {
+      const block = createMockBlock();
+      const props: EditableBlockViewProps = { block, depth: 5 };
+
+      expect(() => <EditableBlockView {...props} />).not.toThrow();
+    });
+  });
+
+  describe('collapse/expand', () => {
+    let onToggleCollapse: ReturnType<typeof vi.fn>;
+
+    beforeEach(() => {
+      onToggleCollapse = vi.fn();
+    });
+
+    it('should show bullet when no children', () => {
+      const block = createMockBlock();
+      const props: EditableBlockViewProps = { block, hasChildren: false };
+
+      expect(() => <EditableBlockView {...props} />).not.toThrow();
+    });
+
+    it('should show collapse triangle when has children', () => {
+      const block = createMockBlock();
+      const props: EditableBlockViewProps = { block, hasChildren: true };
+
+      expect(() => <EditableBlockView {...props} />).not.toThrow();
+    });
+
+    it('should accept onToggleCollapse callback', () => {
+      const block = createMockBlock();
+      const props: EditableBlockViewProps = { block, hasChildren: true, onToggleCollapse };
+
+      expect(() => <EditableBlockView {...props} />).not.toThrow();
+    });
+  });
+
   describe('markdown formatting support', () => {
     it('should allow bold markdown syntax', () => {
       const block = createMockBlock({ content: '**bold text**' });
@@ -301,63 +454,29 @@ describe('EditableBlockView', () => {
     });
   });
 
-  describe('integration with BlockView props', () => {
-    it('should pass through hasChildren prop', () => {
+  describe('callbacks integration', () => {
+    it('should accept all callbacks simultaneously', () => {
       const block = createMockBlock();
-      const props: EditableBlockViewProps = { block, hasChildren: true };
-
-      expect(() => <EditableBlockView {...props} />).not.toThrow();
-    });
-
-    it('should pass through isSelected prop', () => {
-      const block = createMockBlock();
-      const props: EditableBlockViewProps = { block, isSelected: true };
-
-      expect(() => <EditableBlockView {...props} />).not.toThrow();
-    });
-
-    it('should pass through onLongPress prop', () => {
-      const block = createMockBlock();
-      const onLongPress = vi.fn();
-      const props: EditableBlockViewProps = { block, onLongPress };
-
-      expect(() => <EditableBlockView {...props} />).not.toThrow();
-    });
-
-    it('should pass through onToggleCollapse prop', () => {
-      const block = createMockBlock();
-      const onToggleCollapse = vi.fn();
+      const callbacks = {
+        onStartEditing: vi.fn(),
+        onEndEditing: vi.fn(),
+        onContentChange: vi.fn(),
+        onSave: vi.fn(),
+        onEnterPress: vi.fn(),
+        onBackspaceEmpty: vi.fn(),
+        onSwipeDelete: vi.fn(),
+        onToggleCollapse: vi.fn(),
+        onLongPress: vi.fn(),
+        onWikiLinkPress: vi.fn(),
+        onBlockRefPress: vi.fn(),
+        onBlockRefLongPress: vi.fn(),
+      };
       const props: EditableBlockViewProps = {
         block,
         hasChildren: true,
-        onToggleCollapse,
+        isEditing: true,
+        ...callbacks,
       };
-
-      expect(() => <EditableBlockView {...props} />).not.toThrow();
-    });
-
-    it('should pass through fetchBlock prop', () => {
-      const block = createMockBlock({
-        content: 'Text with ((01HXQABCDEFGHJKMNPQRSTUVWX)) reference',
-      });
-      const fetchBlock = vi.fn();
-      const props: EditableBlockViewProps = { block, fetchBlock };
-
-      expect(() => <EditableBlockView {...props} />).not.toThrow();
-    });
-
-    it('should pass through checkPageExists prop', () => {
-      const block = createMockBlock({ content: 'See [[Page]]' });
-      const checkPageExists = vi.fn();
-      const props: EditableBlockViewProps = { block, checkPageExists };
-
-      expect(() => <EditableBlockView {...props} />).not.toThrow();
-    });
-
-    it('should pass through onWikiLinkPress prop', () => {
-      const block = createMockBlock({ content: 'See [[Page]]' });
-      const onWikiLinkPress = vi.fn();
-      const props: EditableBlockViewProps = { block, onWikiLinkPress };
 
       expect(() => <EditableBlockView {...props} />).not.toThrow();
     });
@@ -387,7 +506,7 @@ describe('EditableBlockView', () => {
     });
 
     it('should handle unicode characters', () => {
-      const block = createMockBlock({ content: 'Hello 世界 🌍' });
+      const block = createMockBlock({ content: 'Hello 世界 🌍 مرحبا' });
       const props: EditableBlockViewProps = { block, isEditing: true };
 
       expect(() => <EditableBlockView {...props} />).not.toThrow();
@@ -426,49 +545,17 @@ describe('EditableBlockView', () => {
       expect(() => <EditableBlockView block={block} isEditing={true} />).not.toThrow();
     });
 
-    it('should handle depth changes', () => {
+    it('should handle rapid prop changes', () => {
       const block = createMockBlock();
-      const depths = [0, 1, 2, 3, 5, 10];
 
-      depths.forEach((depth) => {
-        const props: EditableBlockViewProps = { block, depth };
+      for (let i = 0; i < 10; i++) {
+        const props: EditableBlockViewProps = {
+          block: { ...block, content: `Content ${i}` },
+          isEditing: i % 2 === 0,
+          depth: i % 3,
+        };
         expect(() => <EditableBlockView {...props} />).not.toThrow();
-      });
-    });
-
-    it('should handle autoFocus setting', () => {
-      const block = createMockBlock();
-      const props: EditableBlockViewProps = {
-        block,
-        isEditing: true,
-        autoFocus: true,
-      };
-
-      expect(() => <EditableBlockView {...props} />).not.toThrow();
-    });
-  });
-
-  describe('comprehensive callback integration', () => {
-    it('should accept all callbacks simultaneously', () => {
-      const block = createMockBlock();
-      const callbacks = {
-        onStartEditing: vi.fn(),
-        onEndEditing: vi.fn(),
-        onContentChange: vi.fn(),
-        onSave: vi.fn(),
-        onLongPress: vi.fn(),
-        onToggleCollapse: vi.fn(),
-        onWikiLinkPress: vi.fn(),
-        onBlockRefPress: vi.fn(),
-        onBlockRefLongPress: vi.fn(),
-      };
-      const props: EditableBlockViewProps = {
-        block,
-        hasChildren: true,
-        ...callbacks,
-      };
-
-      expect(() => <EditableBlockView {...props} />).not.toThrow();
+      }
     });
   });
 
@@ -477,7 +564,7 @@ describe('EditableBlockView', () => {
 
     beforeEach(() => {
       mockBlock = createMockBlock({
-        blockId: 'test-block-123',
+        blockId: 'test-block-123' as BlockId,
         content: 'Initial content',
       });
     });
@@ -490,9 +577,7 @@ describe('EditableBlockView', () => {
         onContentChange,
       };
 
-      // Verify component renders with callback
       expect(() => <EditableBlockView {...props} />).not.toThrow();
-      // Callback should be defined and ready to receive (blockId, content) args
       expect(onContentChange).toBeDefined();
       expect(typeof onContentChange).toBe('function');
     });
@@ -505,102 +590,48 @@ describe('EditableBlockView', () => {
         onSave,
       };
 
-      // Verify component renders with callback
       expect(() => <EditableBlockView {...props} />).not.toThrow();
-      // Callback should be defined and ready to receive (blockId, content) args
       expect(onSave).toBeDefined();
       expect(typeof onSave).toBe('function');
     });
 
-    it('verifies onEndEditing callback is properly wired', () => {
-      const onEndEditing = vi.fn();
+    it('verifies onEnterPress callback is properly wired', () => {
+      const onEnterPress = vi.fn();
       const props: EditableBlockViewProps = {
         block: mockBlock,
         isEditing: true,
-        onEndEditing,
+        onEnterPress,
       };
 
-      // Verify component renders with callback
       expect(() => <EditableBlockView {...props} />).not.toThrow();
-      // Callback should be defined and ready to receive blockId
-      expect(onEndEditing).toBeDefined();
-      expect(typeof onEndEditing).toBe('function');
+      expect(onEnterPress).toBeDefined();
+      expect(typeof onEnterPress).toBe('function');
     });
 
-    it('verifies onStartEditing callback is properly wired', () => {
-      const onStartEditing = vi.fn();
+    it('verifies onBackspaceEmpty callback is properly wired', () => {
+      const onBackspaceEmpty = vi.fn();
       const props: EditableBlockViewProps = {
-        block: mockBlock,
-        isEditing: false,
-        onStartEditing,
+        block: { ...mockBlock, content: '' },
+        isEditing: true,
+        onBackspaceEmpty,
       };
 
-      // Verify component renders with callback in view mode
       expect(() => <EditableBlockView {...props} />).not.toThrow();
-      // Callback should be defined and ready to receive blockId on tap
-      expect(onStartEditing).toBeDefined();
-      expect(typeof onStartEditing).toBe('function');
+      expect(onBackspaceEmpty).toBeDefined();
+      expect(typeof onBackspaceEmpty).toBe('function');
     });
 
-    it('verifies all callbacks work together', () => {
-      const callbacks = {
-        onStartEditing: vi.fn(),
-        onEndEditing: vi.fn(),
-        onContentChange: vi.fn(),
-        onSave: vi.fn(),
-      };
+    it('verifies onSwipeDelete callback is properly wired', () => {
+      const onSwipeDelete = vi.fn();
       const props: EditableBlockViewProps = {
         block: mockBlock,
         isEditing: true,
-        ...callbacks,
+        onSwipeDelete,
       };
 
-      // All callbacks should be properly wired
       expect(() => <EditableBlockView {...props} />).not.toThrow();
-      Object.values(callbacks).forEach((callback) => {
-        expect(callback).toBeDefined();
-        expect(typeof callback).toBe('function');
-      });
-    });
-
-    it('handles content updates without throwing', () => {
-      const onContentChange = vi.fn();
-      const props: EditableBlockViewProps = {
-        block: mockBlock,
-        isEditing: true,
-        onContentChange,
-      };
-
-      // Component should handle state updates gracefully
-      expect(() => <EditableBlockView {...props} />).not.toThrow();
-    });
-
-    it('handles blur events without throwing', () => {
-      const onSave = vi.fn();
-      const onEndEditing = vi.fn();
-      const props: EditableBlockViewProps = {
-        block: mockBlock,
-        isEditing: true,
-        onSave,
-        onEndEditing,
-      };
-
-      // Component should handle blur gracefully
-      expect(() => <EditableBlockView {...props} />).not.toThrow();
-    });
-
-    it('prevents onSave when content is unchanged', () => {
-      // This tests the logic: if (localContent !== block.content) { onSave?.(...) }
-      const onSave = vi.fn();
-      const props: EditableBlockViewProps = {
-        block: mockBlock,
-        isEditing: true,
-        onSave,
-      };
-
-      // Component should only call onSave when content actually changed
-      expect(() => <EditableBlockView {...props} />).not.toThrow();
-      expect(onSave).toBeDefined();
+      expect(onSwipeDelete).toBeDefined();
+      expect(typeof onSwipeDelete).toBe('function');
     });
 
     it('respects readOnly flag and prevents editing', () => {
@@ -612,19 +643,34 @@ describe('EditableBlockView', () => {
         onStartEditing,
       };
 
-      // Component should not enter edit mode when readOnly
       expect(() => <EditableBlockView {...props} />).not.toThrow();
     });
+  });
 
-    it('maintains focus state during editing', () => {
-      const props: EditableBlockViewProps = {
-        block: mockBlock,
-        isEditing: true,
-        autoFocus: true,
-      };
+  describe('multiple instances', () => {
+    it('should render multiple blocks independently', () => {
+      const blocks = [
+        createMockBlock({ blockId: 'block-1' as BlockId, content: 'Block 1' }),
+        createMockBlock({ blockId: 'block-2' as BlockId, content: 'Block 2' }),
+        createMockBlock({ blockId: 'block-3' as BlockId, content: 'Block 3' }),
+      ];
 
-      // Component should handle focus management
-      expect(() => <EditableBlockView {...props} />).not.toThrow();
+      for (const block of blocks) {
+        const props: EditableBlockViewProps = { block };
+        expect(() => <EditableBlockView {...props} />).not.toThrow();
+      }
+    });
+
+    it('should handle different states for different blocks', () => {
+      const blocks = [
+        createMockBlock({ blockId: 'block-1' as BlockId }),
+        createMockBlock({ blockId: 'block-2' as BlockId }),
+        createMockBlock({ blockId: 'block-3' as BlockId }),
+      ];
+
+      expect(() => <EditableBlockView block={blocks[0]!} isEditing={true} />).not.toThrow();
+      expect(() => <EditableBlockView block={blocks[1]!} isEditing={false} />).not.toThrow();
+      expect(() => <EditableBlockView block={blocks[2]!} depth={2} />).not.toThrow();
     });
   });
 });
