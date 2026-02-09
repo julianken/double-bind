@@ -61,6 +61,11 @@ describe('ConflictDetailView', () => {
       );
 
       expect(element).toBeDefined();
+      expect(element.props.conflict).toBe(conflict);
+      expect(element.props.onKeepLocal).toBe(onKeepLocal);
+      expect(element.props.onKeepRemote).toBe(onKeepRemote);
+      expect(element.props.onMergeLater).toBe(onMergeLater);
+      expect(element.props.onClose).toBe(onClose);
     });
 
     it('should render different conflict types', () => {
@@ -165,6 +170,11 @@ describe('ConflictDetailView', () => {
       );
 
       expect(element).toBeDefined();
+      expect(element.props.conflict.localVersion.snapshot).toHaveProperty('content');
+      expect(element.props.conflict.remoteVersion.snapshot).toHaveProperty('content');
+      expect((element.props.conflict.localVersion.snapshot as Record<string, string>).content).toBe(
+        'This is the local version'
+      );
     });
 
     it('should display remote version content', () => {
@@ -181,6 +191,7 @@ describe('ConflictDetailView', () => {
       );
 
       expect(element).toBeDefined();
+      expect(element.props.conflict.remoteVersion.snapshot).toHaveProperty('content');
     });
 
     it('should display timestamps for both versions', () => {

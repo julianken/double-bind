@@ -5,7 +5,7 @@
  */
 
 import * as React from 'react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import type { ConflictMetadata } from '@double-bind/types';
 import { ConflictListView } from '../../src/sync/ConflictListView';
 
@@ -38,23 +38,23 @@ describe('ConflictListView', () => {
     it('should render empty state when no conflicts', () => {
       const onConflictPress = vi.fn();
 
-      const element = (
-        <ConflictListView conflicts={[]} onConflictPress={onConflictPress} />
-      );
+      const element = <ConflictListView conflicts={[]} onConflictPress={onConflictPress} />;
 
+      // Should render without throwing
       expect(element).toBeDefined();
-      expect(() => element).not.toThrow();
+      expect(element.props.conflicts).toEqual([]);
+      expect(element.props.onConflictPress).toBe(onConflictPress);
     });
 
     it('should render list with single conflict', () => {
       const conflicts = [createMockConflict()];
       const onConflictPress = vi.fn();
 
-      const element = (
-        <ConflictListView conflicts={conflicts} onConflictPress={onConflictPress} />
-      );
+      const element = <ConflictListView conflicts={conflicts} onConflictPress={onConflictPress} />;
 
       expect(element).toBeDefined();
+      expect(element.props.conflicts).toHaveLength(1);
+      expect(element.props.conflicts[0]).toEqual(conflicts[0]);
     });
 
     it('should render list with multiple conflicts', () => {
@@ -65,11 +65,15 @@ describe('ConflictListView', () => {
       ];
       const onConflictPress = vi.fn();
 
-      const element = (
-        <ConflictListView conflicts={conflicts} onConflictPress={onConflictPress} />
-      );
+      const element = <ConflictListView conflicts={conflicts} onConflictPress={onConflictPress} />;
 
       expect(element).toBeDefined();
+      expect(element.props.conflicts).toHaveLength(3);
+      expect(element.props.conflicts.map((c: ConflictMetadata) => c.conflictId)).toEqual([
+        'c1',
+        'c2',
+        'c3',
+      ]);
     });
 
     it('should render page conflicts', () => {
@@ -91,11 +95,11 @@ describe('ConflictListView', () => {
       ];
       const onConflictPress = vi.fn();
 
-      const element = (
-        <ConflictListView conflicts={conflicts} onConflictPress={onConflictPress} />
-      );
+      const element = <ConflictListView conflicts={conflicts} onConflictPress={onConflictPress} />;
 
       expect(element).toBeDefined();
+      expect(element.props.conflicts[0]?.entityType).toBe('page');
+      expect(element.props.conflicts[0]?.localVersion.snapshot).toHaveProperty('title');
     });
 
     it('should render different conflict types', () => {
@@ -141,9 +145,7 @@ describe('ConflictListView', () => {
       const conflicts = [createMockConflict()];
       const onConflictPress = vi.fn();
 
-      const element = (
-        <ConflictListView conflicts={conflicts} onConflictPress={onConflictPress} />
-      );
+      const element = <ConflictListView conflicts={conflicts} onConflictPress={onConflictPress} />;
 
       expect(element).toBeDefined();
     });
@@ -187,9 +189,7 @@ describe('ConflictListView', () => {
       const conflicts = [createMockConflict()];
       const onConflictPress = vi.fn();
 
-      const element = (
-        <ConflictListView conflicts={conflicts} onConflictPress={onConflictPress} />
-      );
+      const element = <ConflictListView conflicts={conflicts} onConflictPress={onConflictPress} />;
 
       expect(element).toBeDefined();
     });
@@ -201,9 +201,7 @@ describe('ConflictListView', () => {
       ];
       const onConflictPress = vi.fn();
 
-      const element = (
-        <ConflictListView conflicts={conflicts} onConflictPress={onConflictPress} />
-      );
+      const element = <ConflictListView conflicts={conflicts} onConflictPress={onConflictPress} />;
 
       expect(element).toBeDefined();
     });
@@ -244,9 +242,7 @@ describe('ConflictListView', () => {
       const conflicts = [createMockConflict()];
       const onConflictPress = vi.fn();
 
-      const element = (
-        <ConflictListView conflicts={conflicts} onConflictPress={onConflictPress} />
-      );
+      const element = <ConflictListView conflicts={conflicts} onConflictPress={onConflictPress} />;
 
       expect(element).toBeDefined();
     });
@@ -271,9 +267,7 @@ describe('ConflictListView', () => {
       ];
       const onConflictPress = vi.fn();
 
-      const element = (
-        <ConflictListView conflicts={conflicts} onConflictPress={onConflictPress} />
-      );
+      const element = <ConflictListView conflicts={conflicts} onConflictPress={onConflictPress} />;
 
       expect(element).toBeDefined();
     });
@@ -295,9 +289,7 @@ describe('ConflictListView', () => {
       ];
       const onConflictPress = vi.fn();
 
-      const element = (
-        <ConflictListView conflicts={conflicts} onConflictPress={onConflictPress} />
-      );
+      const element = <ConflictListView conflicts={conflicts} onConflictPress={onConflictPress} />;
 
       expect(element).toBeDefined();
     });
@@ -310,9 +302,7 @@ describe('ConflictListView', () => {
       ];
       const onConflictPress = vi.fn();
 
-      const element = (
-        <ConflictListView conflicts={conflicts} onConflictPress={onConflictPress} />
-      );
+      const element = <ConflictListView conflicts={conflicts} onConflictPress={onConflictPress} />;
 
       expect(element).toBeDefined();
     });

@@ -56,6 +56,10 @@ describe('ConflictResolutionModal', () => {
       );
 
       expect(element).toBeDefined();
+      expect(element.props.visible).toBe(true);
+      expect(element.props.conflict).toBe(conflict);
+      expect(element.props.onResolve).toBe(onResolve);
+      expect(element.props.onDismiss).toBe(onDismiss);
     });
 
     it('should not render when not visible', () => {
@@ -71,6 +75,7 @@ describe('ConflictResolutionModal', () => {
       );
 
       expect(element).toBeDefined();
+      expect(element.props.visible).toBe(false);
     });
 
     it('should handle null conflict gracefully', () => {
@@ -84,6 +89,7 @@ describe('ConflictResolutionModal', () => {
       );
 
       expect(element).toBeDefined();
+      expect(element.props.conflict).toBeNull();
     });
 
     it('should render with testID', () => {
@@ -117,6 +123,7 @@ describe('ConflictResolutionModal', () => {
       );
 
       expect(element).toBeDefined();
+      expect(element.props.conflict).toBe(conflict);
     });
 
     it('should render Keep Remote option', () => {
@@ -132,6 +139,7 @@ describe('ConflictResolutionModal', () => {
       );
 
       expect(element).toBeDefined();
+      expect(element.props.conflict).toBe(conflict);
     });
 
     it('should render Merge Later option', () => {
@@ -147,6 +155,7 @@ describe('ConflictResolutionModal', () => {
       );
 
       expect(element).toBeDefined();
+      expect(element.props.conflict).toBe(conflict);
     });
   });
 
