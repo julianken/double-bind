@@ -44,3 +44,6 @@ export * from './pagination';
 
 // Streaming utilities
 export * from './streaming';
+
+// Battery optimization utilities
+export * from './battery';

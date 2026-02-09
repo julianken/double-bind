@@ -131,3 +131,13 @@ export type {
 // Streaming types
 export type { StreamChunk, StreamOptions, StreamResult } from './streaming.js';
 export { StreamState } from './streaming.js';
+
+// Battery optimization types
+export type {
+  BatteryState,
+  ScheduleConstraints,
+  ScheduleConfig,
+  ScheduleResult,
+  BatteryOptimizationStats,
+} from './battery.js';
+export { ActivityPriority } from './battery.js';
