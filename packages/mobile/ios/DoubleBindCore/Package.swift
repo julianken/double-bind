@@ -13,21 +13,22 @@ let package = Package(
         .library(
             name: "DoubleBindCore",
             targets: ["DoubleBindCore"]
-        )
+        ),
     ],
     dependencies: [
-        // CozoSwiftBridge provides the CozoDB Swift bindings
-        // Note: In production, this would be added via CocoaPods or SPM
-        // pod 'CozoSwiftBridge', '~> 0.7.1'
+        // CozoSwiftBridge is installed via CocoaPods, not SPM
+        // See Podfile for dependency configuration
     ],
     targets: [
         .target(
             name: "DoubleBindCore",
             dependencies: [],
-            path: "Sources",
-            swiftSettings: [
-                .enableExperimentalFeature("StrictConcurrency")
-            ]
-        )
+            path: "Sources"
+        ),
+        .testTarget(
+            name: "DoubleBindCoreTests",
+            dependencies: ["DoubleBindCore"],
+            path: "Tests"
+        ),
     ]
 )
