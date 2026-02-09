@@ -13,7 +13,7 @@ import * as React from 'react';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import type { Block, BlockId } from '@double-bind/types';
 import { createServices } from '@double-bind/core';
-import { BlockList, type BlockListItem } from '@double-bind/mobile-primitives';
+import { BlockList } from '@double-bind/mobile-primitives';
 import { useDatabase } from '../hooks/useDatabase';
 import type { PagesStackScreenProps } from '../navigation/types';
 import { buildBlockTree } from '../utils/blockTree';
