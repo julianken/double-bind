@@ -38,8 +38,8 @@ const COLORS = {
   link: '#94a3b8', // Slate-400 (matches GraphView EDGE_COLOR)
   textLight: '#1e293b', // Slate-800 for light mode
   textDark: '#e2e8f0', // Slate-200 for dark mode
-  textLightSecondary: 'rgba(30, 41, 59, 0.6)', // Slate-800 at 60% opacity
-  textDarkSecondary: 'rgba(226, 232, 240, 0.6)', // Slate-200 at 60% opacity
+  textLightSecondary: 'rgba(30, 41, 59, 0.75)', // Slate-800 at 75% opacity (WCAG AA compliant)
+  textDarkSecondary: 'rgba(226, 232, 240, 0.75)', // Slate-200 at 75% opacity (WCAG AA compliant)
   labelBgLight: 'rgba(255, 255, 255, 0.9)', // White with slight transparency
   labelBgDark: 'rgba(15, 23, 42, 0.9)', // Slate-900 with slight transparency
   background: 'transparent',
