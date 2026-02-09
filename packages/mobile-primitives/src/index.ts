@@ -38,3 +38,6 @@ export * from './layout';
 
 // Sync and conflict resolution utilities
 export * from './sync';
+
+// Memory management utilities
+export * from './memory';
