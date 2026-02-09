@@ -1,193 +1,197 @@
-/**
- * Kotlin wrapper around CozoDB for Android.
- *
- * This class implements the GraphDB interface, providing type-safe access to
- * CozoDB operations with proper resource management and JSON serialization.
- *
- * Uses the cozo_android library (io.github.cozodb:cozo_android) which provides
- * SQLite storage backend optimized for mobile devices.
- *
- * @see GraphDB - TypeScript interface at packages/types/src/graph-db.ts
- * @see mobile-database-strategy.md - Architecture documentation
- */
 package com.doublebind.core
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.*
 import org.cozodb.CozoDB
-import java.io.Closeable
 
 /**
- * Android implementation of CozoDB wrapper.
+ * CozoDB implementation of the GraphDB interface.
  *
- * Thread safety: All methods are thread-safe. The underlying CozoDB JNI calls
- * are thread-safe. Use with Kotlin coroutines on Dispatchers.IO for best performance.
+ * This class wraps the native CozoDB Android binding and provides
+ * a coroutine-friendly API that matches the GraphDB interface.
  *
- * Resource management: MUST call close() when done. Use Kotlin's `use {}` block
- * or implement as a lifecycle-aware component.
+ * Thread Safety: All database operations use Dispatchers.IO and are
+ * protected by a mutex to ensure thread-safe access to the native database.
  *
- * @param engine Storage engine: "sqlite" (recommended for mobile) or "mem"
- * @param path Path to the database file (ignored for "mem" engine)
+ * Memory Management: The close() method MUST be called when done to
+ * release native resources. Use Kotlin's `use {}` block or implement
+ * proper lifecycle management.
+ *
+ * @param engine Storage engine: "mem" (testing), "sqlite" (mobile), "rocksdb" (desktop)
+ * @param path Database file path (ignored for "mem" engine)
  */
 class CozoGraphDB(
-    engine: String = "sqlite",
-    path: String
-) : Closeable {
+    engine: String = "mem",
+    path: String = ""
+) : GraphDB {
+
+    private val db: CozoDB = try {
+        if (engine == "mem" && path.isEmpty()) {
+            CozoDB()
+        } else {
+            CozoDB(engine, path)
+        }
+    } catch (e: Exception) {
+        throw DatabaseInitializationException(
+            "Failed to initialize CozoDB with engine=$engine, path=$path",
+            e
+        )
+    }
+
+    private val json = Json {
+        ignoreUnknownKeys = true
+        isLenient = true
+    }
+
+    private val mutex = Mutex()
+    private var isClosed = false
 
     /**
-     * The underlying CozoDB instance from cozo_android.
+     * Execute a read-only Datalog query.
      */
-    private val db: CozoDB = CozoDB(engine, path)
-
-    /**
-     * Flag indicating whether the database has been closed.
-     */
-    @Volatile
-    private var isClosed: Boolean = false
-
-    /**
-     * Execute a Datalog query or mutation.
-     *
-     * @param script Datalog script to execute
-     * @param params JSON string of named parameters
-     * @return JSON string containing query results with headers and rows
-     * @throws IllegalStateException if the database is closed
-     * @throws CozoException on query execution errors
-     */
-    fun run(script: String, params: String = "{}"): String {
-        checkNotClosed()
-        return db.run(script, params)
+    @Suppress("UNCHECKED_CAST")
+    override suspend fun <T> query(
+        script: String,
+        params: Map<String, Any?>
+    ): QueryResult<T> = withContext(Dispatchers.IO) {
+        mutex.withLock {
+            ensureOpen()
+            val paramsJson = encodeParams(params)
+            val resultJson = db.run(script, paramsJson)
+            parseQueryResult(resultJson)
+        }
     }
 
     /**
-     * Export data from specified relations.
-     *
-     * @param relations JSON array string of relation names (e.g., '["pages", "blocks"]')
-     * @return JSON object string mapping relation names to row arrays
-     * @throws IllegalStateException if the database is closed
+     * Execute a mutation (insert, update, delete) operation.
      */
-    fun exportRelations(relations: String): String {
-        checkNotClosed()
-        return db.exportRelations(relations)
+    override suspend fun mutate(
+        script: String,
+        params: Map<String, Any?>
+    ): MutationResult = withContext(Dispatchers.IO) {
+        mutex.withLock {
+            ensureOpen()
+            val paramsJson = encodeParams(params)
+            val resultJson = db.run(script, paramsJson)
+            parseMutationResult(resultJson)
+        }
     }
 
     /**
      * Import data into multiple relations at once.
-     *
-     * Note: Triggers are NOT executed for imported relations.
-     * Use parameterized queries via run() if triggers must fire.
-     *
-     * @param data JSON object string mapping relation names to row arrays
-     * @throws IllegalStateException if the database is closed
      */
-    fun importRelations(data: String) {
-        checkNotClosed()
-        db.importRelations(data)
+    override suspend fun importRelations(
+        data: Map<String, List<List<Any?>>>
+    ) = withContext(Dispatchers.IO) {
+        mutex.withLock {
+            ensureOpen()
+            val dataJson = encodeRelationsData(data)
+            db.importRelations(dataJson)
+        }
     }
 
     /**
-     * Create a backup of the database at the specified path.
-     * The backup format is SQLite regardless of the source engine.
-     *
-     * @param path File path for the backup
-     * @throws IllegalStateException if the database is closed
+     * Export data from specified relations.
      */
-    fun backup(path: String) {
-        checkNotClosed()
-        db.backup(path)
+    override suspend fun exportRelations(
+        relations: List<String>
+    ): Map<String, List<List<Any?>>> = withContext(Dispatchers.IO) {
+        mutex.withLock {
+            ensureOpen()
+            val relationsJson = json.encodeToString(
+                JsonArray(relations.map { JsonPrimitive(it) })
+            )
+            val resultJson = db.exportRelations(relationsJson)
+            parseExportResult(resultJson)
+        }
+    }
+
+    /**
+     * Create a backup of the database.
+     */
+    override suspend fun backup(path: String) = withContext(Dispatchers.IO) {
+        mutex.withLock {
+            ensureOpen()
+            db.backup(path)
+        }
     }
 
     /**
      * Restore the database from a backup file.
-     * The current database must be empty (no relations with data).
-     *
-     * @param path File path to the backup
-     * @throws IllegalStateException if the database is closed
      */
-    fun restore(path: String) {
-        checkNotClosed()
-        db.restore(path)
+    override suspend fun restore(path: String) = withContext(Dispatchers.IO) {
+        mutex.withLock {
+            ensureOpen()
+            db.restore(path)
+        }
     }
 
     /**
      * Import specific relations from a backup file.
-     * Relations must already exist in the current database.
-     *
-     * Note: Triggers are NOT executed for imported relations.
-     *
-     * @param path File path to the backup
-     * @param relations JSON array string of relation names to import
-     * @throws IllegalStateException if the database is closed
      */
-    fun importRelationsFromBackup(path: String, relations: String) {
-        checkNotClosed()
-        db.importRelationsFromBackup(path, relations)
+    override suspend fun importRelationsFromBackup(
+        path: String,
+        relations: List<String>
+    ) = withContext(Dispatchers.IO) {
+        mutex.withLock {
+            ensureOpen()
+            val relationsJson = json.encodeToString(
+                JsonArray(relations.map { JsonPrimitive(it) })
+            )
+            db.importRelationsFromBackup(path, relationsJson)
+        }
     }
-
-    // ─────────────────────────────────────────────────────────────────────────────
-    // Mobile Lifecycle Methods
-    // ─────────────────────────────────────────────────────────────────────────────
 
     /**
      * Called when the app transitions to the background.
-     * Flushes pending writes and prepares for suspension.
-     *
-     * For SQLite backend, this is handled gracefully by the engine.
-     * This method exists for API consistency and potential future optimizations.
-     *
-     * @throws IllegalStateException if the database is closed
+     * Flushes any pending writes to ensure data integrity.
      */
-    fun suspend() {
-        checkNotClosed()
-        // SQLite handles background transitions gracefully.
-        // This is a no-op for now but provides a hook for future optimizations
-        // such as flushing WAL or releasing file handles.
+    override suspend fun suspend() = withContext(Dispatchers.IO) {
+        mutex.withLock {
+            if (!isClosed) {
+                // CozoDB handles write durability internally
+                // This is a no-op for in-memory databases
+                // For SQLite, writes are already durable after each operation
+            }
+        }
     }
 
     /**
      * Called when the app returns to the foreground.
-     * Refreshes connections and validates database state.
-     *
-     * For SQLite backend, connections remain valid across suspend/resume.
-     * This method exists for API consistency and potential future optimizations.
-     *
-     * @throws IllegalStateException if the database is closed
+     * Validates database state and refreshes connections if needed.
      */
-    fun resume() {
-        checkNotClosed()
-        // SQLite connections remain valid across suspend/resume.
-        // This is a no-op for now but provides a hook for future optimizations
-        // such as reconnection or integrity checks.
+    override suspend fun resume() = withContext(Dispatchers.IO) {
+        mutex.withLock {
+            if (!isClosed) {
+                // Verify database is still accessible with a simple query
+                try {
+                    db.run("?[] <- [[true]]", "{}")
+                } catch (e: Exception) {
+                    throw CozoException("Database validation failed on resume", e)
+                }
+            }
+        }
     }
 
     /**
      * Called when the system signals memory pressure.
      * Releases non-essential caches and resources.
-     *
-     * CozoDB's Rust core manages its own memory. This method provides a hook
-     * for future optimizations such as clearing query caches.
-     *
-     * @throws IllegalStateException if the database is closed
      */
-    fun onLowMemory() {
-        checkNotClosed()
-        // CozoDB's Rust core manages its own memory efficiently.
-        // This is a no-op for now but provides a hook for future optimizations
-        // such as clearing query result caches or reducing buffer sizes.
+    override suspend fun onLowMemory() = withContext(Dispatchers.IO) {
+        mutex.withLock {
+            if (!isClosed) {
+                // CozoDB manages its own memory internally
+                // For now, we just ensure any pending operations complete
+                // Future: Could implement cache clearing if CozoDB exposes such API
+            }
+        }
     }
-
-    // ─────────────────────────────────────────────────────────────────────────────
-    // Resource Management
-    // ─────────────────────────────────────────────────────────────────────────────
 
     /**
      * Close the database and release native resources.
-     *
-     * MUST be called when the database is no longer needed. Failure to call
-     * close() will leak native memory and file handles.
-     *
-     * After calling close(), the instance is unusable and all subsequent
-     * method calls will throw IllegalStateException.
-     *
-     * Safe to call multiple times (subsequent calls are no-ops).
      */
     override fun close() {
         if (!isClosed) {
@@ -196,14 +200,133 @@ class CozoGraphDB(
         }
     }
 
-    /**
-     * Check if the database is closed and throw if so.
-     *
-     * @throws IllegalStateException if the database has been closed
-     */
-    private fun checkNotClosed() {
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Private Helper Methods
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    private fun ensureOpen() {
         if (isClosed) {
-            throw IllegalStateException("Database has been closed")
+            throw DatabaseClosedException()
         }
+    }
+
+    private fun encodeParams(params: Map<String, Any?>): String {
+        if (params.isEmpty()) return "{}"
+        val jsonObject = buildJsonObject {
+            params.forEach { (key, value) ->
+                put(key, encodeValue(value))
+            }
+        }
+        return json.encodeToString(jsonObject)
+    }
+
+    private fun encodeValue(value: Any?): JsonElement = when (value) {
+        null -> JsonNull
+        is Boolean -> JsonPrimitive(value)
+        is Number -> JsonPrimitive(value)
+        is String -> JsonPrimitive(value)
+        is List<*> -> JsonArray(value.map { encodeValue(it) })
+        is Map<*, *> -> buildJsonObject {
+            value.forEach { (k, v) ->
+                if (k is String) {
+                    put(k, encodeValue(v))
+                }
+            }
+        }
+        else -> JsonPrimitive(value.toString())
+    }
+
+    private fun encodeRelationsData(data: Map<String, List<List<Any?>>>): String {
+        val jsonObject = buildJsonObject {
+            data.forEach { (relation, rows) ->
+                put(relation, JsonArray(rows.map { row ->
+                    JsonArray(row.map { encodeValue(it) })
+                }))
+            }
+        }
+        return json.encodeToString(jsonObject)
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun <T> parseQueryResult(resultJson: String): QueryResult<T> {
+        val jsonElement = json.parseToJsonElement(resultJson)
+        val jsonObject = jsonElement.jsonObject
+
+        // Check for error
+        if (jsonObject.containsKey("ok") && jsonObject["ok"]?.jsonPrimitive?.boolean == false) {
+            val message = jsonObject["message"]?.jsonPrimitive?.content ?: "Unknown error"
+            throw CozoException(message)
+        }
+
+        val headers = jsonObject["headers"]?.jsonArray?.map {
+            it.jsonPrimitive.content
+        } ?: emptyList()
+
+        val rows = jsonObject["rows"]?.jsonArray?.map { rowElement ->
+            rowElement.jsonArray.map { cellElement ->
+                parseJsonValue(cellElement)
+            }
+        } ?: emptyList()
+
+        return QueryResult(
+            headers = headers,
+            rows = rows as List<List<T>>
+        )
+    }
+
+    private fun parseMutationResult(resultJson: String): MutationResult {
+        val jsonElement = json.parseToJsonElement(resultJson)
+        val jsonObject = jsonElement.jsonObject
+
+        // Check for error
+        if (jsonObject.containsKey("ok") && jsonObject["ok"]?.jsonPrimitive?.boolean == false) {
+            val message = jsonObject["message"]?.jsonPrimitive?.content ?: "Unknown error"
+            throw CozoException(message)
+        }
+
+        val headers = jsonObject["headers"]?.jsonArray?.map {
+            it.jsonPrimitive.content
+        } ?: emptyList()
+
+        val rows = jsonObject["rows"]?.jsonArray?.map { rowElement ->
+            rowElement.jsonArray.map { cellElement ->
+                parseJsonValue(cellElement)
+            }
+        } ?: emptyList()
+
+        return MutationResult(headers = headers, rows = rows)
+    }
+
+    private fun parseExportResult(resultJson: String): Map<String, List<List<Any?>>> {
+        val jsonElement = json.parseToJsonElement(resultJson)
+        val jsonObject = jsonElement.jsonObject
+
+        // Check for error
+        if (jsonObject.containsKey("ok") && jsonObject["ok"]?.jsonPrimitive?.boolean == false) {
+            val message = jsonObject["message"]?.jsonPrimitive?.content ?: "Unknown error"
+            throw CozoException(message)
+        }
+
+        return jsonObject.mapValues { (_, value) ->
+            value.jsonArray.map { rowElement ->
+                rowElement.jsonArray.map { cellElement ->
+                    parseJsonValue(cellElement)
+                }
+            }
+        }
+    }
+
+    private fun parseJsonValue(element: JsonElement): Any? = when (element) {
+        is JsonNull -> null
+        is JsonPrimitive -> when {
+            element.isString -> element.content
+            element.booleanOrNull != null -> element.boolean
+            element.intOrNull != null -> element.int
+            element.longOrNull != null -> element.long
+            element.doubleOrNull != null -> element.double
+            else -> element.content
+        }
+        is JsonArray -> element.map { parseJsonValue(it) }
+        is JsonObject -> element.mapValues { parseJsonValue(it.value) }
     }
 }

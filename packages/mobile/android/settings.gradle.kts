@@ -14,5 +14,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "double-bind-android"
+rootProject.name = "double-bind-mobile"
+
 include(":core")

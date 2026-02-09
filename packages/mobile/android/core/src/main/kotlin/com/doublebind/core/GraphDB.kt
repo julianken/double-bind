@@ -1,11 +1,3 @@
-/**
- * GraphDB interface and result types for CozoDB interactions.
- *
- * This Kotlin interface mirrors the TypeScript GraphDB interface defined in
- * packages/types/src/graph-db.ts. All implementations must be thread-safe.
- *
- * @see <a href="../../../../../../types/src/graph-db.ts">TypeScript GraphDB</a>
- */
 package com.doublebind.core
 
 import java.io.Closeable
@@ -13,9 +5,6 @@ import java.io.Closeable
 /**
  * Result from a read-only query operation.
  * Headers contain column names, rows contain the data.
- *
- * @property headers Column names from the query result
- * @property rows Data rows, where each row is a list of values
  */
 data class QueryResult<T>(
     val headers: List<String>,
@@ -26,9 +15,6 @@ data class QueryResult<T>(
  * Result from a mutation operation (insert, update, delete).
  * Structure matches QueryResult but mutations typically return
  * operation metadata rather than domain data.
- *
- * @property headers Column names from the mutation result
- * @property rows Data rows containing operation metadata
  */
 data class MutationResult(
     val headers: List<String>,
@@ -38,14 +24,20 @@ data class MutationResult(
 /**
  * Configuration for database initialization.
  * Platform implementations use this to create appropriate connections.
- *
- * @property engine Storage engine to use:
- *   - "sqlite": Universal embedded storage (recommended for mobile)
- *   - "mem": In-memory, non-persistent (testing)
- * @property path Path to the database file. Ignored for "mem" engine.
  */
 data class GraphDBConfig(
+    /**
+     * Storage engine to use.
+     * - "rocksdb": High-performance LSM-tree storage (desktop)
+     * - "sqlite": Universal embedded storage (mobile, backup format)
+     * - "mem": In-memory, non-persistent (testing)
+     */
     val engine: String,
+
+    /**
+     * Path to the database file or directory.
+     * Ignored for "mem" engine.
+     */
     val path: String
 )
 
@@ -56,12 +48,8 @@ data class GraphDBConfig(
  *
  * All implementations must be thread-safe. Query results should
  * be considered immutable after return.
- *
- * IMPORTANT: The [close] method MUST be called when done with the database.
- * Use Kotlin's [use] block pattern for automatic resource cleanup.
  */
 interface GraphDB : Closeable {
-
     /**
      * Execute a read-only Datalog query.
      *
@@ -69,10 +57,7 @@ interface GraphDB : Closeable {
      * @param params Optional named parameters for the query
      * @return Query results with headers and typed rows
      */
-    suspend fun <T> query(
-        script: String,
-        params: Map<String, Any?> = emptyMap()
-    ): QueryResult<T>
+    suspend fun <T> query(script: String, params: Map<String, Any?> = emptyMap()): QueryResult<T>
 
     /**
      * Execute a mutation (insert, update, delete) operation.
@@ -81,10 +66,7 @@ interface GraphDB : Closeable {
      * @param params Optional named parameters for the mutation
      * @return Mutation result with operation metadata
      */
-    suspend fun mutate(
-        script: String,
-        params: Map<String, Any?> = emptyMap()
-    ): MutationResult
+    suspend fun mutate(script: String, params: Map<String, Any?> = emptyMap()): MutationResult
 
     /**
      * Import data into multiple relations at once.
@@ -136,48 +118,42 @@ interface GraphDB : Closeable {
      */
     suspend fun importRelationsFromBackup(path: String, relations: List<String>)
 
-    // -------------------------------------------------------------------------
-    // Mobile Lifecycle Methods (optional implementations)
-    // These methods support mobile platform lifecycle events.
-    // -------------------------------------------------------------------------
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Mobile Lifecycle Methods
+    // ─────────────────────────────────────────────────────────────────────────────
 
     /**
      * Called when the app transitions to the background (mobile).
      * Implementations should flush pending writes and prepare for suspension.
      * This ensures data integrity if the OS terminates the app while backgrounded.
      *
-     * Android: Called during onPause/onStop
+     * Called during onPause/onStop on Android.
      */
-    suspend fun suspend() {
-        // Default no-op implementation
-    }
+    suspend fun suspend()
 
     /**
      * Called when the app returns to the foreground (mobile).
      * Implementations may refresh connections or validate database state.
      *
-     * Android: Called during onResume
+     * Called during onResume on Android.
      */
-    suspend fun resume() {
-        // Default no-op implementation
-    }
+    suspend fun resume()
 
     /**
      * Called when the system signals memory pressure (mobile).
      * Implementations should release non-essential caches and resources.
      * This helps prevent the OS from terminating the app.
      *
-     * Android: Called during onTrimMemory with TRIM_MEMORY_RUNNING_LOW or higher
+     * Called during onTrimMemory with TRIM_MEMORY_RUNNING_LOW or higher.
      */
-    suspend fun onLowMemory() {
-        // Default no-op implementation
-    }
+    suspend fun onLowMemory()
 
     /**
      * Close the database and release native resources.
      *
-     * IMPORTANT: This method MUST be called when the database is no longer needed.
-     * Failure to call close() will leak native memory and file handles.
+     * IMPORTANT: On mobile platforms (iOS, Android), this method MUST
+     * be called when the database is no longer needed. Failure to call
+     * close() will leak native memory and file handles.
      *
      * After calling close(), the GraphDB instance is unusable and
      * all subsequent method calls will throw.
