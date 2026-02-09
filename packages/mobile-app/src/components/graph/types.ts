@@ -73,6 +73,8 @@ export interface GraphNodeProps {
   onPress?: (nodeId: PageId) => void;
   /** Current scale for text sizing */
   scale: number;
+  /** Whether to show label (LOD optimization) */
+  showLabel?: boolean;
 }
 
 /**
@@ -87,6 +89,8 @@ export interface GraphEdgeProps {
   isBidirectional?: boolean;
   /** Current scale for stroke width */
   scale: number;
+  /** Whether to show arrow head (LOD optimization) */
+  showArrow?: boolean;
 }
 
 /**
