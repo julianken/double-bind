@@ -37,6 +37,9 @@ export { InMemoryConflictStore } from './InMemoryConflictStore';
 // Sync export service
 export { SyncExportService, type SyncExportPackage, type ExportOptions } from './SyncExportService';
 
+// Sync import service
+export { SyncImportService } from './SyncImportService';
+
 // Conflict UI components
 export { ConflictListView } from './ConflictListView';
 export { ConflictDetailView } from './ConflictDetailView';

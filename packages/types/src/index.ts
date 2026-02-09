@@ -102,4 +102,15 @@ export type {
   ProcessedMessage,
   SyncProtocolClient,
   SyncProtocolServer,
+  // Import/export types
+  SyncEntity,
+  SyncData,
+  ImportConflictStrategy,
+  ImportMode,
+  ImportOptions,
+  ImportStats,
+  ImportConflict,
+  ImportResult,
+  SyncDataValidationError,
+  SyncDataValidation,
 } from './sync.js';
