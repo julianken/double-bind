@@ -165,7 +165,7 @@ export function useStreamingQuery<T>(
 
         // Delay before next chunk (unless it's the final chunk)
         if (!isFinal) {
-          await new Promise((resolve) => setTimeout(resolve, timeout));
+          await new Promise<void>((resolve) => setTimeout(resolve, timeout));
         }
       }
 
