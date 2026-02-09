@@ -29,7 +29,8 @@
   "dependencies": {
     "@double-bind/core": "workspace:*",
     "@double-bind/types": "workspace:*",
-    "react-native-safe-area-context": "^4.14.0"
+    "react-native-safe-area-context": "^4.14.0",
+    "ulid": "^2.3.0"
   },
   "devDependencies": {
     "@testing-library/react-native": "^12.4.0",

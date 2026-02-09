@@ -43,3 +43,22 @@ export type {
 
 // Search types
 export type { SearchResult, SearchOptions } from './search.js';
+
+// Conflict resolution types
+export type {
+  HybridLogicalClock,
+  HLCString,
+  VersionVector,
+  ConflictType,
+  ConflictResolutionStrategy,
+  ConflictState,
+  ConflictMetadata,
+  Versioned,
+  VersionedBlock,
+  VersionedPage,
+  ConflictDetectionOptions,
+  ConflictDetectionResult,
+  ResolveConflictInput,
+  ConflictResolutionHook,
+  ConflictStore,
+} from './conflict.js';
