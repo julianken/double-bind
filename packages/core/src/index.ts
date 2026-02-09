@@ -99,5 +99,6 @@ export {
   SavedQueryService,
   type ListSavedQueriesOptions,
   createServices,
+  createServicesFromProvider,
   type Services,
 } from './services/index.js';

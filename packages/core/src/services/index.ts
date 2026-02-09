@@ -5,7 +5,7 @@
  * They provide higher-level operations than repositories.
  */
 
-import type { GraphDB } from '@double-bind/types';
+import type { GraphDB, GraphDBProvider } from '@double-bind/types';
 import { PageService } from './page-service.js';
 import { BlockService } from './block-service.js';
 import { GraphService } from './graph-service.js';
@@ -94,4 +94,41 @@ export function createServices(db: GraphDB): Services {
     searchService,
     savedQueryService,
   };
+}
+
+/**
+ * Factory function — creates all services from a GraphDBProvider.
+ *
+ * This is the platform-agnostic way to initialize the service layer.
+ * Each platform (desktop, mobile, CLI) provides its own GraphDBProvider
+ * implementation, and this factory uses it to create all services.
+ *
+ * The factory:
+ * 1. Gets the GraphDB instance from the provider
+ * 2. Delegates to createServices() to create all services
+ * 3. Returns the Services object for injection into the UI
+ *
+ * @param provider - The platform-specific GraphDBProvider
+ * @returns Promise resolving to Services object
+ *
+ * @example
+ * ```typescript
+ * // Desktop app with Tauri
+ * const provider = new TauriGraphDBProvider();
+ * const services = await createServicesFromProvider(provider);
+ *
+ * // Mobile app with Expo SQLite
+ * const provider = new ExpoSQLiteProvider(dbPath);
+ * const services = await createServicesFromProvider(provider);
+ *
+ * // CLI with cozo-node
+ * const provider = new NodeGraphDBProvider(dbPath);
+ * const services = await createServicesFromProvider(provider);
+ * ```
+ */
+export async function createServicesFromProvider(
+  provider: GraphDBProvider
+): Promise<Services> {
+  const db = await provider.getDatabase();
+  return createServices(db);
 }
