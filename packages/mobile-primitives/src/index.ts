@@ -11,6 +11,7 @@
 // Block Components
 export { BlockView, type BlockViewProps } from './BlockView';
 export { BlockList, type BlockListProps, type BlockListItem } from './BlockList';
+export { DraggableBlockList, type DraggableBlockListProps } from './DraggableBlockList';
 export { BlockReference, type BlockReferenceProps } from './BlockReference';
 
 // Rich Text Components
