@@ -23,7 +23,8 @@
   "license": "MIT",
   "dependencies": {
     "@double-bind/mobile": "workspace:*",
-    "@double-bind/types": "workspace:*"
+    "@double-bind/types": "workspace:*",
+    "react-native-webview": "^13.6.0"
   },
   "devDependencies": {
     "@testing-library/react-hooks": "^8.0.1",
