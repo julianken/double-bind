@@ -124,7 +124,7 @@ export class BlockRepository {
   /**
    * Create a new block with atomic index maintenance.
    *
-   * Inserts into:
+   * Inserts into (atomically via CozoDB transaction block):
    * - blocks: the main block data
    * - blocks_by_page: page-to-blocks index
    * - blocks_by_parent: parent-to-children index
@@ -140,36 +140,35 @@ export class BlockRepository {
     const order = input.order ?? DEFAULT_ORDER;
     const parentKey = computeParentKey(parentId, input.pageId);
 
-    // CozoDB doesn't allow multiple ? rules with :put in a single query
-    // So we execute each :put as a separate mutation
+    // Use CozoDB transaction blocks { } for atomic execution.
+    // All three operations succeed or fail together - no orphaned blocks.
+    const script = `
+{
+  ?[block_id, page_id, parent_id, content, content_type, order, is_collapsed, is_deleted, created_at, updated_at] <- [
+    [$id, $page_id, $parent_id, $content, $content_type, $order, false, false, $now, $now]
+  ]
+  :put blocks { block_id, page_id, parent_id, content, content_type, order, is_collapsed, is_deleted, created_at, updated_at }
+}
+{
+  ?[page_id, block_id] <- [[$page_id, $id]]
+  :put blocks_by_page { page_id, block_id }
+}
+{
+  ?[parent_id, block_id] <- [[$parent_key, $id]]
+  :put blocks_by_parent { parent_id, block_id }
+}
+`.trim();
 
-    // 1. Insert the block
-    await this.db.mutate(
-      `?[block_id, page_id, parent_id, content, content_type, order, is_collapsed, is_deleted, created_at, updated_at] <- [
-        [$id, $page_id, $parent_id, $content, $content_type, $order, false, false, $now, $now]
-      ] :put blocks { block_id, page_id, parent_id, content, content_type, order, is_collapsed, is_deleted, created_at, updated_at }`,
-      {
-        id: blockId,
-        page_id: input.pageId,
-        parent_id: parentId,
-        content: input.content,
-        content_type: contentType,
-        order,
-        now,
-      }
-    );
-
-    // 2. Index by page
-    await this.db.mutate(
-      `?[page_id, block_id] <- [[$page_id, $id]] :put blocks_by_page { page_id, block_id }`,
-      { page_id: input.pageId, id: blockId }
-    );
-
-    // 3. Index by parent
-    await this.db.mutate(
-      `?[parent_id, block_id] <- [[$parent_key, $id]] :put blocks_by_parent { parent_id, block_id }`,
-      { parent_key: parentKey, id: blockId }
-    );
+    await this.db.mutate(script, {
+      id: blockId,
+      page_id: input.pageId,
+      parent_id: parentId,
+      content: input.content,
+      content_type: contentType,
+      order,
+      parent_key: parentKey,
+      now,
+    });
 
     return blockId;
   }
@@ -256,7 +255,7 @@ export class BlockRepository {
   /**
    * Move a block to a new parent and/or position.
    *
-   * Atomically updates:
+   * Atomically updates (via CozoDB transaction block):
    * - Block's parent_id and order
    * - blocks_by_parent index (removes from old, adds to new)
    *
@@ -276,22 +275,26 @@ export class BlockRepository {
     const oldParentKey = computeParentKey(existing.parentId, existing.pageId);
     const newParentKey = computeParentKey(newParentId, existing.pageId);
 
-    // CozoDB limitation: Multiple `?` rules with system commands (:put, :rm) cannot be
-    // combined in a single block. Error: "The rule '?' cannot have multiple definitions
-    // since it contains non-Horn clauses". Therefore, we run as separate mutations.
-    // Note: This means the operation is NOT atomic. If a failure occurs mid-sequence,
-    // the database may be left in an inconsistent state. For a local-first app, this is
-    // acceptable as the user can retry the operation.
-
-    // 1. Update the block itself
-    const updateBlockScript = `
-?[block_id, page_id, parent_id, content, content_type, order, is_collapsed, is_deleted, created_at, updated_at] <- [
+    // Use CozoDB transaction blocks { } for atomic execution.
+    // All three operations succeed or fail together - no orphaned blocks in indexes.
+    const script = `
+{
+  ?[block_id, page_id, parent_id, content, content_type, order, is_collapsed, is_deleted, created_at, updated_at] <- [
     [$id, $page_id, $new_parent_id, $content, $content_type, $new_order, $is_collapsed, $is_deleted, $created_at, $now]
-]
-:put blocks { block_id, page_id, parent_id, content, content_type, order, is_collapsed, is_deleted, created_at, updated_at }
+  ]
+  :put blocks { block_id, page_id, parent_id, content, content_type, order, is_collapsed, is_deleted, created_at, updated_at }
+}
+{
+  ?[parent_id, block_id] <- [[$old_parent_key, $id]]
+  :rm blocks_by_parent { parent_id, block_id }
+}
+{
+  ?[parent_id, block_id] <- [[$new_parent_key, $id]]
+  :put blocks_by_parent { parent_id, block_id }
+}
 `.trim();
 
-    await this.db.mutate(updateBlockScript, {
+    await this.db.mutate(script, {
       id: blockId,
       page_id: existing.pageId,
       new_parent_id: newParentId,
@@ -301,29 +304,9 @@ export class BlockRepository {
       is_collapsed: existing.isCollapsed,
       is_deleted: existing.isDeleted,
       created_at: existing.createdAt,
-      now,
-    });
-
-    // 2. Remove from old parent index
-    const removeFromIndexScript = `
-?[parent_id, block_id] <- [[$old_parent_key, $id]]
-:rm blocks_by_parent { parent_id, block_id }
-`.trim();
-
-    await this.db.mutate(removeFromIndexScript, {
       old_parent_key: oldParentKey,
-      id: blockId,
-    });
-
-    // 3. Add to new parent index
-    const addToIndexScript = `
-?[parent_id, block_id] <- [[$new_parent_key, $id]]
-:put blocks_by_parent { parent_id, block_id }
-`.trim();
-
-    await this.db.mutate(addToIndexScript, {
       new_parent_key: newParentKey,
-      id: blockId,
+      now,
     });
   }
 

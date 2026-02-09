@@ -227,38 +227,31 @@ describe('LinkRepository', () => {
   });
 
   describe('removeLinksFromBlock', () => {
-    it('should execute two removal mutations', async () => {
+    it('should execute single atomic mutation', async () => {
       const blockId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
 
       await repo.removeLinksFromBlock(blockId);
 
-      expect(db.mutations).toHaveLength(2);
+      // Now uses 1 atomic mutation containing both operations
+      expect(db.mutations).toHaveLength(1);
     });
 
-    it('should construct correct removal query for links', async () => {
+    it('should construct atomic removal query for both links and block refs', async () => {
       const blockId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
 
       await repo.removeLinksFromBlock(blockId);
 
-      const linksRemoval = db.mutations[0]!;
-      expect(linksRemoval.script).toContain('*links{');
-      expect(linksRemoval.script).toContain('context_block_id == $block_id');
-      expect(linksRemoval.script).toContain(':rm links { source_id, target_id, link_type }');
-      expect(linksRemoval.params).toEqual({ block_id: blockId });
-    });
-
-    it('should construct correct removal query for block refs', async () => {
-      const blockId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
-
-      await repo.removeLinksFromBlock(blockId);
-
-      const blockRefsRemoval = db.mutations[1]!;
-      expect(blockRefsRemoval.script).toContain('*block_refs{');
-      expect(blockRefsRemoval.script).toContain('source_block_id == $block_id');
-      expect(blockRefsRemoval.script).toContain(
-        ':rm block_refs { source_block_id, target_block_id }'
-      );
-      expect(blockRefsRemoval.params).toEqual({ block_id: blockId });
+      const atomicRemoval = db.mutations[0]!;
+      // Should contain links removal
+      expect(atomicRemoval.script).toContain('*links{');
+      expect(atomicRemoval.script).toContain('context_block_id == $block_id');
+      expect(atomicRemoval.script).toContain(':rm links { source_id, target_id, link_type }');
+      // Should also contain block_refs removal
+      expect(atomicRemoval.script).toContain('*block_refs{');
+      expect(atomicRemoval.script).toContain('source_block_id == $block_id');
+      expect(atomicRemoval.script).toContain(':rm block_refs { source_block_id, target_block_id }');
+      // Single param for both operations
+      expect(atomicRemoval.params).toEqual({ block_id: blockId });
     });
   });
 
@@ -373,30 +366,29 @@ describe('LinkRepository', () => {
       const blockId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
 
       await expect(repo.removeLinksFromBlock(blockId)).resolves.not.toThrow();
-      expect(db.mutations).toHaveLength(2);
+      // Now uses 1 atomic mutation containing both operations
+      expect(db.mutations).toHaveLength(1);
     });
 
-    it('should use same block_id for both removals', async () => {
+    it('should use block_id for atomic removal', async () => {
       const blockId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
 
       await repo.removeLinksFromBlock(blockId);
 
+      // Single atomic mutation has block_id parameter
       expect(db.mutations[0]?.params.block_id).toBe(blockId);
-      expect(db.mutations[1]?.params.block_id).toBe(blockId);
     });
 
-    it('should execute removals sequentially', async () => {
+    it('should execute both removals atomically', async () => {
       const blockId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
 
       await repo.removeLinksFromBlock(blockId);
 
-      // First mutation should be for links
+      // Single atomic script contains both removal operations
       expect(db.mutations[0]?.script).toContain('*links{');
       expect(db.mutations[0]?.script).toContain(':rm links');
-
-      // Second mutation should be for block_refs
-      expect(db.mutations[1]?.script).toContain('*block_refs{');
-      expect(db.mutations[1]?.script).toContain(':rm block_refs');
+      expect(db.mutations[0]?.script).toContain('*block_refs{');
+      expect(db.mutations[0]?.script).toContain(':rm block_refs');
     });
   });
 
