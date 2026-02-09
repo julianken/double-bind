@@ -5,7 +5,8 @@
  * They provide higher-level operations than repositories.
  */
 
-import type { GraphDB, GraphDBProvider } from '@double-bind/types';
+import type { GraphDB } from '@double-bind/types';
+import type { GraphDBProvider } from '../providers/graph-db-provider.js';
 import { PageService } from './page-service.js';
 import { BlockService } from './block-service.js';
 import { GraphService } from './graph-service.js';
@@ -52,22 +53,21 @@ export interface Services {
  * 2. Wires up services with their repository dependencies
  * 3. Returns the Services object for injection into the UI
  *
- * @param db - The GraphDB instance (CozoDB or Tauri client)
+ * @param db - The GraphDB instance (platform-specific implementation)
  * @returns Services object containing all application services
  *
  * @example
  * ```typescript
- * // Desktop app initialization (after migrations complete)
- * const db = tauriGraphDB();
+ * // Desktop/mobile app initialization with GraphDBProvider
+ * const provider = new TauriGraphDBProvider(); // or SqliteGraphDBProvider for mobile
+ * await provider.initialize();
+ * const db = provider.getGraphDB();
+ * await runMigrations(db);
  * const services = createServices(db);
  *
- * // TUI/CLI initialization
+ * // Node.js CLI initialization
  * const db = createCozoNodeGraphDB(dbPath);
- * const migrationResult = await runMigrations(db);
- * if (migrationResult.errors.length > 0) {
- *   console.error('Migration failed:', migrationResult.errors);
- *   process.exit(3);
- * }
+ * await runMigrations(db);
  * const services = createServices(db);
  * ```
  */

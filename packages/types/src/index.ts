@@ -37,7 +37,6 @@ export type {
   GraphDB,
   GraphDBConfig,
   GraphDBFactory,
-  GraphDBProvider,
   QueryResult,
   MutationResult,
 } from './graph-db.js';
