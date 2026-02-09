@@ -24,13 +24,10 @@
   "dependencies": {
     "@double-bind/mobile": "workspace:*",
     "@double-bind/types": "workspace:*",
-    "react-native-gesture-handler": "^2.14.0",
-    "react-native-reanimated": "^3.6.0",
-    "react-native-svg": "^14.1.0"
+    "react-native-webview": "^13.6.0"
   },
   "devDependencies": {
     "@testing-library/react-hooks": "^8.0.1",
-    "@testing-library/react-native": "^13.3.3",
     "@types/react": "^18.2.0",
     "react": "^18.2.0",
     "react-native": "^0.73.0",
