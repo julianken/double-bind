@@ -8,6 +8,7 @@
 export { MobileGraph } from './MobileGraph';
 export { GraphNode } from './GraphNode';
 export { GraphEdge } from './GraphEdge';
+export { GraphDetailPanel } from './GraphDetailPanel';
 export { useForceLayout, useNodeMap } from './useForceLayout';
 export type {
   MobileGraphProps,
@@ -17,4 +18,5 @@ export type {
   GraphEdgeProps,
   LayoutNode,
 } from './types';
+export type { GraphDetailPanelProps } from './GraphDetailPanel';
 export { GRAPH_CONSTANTS, GRAPH_COLORS } from './types';
