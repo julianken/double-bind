@@ -6,7 +6,14 @@ import eslintConfigPrettier from 'eslint-config-prettier';
 export default tseslint.config(
   // Global ignores
   {
-    ignores: ['**/dist/', '**/node_modules/', '**/src-tauri/', '**/*.js'],
+    ignores: [
+      '**/dist/',
+      '**/node_modules/',
+      '**/src-tauri/',
+      '**/*.js',
+      // Mobile app has React 18/19 type conflict - skip until RN supports React 19
+      'packages/mobile-app/**',
+    ],
   },
 
   // Base ESLint recommended rules
