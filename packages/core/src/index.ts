@@ -101,3 +101,10 @@ export {
   createServices,
   type Services,
 } from './services/index.js';
+
+// Providers - platform-agnostic database lifecycle management
+export {
+  type GraphDBProvider,
+  type GraphDBProviderConfig,
+  type GraphDBProviderInitResult,
+} from './providers/index.js';
