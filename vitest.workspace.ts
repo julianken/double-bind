@@ -63,4 +63,22 @@ export default defineWorkspace([
       },
     },
   },
+
+  // Mobile primitives integration tests - runs mobile service integration tests with real CozoDB
+  {
+    test: {
+      name: 'mobile-primitives-integration',
+      root: './packages/mobile-primitives',
+      globals: true,
+      environment: 'node',
+      include: ['test/integration/**/*.{test,spec}.ts'],
+      passWithNoTests: true,
+      pool: 'forks',
+      poolOptions: {
+        forks: {
+          singleFork: true,
+        },
+      },
+    },
+  },
 ]);

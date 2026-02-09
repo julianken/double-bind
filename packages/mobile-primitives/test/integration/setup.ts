@@ -21,6 +21,7 @@ import {
   PageService,
   BlockService,
   GraphService,
+  SearchService,
 } from '@double-bind/core';
 
 /**
@@ -36,10 +37,12 @@ export interface TestContext {
   pageService: PageService;
   blockService: BlockService;
   graphService: GraphService;
+  searchService: SearchService;
 }
 
 /**
  * Create a fresh test context with all services initialized
+ * Each call creates a completely isolated database instance
  */
 export function createTestContext(): TestContext {
   const db = new MockGraphDB() as unknown as GraphDB;
@@ -55,6 +58,7 @@ export function createTestContext(): TestContext {
   const pageService = new PageService(pageRepo, blockRepo, linkRepo);
   const blockService = new BlockService(blockRepo, linkRepo, pageRepo, tagRepo, propertyRepo);
   const graphService = new GraphService(db);
+  const searchService = new SearchService(db, pageRepo, blockRepo);
 
   return {
     db,
@@ -66,27 +70,29 @@ export function createTestContext(): TestContext {
     pageService,
     blockService,
     graphService,
+    searchService,
   };
 }
 
 /**
  * Seed test database with sample data for integration tests
+ * Uses unique names to avoid conflicts with test-created pages
  */
 export function seedTestData(db: MockGraphDB): void {
-  // Seed pages
+  // Seed pages - use unique prefixes to avoid conflicts
   db.seed('pages', [
-    ['page-1', 'Welcome', 1700000000, 1700000000, false, null],
-    ['page-2', 'Getting Started', 1700000100, 1700000100, false, null],
-    ['page-3', 'Advanced Topics', 1700000200, 1700000200, false, null],
+    ['page-1', 'Seeded Page One', 1700000000, 1700000000, false, null],
+    ['page-2', 'Seeded Page Two', 1700000100, 1700000100, false, null],
+    ['page-3', 'Seeded Page Three', 1700000200, 1700000200, false, null],
   ]);
 
-  // Seed blocks
+  // Seed blocks - reference the seeded pages only
   db.seed('blocks', [
     [
       'block-1',
       'page-1',
       null,
-      'Welcome to [[Getting Started]]',
+      'Content linking to [[Seeded Page Two]]',
       'text',
       'a0',
       false,
@@ -98,7 +104,7 @@ export function seedTestData(db: MockGraphDB): void {
       'block-2',
       'page-1',
       null,
-      'This is a [[Advanced Topics]] reference',
+      'Content linking to [[Seeded Page Three]]',
       'text',
       'a1',
       false,
@@ -110,7 +116,7 @@ export function seedTestData(db: MockGraphDB): void {
       'block-3',
       'page-2',
       null,
-      'Getting started content',
+      'Seeded block content',
       'text',
       'a0',
       false,
@@ -122,7 +128,7 @@ export function seedTestData(db: MockGraphDB): void {
       'block-4',
       'page-3',
       null,
-      'Advanced content',
+      'Seeded block content',
       'text',
       'a0',
       false,

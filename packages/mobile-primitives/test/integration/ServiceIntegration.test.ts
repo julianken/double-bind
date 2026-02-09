@@ -26,7 +26,7 @@ describe('Service Integration - Cross-Service Scenarios', () => {
   beforeEach(() => {
     ctx = createTestContext();
     mobileEnv = createMockMobileEnvironment();
-    seedTestData(ctx.db);
+    // Don't seed data - let each test create its own to avoid conflicts
   });
 
   afterEach(() => {

@@ -27,7 +27,7 @@ describe('Core Service Integration - Mobile Bridge', () => {
   beforeEach(() => {
     ctx = createTestContext();
     mobileEnv = createMockMobileEnvironment();
-    seedTestData(ctx.db);
+    // Don't seed data - let each test create its own to avoid conflicts
   });
 
   afterEach(() => {
@@ -52,17 +52,19 @@ describe('Core Service Integration - Mobile Bridge', () => {
     });
 
     it('should retrieve page with blocks through mobile bridge', async () => {
-      const pageId = 'page-1' as PageId;
+      // Create a test page with blocks
+      const page = await ctx.pageService.createPage('Test Page');
+      const block = await ctx.blockService.createBlock(page.pageId, null, 'Test block');
 
       // Simulate mobile UI requesting page data
-      mobileEnv.bridge.emit('page:fetch', { pageId });
+      mobileEnv.bridge.emit('page:fetch', { pageId: page.pageId });
 
       // Service layer retrieves page with blocks
-      const result = await ctx.pageService.getPageWithBlocks(pageId);
+      const result = await ctx.pageService.getPageWithBlocks(page.pageId);
 
       expect(result).toBeDefined();
-      expect(result?.page.pageId).toBe(pageId);
-      expect(result?.page.title).toBe('Welcome');
+      expect(result?.page.pageId).toBe(page.pageId);
+      expect(result?.page.title).toBe('Test Page');
       expect(result?.blocks.length).toBeGreaterThan(0);
     });
 
@@ -74,7 +76,7 @@ describe('Core Service Integration - Mobile Bridge', () => {
       mobileEnv.bridge.emit('page:update', { pageId, title: newTitle });
 
       // Service layer updates the page
-      await ctx.pageService.updatePage(pageId, { title: newTitle });
+      await ctx.pageService.updateTitle(pageId, newTitle);
 
       // Verify update
       const result = await ctx.pageService.getPageWithBlocks(pageId);
@@ -103,7 +105,7 @@ describe('Core Service Integration - Mobile Bridge', () => {
       mobileEnv.bridge.emit('page:backlinks', { pageId });
 
       // Service layer retrieves backlinks
-      const backlinks = await ctx.pageService.getBacklinks(pageId);
+      const backlinks = await ctx.pageService.getPageBacklinks(pageId);
 
       expect(backlinks).toBeDefined();
       expect(Array.isArray(backlinks)).toBe(true);
@@ -216,8 +218,8 @@ describe('Core Service Integration - Mobile Bridge', () => {
         targetParentId: block1.blockId,
       });
 
-      // Service layer updates parent
-      await ctx.blockService.updateParent(block2.blockId, block1.blockId);
+      // Service layer updates parent using moveBlock
+      await ctx.blockService.moveBlock(block2.blockId, block1.blockId);
 
       // Verify indentation
       const updated = await ctx.blockService.getById(block2.blockId);
@@ -226,8 +228,8 @@ describe('Core Service Integration - Mobile Bridge', () => {
       // Simulate mobile gesture to outdent block2
       mobileEnv.bridge.emit('block:outdent', { blockId: block2.blockId });
 
-      // Service layer updates parent to null
-      await ctx.blockService.updateParent(block2.blockId, null);
+      // Service layer updates parent to null using moveBlock
+      await ctx.blockService.moveBlock(block2.blockId, null);
 
       // Verify outdentation
       const outdented = await ctx.blockService.getById(block2.blockId);
@@ -284,7 +286,7 @@ describe('Core Service Integration - Mobile Bridge', () => {
       mobileEnv.bridge.emit('graph:suggest', { pageId });
 
       // Service layer generates suggestions
-      const suggestions = await ctx.graphService.suggestLinks(pageId);
+      const suggestions = await ctx.graphService.getSuggestedLinks(pageId);
 
       expect(suggestions).toBeDefined();
       expect(Array.isArray(suggestions)).toBe(true);
@@ -457,8 +459,9 @@ describe('Core Service Integration - Mobile Bridge', () => {
     it('should handle invalid page ID gracefully', async () => {
       const invalidPageId = 'non-existent-page' as PageId;
 
-      const result = await ctx.pageService.getPageWithBlocks(invalidPageId);
-      expect(result).toBeNull();
+      await expect(ctx.pageService.getPageWithBlocks(invalidPageId)).rejects.toThrow(
+        'Page not found'
+      );
     });
 
     it('should handle invalid block ID gracefully', async () => {
