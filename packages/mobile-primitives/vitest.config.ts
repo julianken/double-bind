@@ -1,11 +1,13 @@
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
+  esbuild: {
+    jsx: 'automatic',
+  },
   test: {
-    name: 'mobile-primitives',
-    environment: 'node',
     globals: true,
-    setupFiles: ['./test/setup.ts'],
+    environment: 'node',
     include: ['test/**/*.test.{ts,tsx}'],
+    setupFiles: ['./test/setup.ts'],
   },
 });
