@@ -9,6 +9,27 @@
 import Foundation
 import React
 
+/// Actor that manages the database instance with thread-safe access.
+/// Using an actor ensures all access to the db property is serialized.
+private actor DatabaseManager {
+    private var db: CozoGraphDB?
+
+    func setDatabase(_ database: CozoGraphDB?) {
+        self.db = database
+    }
+
+    func getDatabase() -> CozoGraphDB? {
+        return db
+    }
+
+    func closeAndClear() async throws {
+        if let currentDb = db {
+            try await currentDb.close()
+            db = nil
+        }
+    }
+}
+
 /// React Native native module for CozoDB database operations.
 /// This module wraps CozoGraphDB and exposes its methods to JavaScript.
 ///
@@ -19,12 +40,8 @@ final class CozoModule: NSObject {
 
     // MARK: - Properties
 
-    /// The underlying CozoGraphDB instance.
-    /// Initialized via `initialize()` and released via `close()`.
-    private var db: CozoGraphDB?
-
-    /// Lock for thread-safe access to the db property.
-    private let lock = NSLock()
+    /// Actor-based database manager for thread-safe access.
+    private let dbManager = DatabaseManager()
 
     // MARK: - Error Codes
 
@@ -58,17 +75,12 @@ final class CozoModule: NSObject {
         reject: @escaping RCTPromiseRejectBlock
     ) {
         Task {
-            lock.lock()
-            defer { lock.unlock() }
-
-            // Close existing database if any
-            if let existingDb = db {
-                try? await existingDb.close()
-                db = nil
-            }
+            // Close existing database if any (actor handles serialization)
+            try? await dbManager.closeAndClear()
 
             do {
-                db = try CozoGraphDB(engine: "sqlite", path: path)
+                let newDb = try CozoGraphDB(engine: "sqlite", path: path)
+                await dbManager.setDatabase(newDb)
                 resolve(nil)
             } catch {
                 reject(
@@ -91,17 +103,8 @@ final class CozoModule: NSObject {
         reject: @escaping RCTPromiseRejectBlock
     ) {
         Task {
-            lock.lock()
-            defer { lock.unlock() }
-
-            guard let currentDb = db else {
-                resolve(nil)
-                return
-            }
-
             do {
-                try await currentDb.close()
-                db = nil
+                try await dbManager.closeAndClear()
                 resolve(nil)
             } catch {
                 reject(
@@ -130,7 +133,7 @@ final class CozoModule: NSObject {
         reject: @escaping RCTPromiseRejectBlock
     ) {
         Task {
-            guard let currentDb = getDb() else {
+            guard let currentDb = await dbManager.getDatabase() else {
                 reject(
                     ErrorCode.notInitialized.rawValue,
                     "Database not initialized. Call initialize() first.",
@@ -165,7 +168,7 @@ final class CozoModule: NSObject {
         reject: @escaping RCTPromiseRejectBlock
     ) {
         Task {
-            guard let currentDb = getDb() else {
+            guard let currentDb = await dbManager.getDatabase() else {
                 reject(
                     ErrorCode.notInitialized.rawValue,
                     "Database not initialized. Call initialize() first.",
@@ -200,7 +203,7 @@ final class CozoModule: NSObject {
         reject: @escaping RCTPromiseRejectBlock
     ) {
         Task {
-            guard let currentDb = getDb() else {
+            guard let currentDb = await dbManager.getDatabase() else {
                 reject(
                     ErrorCode.notInitialized.rawValue,
                     "Database not initialized. Call initialize() first.",
@@ -237,7 +240,7 @@ final class CozoModule: NSObject {
         reject: @escaping RCTPromiseRejectBlock
     ) {
         Task {
-            guard let currentDb = getDb() else {
+            guard let currentDb = await dbManager.getDatabase() else {
                 reject(
                     ErrorCode.notInitialized.rawValue,
                     "Database not initialized. Call initialize() first.",
@@ -272,7 +275,7 @@ final class CozoModule: NSObject {
         reject: @escaping RCTPromiseRejectBlock
     ) {
         Task {
-            guard let currentDb = getDb() else {
+            guard let currentDb = await dbManager.getDatabase() else {
                 reject(
                     ErrorCode.notInitialized.rawValue,
                     "Database not initialized. Call initialize() first.",
@@ -309,7 +312,7 @@ final class CozoModule: NSObject {
         reject: @escaping RCTPromiseRejectBlock
     ) {
         Task {
-            guard let currentDb = getDb() else {
+            guard let currentDb = await dbManager.getDatabase() else {
                 reject(
                     ErrorCode.notInitialized.rawValue,
                     "Database not initialized. Call initialize() first.",
@@ -344,7 +347,7 @@ final class CozoModule: NSObject {
         reject: @escaping RCTPromiseRejectBlock
     ) {
         Task {
-            guard let currentDb = getDb() else {
+            guard let currentDb = await dbManager.getDatabase() else {
                 // Not initialized is OK for lifecycle methods
                 resolve(nil)
                 return
@@ -374,7 +377,7 @@ final class CozoModule: NSObject {
         reject: @escaping RCTPromiseRejectBlock
     ) {
         Task {
-            guard let currentDb = getDb() else {
+            guard let currentDb = await dbManager.getDatabase() else {
                 // Not initialized is OK for lifecycle methods
                 resolve(nil)
                 return
@@ -404,7 +407,7 @@ final class CozoModule: NSObject {
         reject: @escaping RCTPromiseRejectBlock
     ) {
         Task {
-            guard let currentDb = getDb() else {
+            guard let currentDb = await dbManager.getDatabase() else {
                 // Not initialized is OK for lifecycle methods
                 resolve(nil)
                 return
@@ -423,12 +426,4 @@ final class CozoModule: NSObject {
         }
     }
 
-    // MARK: - Private Helpers
-
-    /// Thread-safe access to the database instance.
-    private func getDb() -> CozoGraphDB? {
-        lock.lock()
-        defer { lock.unlock() }
-        return db
-    }
 }

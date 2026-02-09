@@ -9,6 +9,25 @@
 import Foundation
 import CozoSwiftBridge
 
+/// Actor that manages the closed state with thread-safe access.
+private actor ClosedStateManager {
+    private var _isClosed: Bool = false
+
+    var isClosed: Bool {
+        return _isClosed
+    }
+
+    func setClosed() {
+        _isClosed = true
+    }
+
+    func ensureNotClosed() throws {
+        if _isClosed {
+            throw GraphDBError.databaseClosed
+        }
+    }
+}
+
 /// Thread-safe wrapper around CozoDB that implements the GraphDB interface.
 /// All operations are executed on a background queue and results are returned asynchronously.
 public final class CozoGraphDB: @unchecked Sendable {
@@ -17,10 +36,14 @@ public final class CozoGraphDB: @unchecked Sendable {
 
     private var db: CozoDB?
     private let queue = DispatchQueue(label: "com.doublebind.cozodb", qos: .userInitiated)
-    private let lock = NSLock()
+    private let closedState = ClosedStateManager()
 
     /// Whether the database has been closed.
-    public private(set) var isClosed: Bool = false
+    public var isClosed: Bool {
+        get async {
+            return await closedState.isClosed
+        }
+    }
 
     // MARK: - Initialization
 
@@ -58,7 +81,7 @@ public final class CozoGraphDB: @unchecked Sendable {
     /// - Throws: `GraphDBError.databaseClosed` if database is closed
     ///           `GraphDBError.queryFailed` if query execution fails
     public func run(_ script: String, params: String = "{}") async throws -> String {
-        try ensureNotClosed()
+        try await closedState.ensureNotClosed()
 
         return try await withCheckedThrowingContinuation { continuation in
             queue.async { [weak self] in
@@ -94,7 +117,7 @@ public final class CozoGraphDB: @unchecked Sendable {
     /// - Throws: `GraphDBError.databaseClosed` if database is closed
     ///           `GraphDBError.exportFailed` if export fails
     public func exportRelations(_ relations: String) async throws -> String {
-        try ensureNotClosed()
+        try await closedState.ensureNotClosed()
 
         return try await withCheckedThrowingContinuation { continuation in
             queue.async { [weak self] in
@@ -129,7 +152,7 @@ public final class CozoGraphDB: @unchecked Sendable {
     /// - Throws: `GraphDBError.databaseClosed` if database is closed
     ///           `GraphDBError.importFailed` if import fails
     public func importRelations(_ data: String) async throws {
-        try ensureNotClosed()
+        try await closedState.ensureNotClosed()
 
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             queue.async { [weak self] in
@@ -160,7 +183,7 @@ public final class CozoGraphDB: @unchecked Sendable {
     /// - Throws: `GraphDBError.databaseClosed` if database is closed
     ///           `GraphDBError.backupFailed` if backup fails
     public func backup(to path: String) async throws {
-        try ensureNotClosed()
+        try await closedState.ensureNotClosed()
 
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             queue.async { [weak self] in
@@ -185,7 +208,7 @@ public final class CozoGraphDB: @unchecked Sendable {
     /// - Throws: `GraphDBError.databaseClosed` if database is closed
     ///           `GraphDBError.restoreFailed` if restore fails
     public func restore(from path: String) async throws {
-        try ensureNotClosed()
+        try await closedState.ensureNotClosed()
 
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             queue.async { [weak self] in
@@ -212,7 +235,7 @@ public final class CozoGraphDB: @unchecked Sendable {
     /// - Throws: `GraphDBError.databaseClosed` if database is closed
     ///           `GraphDBError.importFromBackupFailed` if import fails
     public func importRelationsFromBackup(path: String, relations: String) async throws {
-        try ensureNotClosed()
+        try await closedState.ensureNotClosed()
 
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             queue.async { [weak self] in
@@ -240,7 +263,7 @@ public final class CozoGraphDB: @unchecked Sendable {
     /// Called when the app transitions to the background.
     /// Flushes pending writes to ensure data integrity.
     public func suspend() async throws {
-        try ensureNotClosed()
+        try await closedState.ensureNotClosed()
 
         // SQLite handles this gracefully with WAL mode.
         // No explicit action needed, but we can force a checkpoint if needed.
@@ -250,7 +273,7 @@ public final class CozoGraphDB: @unchecked Sendable {
     /// Called when the app returns to the foreground.
     /// Validates database state and refreshes connections if needed.
     public func resume() async throws {
-        try ensureNotClosed()
+        try await closedState.ensureNotClosed()
 
         // SQLite connections remain valid across app suspension.
         // No explicit action needed.
@@ -259,7 +282,7 @@ public final class CozoGraphDB: @unchecked Sendable {
     /// Called when the system signals memory pressure.
     /// Releases non-essential caches and resources.
     public func onLowMemory() async throws {
-        try ensureNotClosed()
+        try await closedState.ensureNotClosed()
 
         // CozoDB manages its own memory. We could potentially clear
         // any application-level caches here if we add them in the future.
@@ -270,24 +293,13 @@ public final class CozoGraphDB: @unchecked Sendable {
     /// Closes the database and releases all resources.
     /// After calling this method, the instance is unusable.
     public func close() async throws {
-        lock.lock()
-        defer { lock.unlock() }
+        // Check if already closed (actor handles thread safety)
+        guard await !closedState.isClosed else { return }
 
-        guard !isClosed else { return }
+        // Mark as closed first (actor handles thread safety)
+        await closedState.setClosed()
 
         // CozoDB releases resources on deinit
         db = nil
-        isClosed = true
-    }
-
-    // MARK: - Private Helpers
-
-    private func ensureNotClosed() throws {
-        lock.lock()
-        defer { lock.unlock() }
-
-        if isClosed {
-            throw GraphDBError.databaseClosed
-        }
     }
 }
