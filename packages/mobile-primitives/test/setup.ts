@@ -46,6 +46,7 @@ vi.mock('react-native', () => ({
   Text: 'Text',
   ScrollView: 'ScrollView',
   TouchableOpacity: 'TouchableOpacity',
+  Pressable: 'Pressable',
   ActivityIndicator: 'ActivityIndicator',
   RefreshControl: 'RefreshControl',
   KeyboardAvoidingView: 'KeyboardAvoidingView',
@@ -69,6 +70,26 @@ vi.mock('react-native', () => ({
   },
 }));
 
+// Mock react-native-gesture-handler
+vi.mock('react-native-gesture-handler', () => ({
+  Gesture: {
+    Tap: vi.fn(() => ({
+      numberOfTaps: vi.fn().mockReturnThis(),
+      maxDuration: vi.fn().mockReturnThis(),
+      onEnd: vi.fn().mockReturnThis(),
+      requireExternalGestureToFail: vi.fn().mockReturnThis(),
+    })),
+    LongPress: vi.fn(() => ({
+      minDuration: vi.fn().mockReturnThis(),
+      maxDistance: vi.fn().mockReturnThis(),
+      onEnd: vi.fn().mockReturnThis(),
+    })),
+    Exclusive: vi.fn((...gestures) => gestures),
+  },
+  GestureDetector: 'GestureDetector',
+  Pressable: 'Pressable',
+}));
+
 // Mock react-native-safe-area-context
 vi.mock('react-native-safe-area-context', () => ({
   SafeAreaView: 'SafeAreaView',
@@ -79,4 +100,29 @@ vi.mock('react-native-safe-area-context', () => ({
     bottom: 34,
     left: 0,
   })),
+}));
+
+// Mock @double-bind/core parseContent function
+vi.mock('@double-bind/core', () => ({
+  parseContent: vi.fn((content: string) => {
+    // Simple mock implementation that extracts page links
+    const pageLinks: Array<{ title: string; startIndex: number; endIndex: number }> = [];
+    const linkPattern = /\[\[([^\]]+)\]\]/g;
+    let match;
+
+    while ((match = linkPattern.exec(content)) !== null) {
+      pageLinks.push({
+        title: match[1]!,
+        startIndex: match.index,
+        endIndex: match.index + match[0].length,
+      });
+    }
+
+    return {
+      pageLinks,
+      blockRefs: [],
+      tags: [],
+      properties: [],
+    };
+  }),
 }));
