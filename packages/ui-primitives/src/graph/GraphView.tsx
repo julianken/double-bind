@@ -44,6 +44,8 @@ export interface GraphNode {
 export interface GraphEdge {
   source: PageId;
   target: PageId;
+  /** When true, indicates a bidirectional link (A→B and B→A both exist) */
+  isBidirectional?: boolean;
 }
 
 export interface GraphViewProps {
@@ -135,6 +137,15 @@ const MAX_NODE_RADIUS = 15;
 /** Highlighted node radius multiplier */
 const HIGHLIGHT_RADIUS_MULTIPLIER = 1.5;
 
+/** Arrow head length in pixels */
+const ARROW_LENGTH = 4.5;
+
+/** Arrow position relative to target (0=source, 1=target) */
+const ARROW_REL_POS = 1.25;
+
+/** Curvature for bidirectional links to separate arrows */
+const BIDIRECTIONAL_CURVATURE = 0.15;
+
 /** Community color palette (categorical) */
 const COMMUNITY_COLORS: readonly string[] = [
   '#6366f1', // indigo
@@ -161,8 +172,11 @@ interface InternalNodeData {
 
 type InternalNode = NodeObject<InternalNodeData>;
 
-// Internal link type - no extra properties needed, using object for base type
-type InternalLink = LinkObject<InternalNodeData, object>;
+// Internal link type with bidirectional flag
+interface InternalLinkData {
+  isBidirectional?: boolean;
+}
+type InternalLink = LinkObject<InternalNodeData, InternalLinkData>;
 
 // ============================================================================
 // Styles
@@ -240,6 +254,7 @@ export const GraphView = memo(
       const internalLinks: InternalLink[] = edges.map((edge) => ({
         source: edge.source,
         target: edge.target,
+        isBidirectional: edge.isBidirectional,
       }));
 
       return { nodes: internalNodes, links: internalLinks };
@@ -396,7 +411,13 @@ export const GraphView = memo(
           onNodeHover={handleNodeHover}
           linkColor={() => EDGE_COLOR}
           linkWidth={1}
-          linkDirectionalParticles={0}
+          linkDirectionalArrowLength={ARROW_LENGTH}
+          linkDirectionalArrowRelPos={ARROW_REL_POS}
+          linkDirectionalArrowColor={() => EDGE_COLOR}
+          linkCurvature={(link: InternalLink) => {
+            // For bidirectional links, curve slightly to separate the arrows
+            return link.isBidirectional ? BIDIRECTIONAL_CURVATURE : 0;
+          }}
           enableNodeDrag={true}
           enableZoomInteraction={true}
           enablePanInteraction={true}
