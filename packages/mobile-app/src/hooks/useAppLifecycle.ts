@@ -14,7 +14,7 @@
  * @see MobileGraphDB - Database implementation with suspend/resume methods
  */
 
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useState } from 'react';
 import { AppState, type AppStateStatus } from 'react-native';
 import type { MobileGraphDB } from '@double-bind/mobile';
 
@@ -228,7 +228,7 @@ export interface AppLifecycleState {
  * ```
  */
 export function useAppLifecycleState(): AppLifecycleState {
-  const stateRef = useRef<AppLifecycleState>({
+  const [state, setState] = useState<AppLifecycleState>({
     appState: AppState.currentState,
     isActive: AppState.currentState === 'active',
     isBackground: AppState.currentState === 'background',
@@ -237,12 +237,12 @@ export function useAppLifecycleState(): AppLifecycleState {
 
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (nextState) => {
-      stateRef.current = {
+      setState({
         appState: nextState,
         isActive: nextState === 'active',
         isBackground: nextState === 'background',
         isTransitioning: false,
-      };
+      });
     });
 
     return () => {
@@ -250,5 +250,5 @@ export function useAppLifecycleState(): AppLifecycleState {
     };
   }, []);
 
-  return stateRef.current;
+  return state;
 }
