@@ -56,6 +56,10 @@ export function usePageWithBlocks(pageId: PageId) {
     queryKey: pageKeys.withBlocks(pageId),
     queryFn: () => pageService.getPageWithBlocks(pageId),
     enabled: !!pageId,
+    // Always refetch on mount to ensure fresh data after navigation.
+    // This fixes the race condition where blur-triggered saves complete
+    // after navigation, leaving stale data in the cache.
+    refetchOnMount: 'always',
   });
 }
 
@@ -194,6 +198,10 @@ export function useDailyNoteWithBlocks(dateString?: string): {
       const { blocks } = await pageService.getPageWithBlocks(page.pageId);
       return { page, blocks };
     },
+    // Always refetch on mount to ensure fresh data after navigation.
+    // This fixes the race condition where blur-triggered saves complete
+    // after navigation, leaving stale data in the cache.
+    refetchOnMount: 'always',
   });
 
   return {

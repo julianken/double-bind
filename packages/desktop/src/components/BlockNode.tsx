@@ -33,7 +33,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS as DndCSS } from '@dnd-kit/utilities';
 import { InlineBlockRef, InlinePageLink } from '@double-bind/ui-primitives';
-import { useCozoQuery, invalidateQueries } from '../hooks/useCozoQuery.js';
+import { useCozoQuery, invalidateQueries, resetQueries } from '../hooks/useCozoQuery.js';
 import { useAppStore } from '../stores/ui-store.js';
 import { useServices } from '../providers/ServiceProvider.js';
 import { BlockEditor as RealBlockEditor } from '../editor/BlockEditor.js';
@@ -978,17 +978,24 @@ function BlockNodeComponent({ blockId, depth = 0, previousBlockId, nextBlockId }
     [setFocusedBlock]
   );
 
-  // Callback when blocks change (for query invalidation)
-  // Only invalidate page-level queries to avoid cascade of all block queries
+  // Callback when blocks change (for cache reset)
+  // Use resetQueries to clear cache and prevent duplicates during structural changes
+  // (indent/outdent, reorder). Shows brief loading state instead of stale/duplicate data.
   const handleBlocksChanged = useCallback(() => {
     const pageId = block?.pageId;
     if (pageId) {
-      // Invalidate the specific page's blocks query (used by DailyNotesView/PageView)
-      invalidateQueries(['blocks', 'byPage', pageId]);
+      // Reset the specific page's blocks query (used by DailyNotesView/PageView)
+      resetQueries(['blocks', 'byPage', pageId]);
     }
-    // Invalidate page-level query for PageView
-    invalidateQueries(['page', 'withBlocks']);
-  }, [block?.pageId]);
+    // Reset all block children queries to update tree structure without duplicates
+    resetQueries(['blocks', 'children']);
+    // Reset this block's detail to get updated parentId after indent/outdent
+    resetQueries(['block', blockId]);
+    // Reset page-level query for PageView
+    resetQueries(['page', 'withBlocks']);
+    // Reset daily note query for DailyNotesView (uses ['dailyNote', 'withBlocks', date])
+    resetQueries(['dailyNote']);
+  }, [block?.pageId, blockId]);
 
   // Handle activating this block for editing
   const handleActivate = useCallback(() => {
@@ -1101,6 +1108,7 @@ function BlockNodeComponent({ blockId, depth = 0, previousBlockId, nextBlockId }
               initialContent={block.content}
               blockService={services?.blockService}
               pageId={block.pageId}
+              parentId={block.parentId}
               previousBlockId={previousBlockId ?? null}
               nextBlockId={nextBlockId ?? null}
               focusBlock={focusBlock}

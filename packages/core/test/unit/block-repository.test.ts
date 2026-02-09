@@ -207,20 +207,18 @@ describe('BlockRepository', () => {
   });
 
   describe('create', () => {
-    it('should execute three separate mutations for index maintenance', async () => {
+    it('should execute atomic mutation for index maintenance', async () => {
       const pageId = '01ARZ3NDEKTSV4RRFFQ69G5PAG';
 
       await repo.create({ pageId, content: 'New block' });
 
-      // Should have 3 separate mutations (CozoDB v0.7 doesn't allow multiple ? rules with :put)
-      expect(db.mutations).toHaveLength(3);
+      // Should have 1 atomic mutation containing all 3 operations
+      expect(db.mutations).toHaveLength(1);
 
-      // First mutation: put to blocks relation
+      // Single atomic script contains all operations
       expect(db.mutations[0]?.script).toContain(':put blocks {');
-      // Second mutation: put to blocks_by_page index
-      expect(db.mutations[1]?.script).toContain(':put blocks_by_page {');
-      // Third mutation: put to blocks_by_parent index
-      expect(db.mutations[2]?.script).toContain(':put blocks_by_parent {');
+      expect(db.mutations[0]?.script).toContain(':put blocks_by_page {');
+      expect(db.mutations[0]?.script).toContain(':put blocks_by_parent {');
     });
 
     it('should generate ULID for block ID', async () => {
@@ -253,8 +251,8 @@ describe('BlockRepository', () => {
 
       await repo.create({ pageId, content: 'Root block' });
 
-      // The third mutation (blocks_by_parent insert) has the parent_key
-      expect(db.mutations[2]?.params.parent_key).toBe(`__page:${pageId}`);
+      // Atomic mutation has the parent_key for blocks_by_parent
+      expect(db.mutations[0]?.params.parent_key).toBe(`__page:${pageId}`);
     });
 
     it('should use parent ID as parent key when provided', async () => {
@@ -263,9 +261,9 @@ describe('BlockRepository', () => {
 
       await repo.create({ pageId, parentId, content: 'Child block' });
 
-      // First mutation (blocks) has parent_id, third mutation (blocks_by_parent) has parent_key
+      // Atomic mutation has both parent_id and parent_key
       expect(db.mutations[0]?.params.parent_id).toBe(parentId);
-      expect(db.mutations[2]?.params.parent_key).toBe(parentId);
+      expect(db.mutations[0]?.params.parent_key).toBe(parentId);
     });
 
     it('should use provided content type', async () => {
@@ -430,7 +428,7 @@ describe('BlockRepository', () => {
   });
 
   describe('move', () => {
-    it('should execute three separate mutations for block and index updates', async () => {
+    it('should execute atomic mutation for block and index updates', async () => {
       const blockId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
       const pageId = '01ARZ3NDEKTSV4RRFFQ69G5PAG';
       db.seed('blocks', [createBlockRow({ block_id: blockId, page_id: pageId })]);
@@ -438,19 +436,16 @@ describe('BlockRepository', () => {
       const newParentId = '01ARZ3NDEKTSV4RRFFQ69G5PAR';
       await repo.move(blockId, newParentId, 'b');
 
-      // CozoDB doesn't support multiple ? rules with system commands in one block,
-      // so move() uses 3 separate mutations:
+      // move() uses 1 atomic mutation containing all 3 operations:
       // 1. Update the block itself (:put blocks)
       // 2. Remove from old parent index (:rm blocks_by_parent)
       // 3. Add to new parent index (:put blocks_by_parent)
-      expect(db.mutations).toHaveLength(3);
+      expect(db.mutations).toHaveLength(1);
 
-      // First mutation: update blocks
+      // Single atomic script contains all operations
       expect(db.mutations[0].script).toContain(':put blocks {');
-      // Second mutation: remove from old parent index
-      expect(db.mutations[1].script).toContain(':rm blocks_by_parent {');
-      // Third mutation: add to new parent index
-      expect(db.mutations[2].script).toContain(':put blocks_by_parent {');
+      expect(db.mutations[0].script).toContain(':rm blocks_by_parent {');
+      expect(db.mutations[0].script).toContain(':put blocks_by_parent {');
     });
 
     it('should throw BLOCK_NOT_FOUND if block does not exist', async () => {
@@ -474,10 +469,10 @@ describe('BlockRepository', () => {
 
       await repo.move(blockId, newParentId, 'b');
 
-      // move() uses 3 separate mutations
-      // Mutation 2 removes from old parent, mutation 3 adds to new parent
-      expect(db.mutations[1].params.old_parent_key).toBe(oldParentId);
-      expect(db.mutations[2].params.new_parent_key).toBe(newParentId);
+      // move() uses 1 atomic mutation with all operations
+      expect(db.mutations).toHaveLength(1);
+      expect(db.mutations[0].params.old_parent_key).toBe(oldParentId);
+      expect(db.mutations[0].params.new_parent_key).toBe(newParentId);
     });
 
     it('should use page sentinel for root-level move', async () => {
@@ -491,10 +486,10 @@ describe('BlockRepository', () => {
 
       await repo.move(blockId, null, 'b');
 
-      // move() uses 3 separate mutations
-      expect(db.mutations[1].params.old_parent_key).toBe(oldParentId);
-      expect(db.mutations[2].params.new_parent_key).toBe(`__page:${pageId}`);
-      // First mutation updates the block with null parent_id
+      // move() uses 1 atomic mutation with all operations
+      expect(db.mutations).toHaveLength(1);
+      expect(db.mutations[0].params.old_parent_key).toBe(oldParentId);
+      expect(db.mutations[0].params.new_parent_key).toBe(`__page:${pageId}`);
       expect(db.mutations[0].params.new_parent_id).toBeNull();
     });
 
@@ -797,14 +792,12 @@ describe('BlockRepository', () => {
 
       await repo.move(blockId, parentId, 'z');
 
-      // move() uses 3 separate mutations
-      // First mutation updates the block
+      // move() uses 1 atomic mutation with all operations
+      expect(db.mutations).toHaveLength(1);
       expect(db.mutations[0].params.new_parent_id).toBe(parentId);
       expect(db.mutations[0].params.new_order).toBe('z');
-      // Second mutation removes from old parent (same as new)
-      expect(db.mutations[1].params.old_parent_key).toBe(parentId);
-      // Third mutation adds to new parent (same as old)
-      expect(db.mutations[2].params.new_parent_key).toBe(parentId);
+      expect(db.mutations[0].params.old_parent_key).toBe(parentId);
+      expect(db.mutations[0].params.new_parent_key).toBe(parentId);
     });
   });
 
@@ -878,9 +871,10 @@ describe('BlockRepository', () => {
 
       await repo.create({ pageId, content: 'Root block' });
 
-      // create() uses 3 separate mutations
+      // create() uses 1 atomic mutation with all operations
+      expect(db.mutations).toHaveLength(1);
       expect(db.mutations[0]?.params.parent_id).toBeNull();
-      expect(db.mutations[2]?.params.parent_key).toBe(`__page:${pageId}`);
+      expect(db.mutations[0]?.params.parent_key).toBe(`__page:${pageId}`);
     });
 
     it('should create child block with parentId', async () => {
@@ -889,9 +883,10 @@ describe('BlockRepository', () => {
 
       await repo.create({ pageId, content: 'Child block', parentId });
 
-      // create() uses 3 separate mutations
+      // create() uses 1 atomic mutation with all operations
+      expect(db.mutations).toHaveLength(1);
       expect(db.mutations[0]?.params.parent_id).toBe(parentId);
-      expect(db.mutations[2]?.params.parent_key).toBe(parentId);
+      expect(db.mutations[0]?.params.parent_key).toBe(parentId);
     });
 
     it('should maintain all indexes on create', async () => {
@@ -899,11 +894,11 @@ describe('BlockRepository', () => {
 
       await repo.create({ pageId, content: 'Block' });
 
-      // create() uses 3 separate mutations for each index
-      expect(db.mutations).toHaveLength(3);
+      // create() uses 1 atomic mutation containing all 3 index operations
+      expect(db.mutations).toHaveLength(1);
       expect(db.mutations[0]?.script).toContain(':put blocks {');
-      expect(db.mutations[1]?.script).toContain(':put blocks_by_page {');
-      expect(db.mutations[2]?.script).toContain(':put blocks_by_parent {');
+      expect(db.mutations[0]?.script).toContain(':put blocks_by_page {');
+      expect(db.mutations[0]?.script).toContain(':put blocks_by_parent {');
     });
   });
 

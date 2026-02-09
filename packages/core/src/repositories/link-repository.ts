@@ -226,31 +226,30 @@ export class LinkRepository {
    * Called when block content is updated to clear old references
    * before creating new ones.
    *
-   * This removes:
+   * Atomically removes (via CozoDB transaction block):
    * 1. Links where context_block_id matches (page links from this block)
    * 2. Block refs where source_block_id matches (block refs from this block)
    *
    * @param blockId - The block whose references should be removed
    */
   async removeLinksFromBlock(blockId: BlockId): Promise<void> {
-    // Remove links where this block is the context
-    const removeLinksScript = `
-?[source_id, target_id, link_type] :=
+    // Use CozoDB transaction blocks { } for atomic execution.
+    // Both removals succeed or fail together.
+    const script = `
+{
+  ?[source_id, target_id, link_type] :=
     *links{ source_id, target_id, link_type, context_block_id },
     context_block_id == $block_id
-:rm links { source_id, target_id, link_type }
-`.trim();
-
-    // Remove block refs where this block is the source
-    const removeBlockRefsScript = `
-?[source_block_id, target_block_id] :=
+  :rm links { source_id, target_id, link_type }
+}
+{
+  ?[source_block_id, target_block_id] :=
     *block_refs{ source_block_id, target_block_id },
     source_block_id == $block_id
-:rm block_refs { source_block_id, target_block_id }
+  :rm block_refs { source_block_id, target_block_id }
+}
 `.trim();
 
-    // Execute both removals
-    await this.db.mutate(removeLinksScript, { block_id: blockId });
-    await this.db.mutate(removeBlockRefsScript, { block_id: blockId });
+    await this.db.mutate(script, { block_id: blockId });
   }
 }

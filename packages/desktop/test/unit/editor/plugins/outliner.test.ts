@@ -57,6 +57,7 @@ function createMockContext(overrides: Partial<OutlinerContext> = {}): OutlinerCo
   return {
     blockId: 'block-1' as BlockId,
     pageId: 'page-1' as PageId,
+    parentId: null, // Root-level block by default
     previousBlockId: 'block-0' as BlockId,
     nextBlockId: 'block-2' as BlockId,
     getContentBeforeCursor: vi.fn().mockReturnValue('before'),

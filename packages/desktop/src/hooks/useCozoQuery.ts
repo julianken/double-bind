@@ -76,6 +76,30 @@ export const invalidateQueries = (keyPrefix: string[]): void => {
 };
 
 /**
+ * Force immediate refetch of queries by key prefix.
+ * Unlike invalidateQueries (which just marks as stale), this triggers an immediate refetch.
+ * Note: Old cached data is still shown until refetch completes, which can cause duplicates
+ * for structural changes. Use resetQueries for those cases instead.
+ *
+ * @param keyPrefix - Array of key segments to match (e.g., ['blocks'], ['backlinks'])
+ */
+export const refetchQueries = (keyPrefix: string[]): void => {
+  void queryClient.refetchQueries({ queryKey: keyPrefix });
+};
+
+/**
+ * Reset queries by clearing cache and triggering refetch.
+ * Unlike refetchQueries (which keeps stale data visible), this clears cache first
+ * to prevent duplicate items during structural changes (indent/outdent, reorder).
+ * Tradeoff: Shows brief loading state instead of stale data.
+ *
+ * @param keyPrefix - Array of key segments to match (e.g., ['blocks'], ['backlinks'])
+ */
+export const resetQueries = (keyPrefix: string[]): void => {
+  void queryClient.resetQueries({ queryKey: keyPrefix });
+};
+
+/**
  * React hook for executing CozoDB queries with automatic caching and invalidation.
  *
  * Now powered by TanStack Query for stable identity guarantees.
