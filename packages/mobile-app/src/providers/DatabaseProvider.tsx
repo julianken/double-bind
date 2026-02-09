@@ -175,10 +175,12 @@ export function DatabaseProvider({
 
     return () => {
       mounted = false;
-      // Close database on unmount
       if (dbInstance) {
         void dbInstance.close();
       }
+      // Reset state to prevent stale closed database references
+      setDb(null);
+      setStatus('idle');
     };
   }, [effectivePath, initAttempt, onReady, onError]);
 
@@ -214,9 +216,14 @@ export function DatabaseProvider({
 
   const retry = useCallback(() => {
     if (status === 'error') {
+      // Close any existing db instance before retry
+      if (db) {
+        void (db as MobileGraphDB).close();
+        setDb(null);
+      }
       setInitAttempt((prev) => prev + 1);
     }
-  }, [status]);
+  }, [status, db]);
 
   // ─────────────────────────────────────────────────────────────────────────
   // Render
