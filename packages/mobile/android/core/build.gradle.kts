@@ -1,13 +1,7 @@
-/**
- * Gradle build configuration for the Double-Bind Android core module.
- *
- * This module provides the React Native bridge to CozoDB, exposing database
- * operations to JavaScript via native modules.
- */
-
 plugins {
     id("com.android.library")
     id("org.jetbrains.kotlin.android")
+    id("org.jetbrains.kotlin.plugin.serialization")
 }
 
 android {
@@ -15,7 +9,8 @@ android {
     compileSdk = 34
 
     defaultConfig {
-        minSdk = 24  // Android 7.0 (Nougat) - matches React Native defaults
+        minSdk = 24
+        targetSdk = 34
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
@@ -39,23 +34,39 @@ android {
     kotlinOptions {
         jvmTarget = "17"
     }
+
+    testOptions {
+        unitTests.all {
+            it.useJUnitPlatform()
+        }
+    }
 }
 
 dependencies {
-    // CozoDB Android library
-    // Provides SQLite-backed Datalog database with graph algorithms
-    implementation("io.github.cozodb:cozo_android:0.7.2")
+    // CozoDB Android binding
+    implementation("io.github.cozodb:cozo_android:0.7.6")
 
-    // Kotlin coroutines for async database operations
+    // Kotlin Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 
-    // React Native bridge
-    // Note: Version managed by the React Native project
-    implementation("com.facebook.react:react-native:+")
+    // Kotlin Serialization
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
 
-    // Testing dependencies
-    testImplementation("junit:junit:4.13.2")
+    // Unit Testing
+    testImplementation("org.junit.jupiter:junit-jupiter:5.10.0")
+    testImplementation("org.junit.jupiter:junit-jupiter-api:5.10.0")
+    testImplementation("org.junit.jupiter:junit-jupiter-params:5.10.0")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.10.0")
+
+    // Coroutine Testing
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
+
+    // Assertions
+    testImplementation("com.google.truth:truth:1.1.5")
+    testImplementation("io.mockk:mockk:1.13.8")
+
+    // Android Testing
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
 }

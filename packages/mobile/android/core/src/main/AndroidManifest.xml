@@ -1,12 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-  Android manifest for Double-Bind core library module.
-
-  This library module provides CozoDB integration via React Native native modules.
-  It has no activities or UI components - all functionality is accessed through
-  the CozoModule native module.
--->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- No permissions required for database operations -->
-    <!-- File storage uses app-private directories which don't require permissions -->
+    <!-- Core library module - no permissions needed -->
 </manifest>
