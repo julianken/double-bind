@@ -157,19 +157,19 @@ export function useGraphData(options: UseGraphDataOptions): UseGraphDataResult {
             ?[pageId, title] :=
               *page{pageId, title, isDeleted},
               isDeleted = false,
-              reachable[pageId, ${depth}]
+              reachable[pageId, $maxDepth]
 
             reachable[pageId, 0] :=
-              pageId = "${centerPageId}"
+              pageId = $centerPageId
 
             reachable[pageId, depth] :=
               reachable[fromId, prevDepth],
-              prevDepth < ${depth},
+              prevDepth < $maxDepth,
               depth = prevDepth + 1,
               (*link{sourceId: fromId, targetId: pageId} ; *link{sourceId: pageId, targetId: fromId})
           `;
 
-          const pagesResult = await db.query(neighborQuery);
+          const pagesResult = await db.query(neighborQuery, { centerPageId, maxDepth: depth });
 
           // Query links between visible pages
           const pageIds = pagesResult.rows
