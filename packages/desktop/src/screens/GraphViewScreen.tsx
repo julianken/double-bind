@@ -104,10 +104,23 @@ function useGraphData(): {
       community: communityMap?.get(page.pageId),
     }));
 
-    const edges: GraphEdge[] = graphResult.edges.map((link: Link) => ({
-      source: link.sourceId,
-      target: link.targetId,
-    }));
+    // Build a set of edge keys to detect bidirectional links
+    const edgeSet = new Set<string>();
+    for (const link of graphResult.edges) {
+      edgeSet.add(`${link.sourceId}->${link.targetId}`);
+    }
+
+    const edges: GraphEdge[] = graphResult.edges.map((link: Link) => {
+      // Check if the reverse link exists
+      const reverseKey = `${link.targetId}->${link.sourceId}`;
+      const isBidirectional = edgeSet.has(reverseKey);
+
+      return {
+        source: link.sourceId,
+        target: link.targetId,
+        isBidirectional,
+      };
+    });
 
     return { nodes, edges };
   }, [graphResult, pageRankMap, communityMap]);

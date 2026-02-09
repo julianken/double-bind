@@ -94,6 +94,8 @@ export interface MiniGraphNode {
 export interface MiniGraphEdge {
   source: PageId;
   target: PageId;
+  /** When true, indicates a bidirectional link (A→B and B→A both exist) */
+  isBidirectional?: boolean;
 }
 
 export interface MiniGraphProps {
@@ -130,6 +132,7 @@ interface GraphNode extends NodeObject {
 interface GraphLink extends LinkObject {
   source: PageId | GraphNode;
   target: PageId | GraphNode;
+  isBidirectional?: boolean;
 }
 
 // ============================================================================
@@ -152,6 +155,7 @@ const SIZES = {
   normalNodeRadius: 5,
   linkWidth: 1,
   fontSize: 10,
+  arrowSize: 4, // Arrow head size for mini graph (smaller than main graph)
 } as const;
 
 // ============================================================================
@@ -211,6 +215,7 @@ export const MiniGraph = memo(function MiniGraph({
     const graphLinks: GraphLink[] = edges.map((edge) => ({
       source: edge.source,
       target: edge.target,
+      isBidirectional: edge.isBidirectional,
     }));
 
     return { nodes: graphNodes, links: graphLinks };
@@ -260,7 +265,7 @@ export const MiniGraph = memo(function MiniGraph({
     [textColor]
   );
 
-  // Custom link rendering
+  // Custom link rendering with directional arrows
   const paintLink = useCallback(
     (link: GraphLink, ctx: CanvasRenderingContext2D) => {
       const sourceNode = link.source as GraphNode;
@@ -270,12 +275,85 @@ export const MiniGraph = memo(function MiniGraph({
         return;
       }
 
-      ctx.beginPath();
-      ctx.moveTo(sourceNode.x, sourceNode.y);
-      ctx.lineTo(targetNode.x, targetNode.y);
-      ctx.strokeStyle = linkColor; // Theme-aware link color
+      const sourceX = sourceNode.x;
+      const sourceY = sourceNode.y;
+      const targetX = targetNode.x;
+      const targetY = targetNode.y;
+
+      // Calculate the target node radius to offset the arrow
+      const targetRadius = targetNode.isCenter ? SIZES.centerNodeRadius : SIZES.normalNodeRadius;
+
+      // For bidirectional links, add slight curvature
+      const curvature = link.isBidirectional ? 0.15 : 0;
+
+      ctx.strokeStyle = linkColor;
       ctx.lineWidth = SIZES.linkWidth;
-      ctx.stroke();
+
+      if (curvature === 0) {
+        // Straight line
+        ctx.beginPath();
+        ctx.moveTo(sourceX, sourceY);
+        ctx.lineTo(targetX, targetY);
+        ctx.stroke();
+
+        // Draw arrow at target
+        const angle = Math.atan2(targetY - sourceY, targetX - sourceX);
+        const arrowX = targetX - (targetRadius + 2) * Math.cos(angle);
+        const arrowY = targetY - (targetRadius + 2) * Math.sin(angle);
+
+        ctx.fillStyle = linkColor;
+        ctx.beginPath();
+        ctx.moveTo(arrowX, arrowY);
+        ctx.lineTo(
+          arrowX - SIZES.arrowSize * Math.cos(angle - Math.PI / 6),
+          arrowY - SIZES.arrowSize * Math.sin(angle - Math.PI / 6)
+        );
+        ctx.lineTo(
+          arrowX - SIZES.arrowSize * Math.cos(angle + Math.PI / 6),
+          arrowY - SIZES.arrowSize * Math.sin(angle + Math.PI / 6)
+        );
+        ctx.closePath();
+        ctx.fill();
+      } else {
+        // Curved line for bidirectional links
+        const midX = (sourceX + targetX) / 2;
+        const midY = (sourceY + targetY) / 2;
+        const dx = targetX - sourceX;
+        const dy = targetY - sourceY;
+        const len = Math.sqrt(dx * dx + dy * dy);
+        // Perpendicular offset for curve
+        const offsetX = (-dy / len) * curvature * len;
+        const offsetY = (dx / len) * curvature * len;
+        const ctrlX = midX + offsetX;
+        const ctrlY = midY + offsetY;
+
+        ctx.beginPath();
+        ctx.moveTo(sourceX, sourceY);
+        ctx.quadraticCurveTo(ctrlX, ctrlY, targetX, targetY);
+        ctx.stroke();
+
+        // Draw arrow at target (calculate tangent at endpoint for curved path)
+        const t = 0.85; // Position along curve to get tangent
+        const tangentX = 2 * (1 - t) * (ctrlX - sourceX) + 2 * t * (targetX - ctrlX);
+        const tangentY = 2 * (1 - t) * (ctrlY - sourceY) + 2 * t * (targetY - ctrlY);
+        const angle = Math.atan2(tangentY, tangentX);
+        const arrowX = targetX - (targetRadius + 2) * Math.cos(angle);
+        const arrowY = targetY - (targetRadius + 2) * Math.sin(angle);
+
+        ctx.fillStyle = linkColor;
+        ctx.beginPath();
+        ctx.moveTo(arrowX, arrowY);
+        ctx.lineTo(
+          arrowX - SIZES.arrowSize * Math.cos(angle - Math.PI / 6),
+          arrowY - SIZES.arrowSize * Math.sin(angle - Math.PI / 6)
+        );
+        ctx.lineTo(
+          arrowX - SIZES.arrowSize * Math.cos(angle + Math.PI / 6),
+          arrowY - SIZES.arrowSize * Math.sin(angle + Math.PI / 6)
+        );
+        ctx.closePath();
+        ctx.fill();
+      }
     },
     [linkColor]
   );
