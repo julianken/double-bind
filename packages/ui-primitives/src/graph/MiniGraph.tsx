@@ -29,47 +29,47 @@ import ForceGraph2D, {
 import type { PageId } from '@double-bind/types';
 
 // ============================================================================
+// Constants (defined before hooks that use them)
+// ============================================================================
+
+const COLORS = {
+  centerNode: '#3b82f6', // Blue-500
+  normalNode: '#6b7280', // Gray-500
+  link: '#94a3b8', // Slate-400 (matches GraphView EDGE_COLOR)
+  textLight: '#1e293b', // Slate-800 for light mode
+  textDark: '#e2e8f0', // Slate-200 for dark mode
+  background: 'transparent',
+} as const;
+
+// ============================================================================
 // Theme Detection
 // ============================================================================
 
 /**
- * Get computed CSS variable value from the document.
- * Falls back to provided default if unavailable.
+ * Detect if dark mode is active by checking the data-theme attribute.
  */
-function getCSSVariable(name: string, fallback: string): string {
-  if (typeof document === 'undefined') return fallback;
-  const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-  return value || fallback;
+function isDarkMode(): boolean {
+  if (typeof document === 'undefined') return false;
+  return document.documentElement.getAttribute('data-theme') === 'dark';
 }
 
 /**
  * Hook to get theme-aware colors for canvas rendering.
  * Listens for theme changes via data-theme attribute mutations.
+ * Uses static colors that match GraphView for consistency.
+ * Returns a themeKey to force ForceGraph2D canvas repaint on theme change.
  */
 function useThemeColors() {
-  const [textColor, setTextColor] = useState(() =>
-    getCSSVariable('--text-primary', '#1f2937')
-  );
-  const [linkColor, setLinkColor] = useState(() =>
-    getCSSVariable('--border-default', '#d1d5db')
-  );
+  const [isDark, setIsDark] = useState(isDarkMode);
 
   useEffect(() => {
     if (typeof document === 'undefined' || typeof MutationObserver === 'undefined') return;
-
-    const updateColors = () => {
-      setTextColor(getCSSVariable('--text-primary', '#1f2937'));
-      setLinkColor(getCSSVariable('--border-default', '#d1d5db'));
-    };
-
-    // Initial update
-    updateColors();
 
     // Watch for theme changes on document element
     const observer = new MutationObserver((mutations) => {
       for (const mutation of mutations) {
         if (mutation.attributeName === 'data-theme') {
-          updateColors();
+          setIsDark(isDarkMode());
           break;
         }
       }
@@ -79,7 +79,11 @@ function useThemeColors() {
     return () => observer.disconnect();
   }, []);
 
-  return { textColor, linkColor };
+  return {
+    textColor: isDark ? COLORS.textDark : COLORS.textLight,
+    linkColor: COLORS.link,
+    themeKey: isDark ? 'dark' : 'light',
+  };
 }
 
 // ============================================================================
@@ -136,19 +140,11 @@ interface GraphLink extends LinkObject {
 }
 
 // ============================================================================
-// Constants
+// Layout Constants
 // ============================================================================
 
 const DEFAULT_WIDTH = 200;
 const DEFAULT_HEIGHT = 150;
-
-const COLORS = {
-  centerNode: '#3b82f6', // Blue-500
-  normalNode: '#6b7280', // Gray-500
-  link: '#d1d5db', // Gray-300
-  text: '#1f2937', // Gray-800
-  background: 'transparent',
-} as const;
 
 const SIZES = {
   centerNodeRadius: 8,
@@ -202,7 +198,7 @@ export const MiniGraph = memo(function MiniGraph({
   className,
 }: MiniGraphProps) {
   const graphRef = useRef<ForceGraphMethods<GraphNode, GraphLink> | undefined>(undefined);
-  const { textColor, linkColor } = useThemeColors();
+  const { textColor, linkColor, themeKey } = useThemeColors();
 
   // Transform nodes to include isCenter flag
   const graphData = useMemo(() => {
@@ -250,9 +246,10 @@ export const MiniGraph = memo(function MiniGraph({
       ctx.fillStyle = color;
       ctx.fill();
 
-      // Draw label for center node or when zoomed in
-      if (node.isCenter || globalScale > 1.5) {
-        const label = node.title.length > 15 ? node.title.substring(0, 15) + '...' : node.title;
+      // Only draw label for center node to keep compact view clean
+      // Other node names show on hover via tooltip
+      if (node.isCenter) {
+        const label = node.title.length > 12 ? node.title.substring(0, 12) + '...' : node.title;
         const fontSize = SIZES.fontSize / globalScale;
 
         ctx.font = `${fontSize}px sans-serif`;
@@ -263,99 +260,6 @@ export const MiniGraph = memo(function MiniGraph({
       }
     },
     [textColor]
-  );
-
-  // Custom link rendering with directional arrows
-  const paintLink = useCallback(
-    (link: GraphLink, ctx: CanvasRenderingContext2D) => {
-      const sourceNode = link.source as GraphNode;
-      const targetNode = link.target as GraphNode;
-
-      if (!sourceNode.x || !sourceNode.y || !targetNode.x || !targetNode.y) {
-        return;
-      }
-
-      const sourceX = sourceNode.x;
-      const sourceY = sourceNode.y;
-      const targetX = targetNode.x;
-      const targetY = targetNode.y;
-
-      // Calculate the target node radius to offset the arrow
-      const targetRadius = targetNode.isCenter ? SIZES.centerNodeRadius : SIZES.normalNodeRadius;
-
-      // For bidirectional links, add slight curvature
-      const curvature = link.isBidirectional ? 0.15 : 0;
-
-      ctx.strokeStyle = linkColor;
-      ctx.lineWidth = SIZES.linkWidth;
-
-      if (curvature === 0) {
-        // Straight line
-        ctx.beginPath();
-        ctx.moveTo(sourceX, sourceY);
-        ctx.lineTo(targetX, targetY);
-        ctx.stroke();
-
-        // Draw arrow at target
-        const angle = Math.atan2(targetY - sourceY, targetX - sourceX);
-        const arrowX = targetX - (targetRadius + 2) * Math.cos(angle);
-        const arrowY = targetY - (targetRadius + 2) * Math.sin(angle);
-
-        ctx.fillStyle = linkColor;
-        ctx.beginPath();
-        ctx.moveTo(arrowX, arrowY);
-        ctx.lineTo(
-          arrowX - SIZES.arrowSize * Math.cos(angle - Math.PI / 6),
-          arrowY - SIZES.arrowSize * Math.sin(angle - Math.PI / 6)
-        );
-        ctx.lineTo(
-          arrowX - SIZES.arrowSize * Math.cos(angle + Math.PI / 6),
-          arrowY - SIZES.arrowSize * Math.sin(angle + Math.PI / 6)
-        );
-        ctx.closePath();
-        ctx.fill();
-      } else {
-        // Curved line for bidirectional links
-        const midX = (sourceX + targetX) / 2;
-        const midY = (sourceY + targetY) / 2;
-        const dx = targetX - sourceX;
-        const dy = targetY - sourceY;
-        const len = Math.sqrt(dx * dx + dy * dy);
-        // Perpendicular offset for curve
-        const offsetX = (-dy / len) * curvature * len;
-        const offsetY = (dx / len) * curvature * len;
-        const ctrlX = midX + offsetX;
-        const ctrlY = midY + offsetY;
-
-        ctx.beginPath();
-        ctx.moveTo(sourceX, sourceY);
-        ctx.quadraticCurveTo(ctrlX, ctrlY, targetX, targetY);
-        ctx.stroke();
-
-        // Draw arrow at target (calculate tangent at endpoint for curved path)
-        const t = 0.85; // Position along curve to get tangent
-        const tangentX = 2 * (1 - t) * (ctrlX - sourceX) + 2 * t * (targetX - ctrlX);
-        const tangentY = 2 * (1 - t) * (ctrlY - sourceY) + 2 * t * (targetY - ctrlY);
-        const angle = Math.atan2(tangentY, tangentX);
-        const arrowX = targetX - (targetRadius + 2) * Math.cos(angle);
-        const arrowY = targetY - (targetRadius + 2) * Math.sin(angle);
-
-        ctx.fillStyle = linkColor;
-        ctx.beginPath();
-        ctx.moveTo(arrowX, arrowY);
-        ctx.lineTo(
-          arrowX - SIZES.arrowSize * Math.cos(angle - Math.PI / 6),
-          arrowY - SIZES.arrowSize * Math.sin(angle - Math.PI / 6)
-        );
-        ctx.lineTo(
-          arrowX - SIZES.arrowSize * Math.cos(angle + Math.PI / 6),
-          arrowY - SIZES.arrowSize * Math.sin(angle + Math.PI / 6)
-        );
-        ctx.closePath();
-        ctx.fill();
-      }
-    },
-    [linkColor]
   );
 
   // Node tooltip (title only for simplicity)
@@ -391,6 +295,7 @@ export const MiniGraph = memo(function MiniGraph({
       data-center-node={centerNodeId}
     >
       <ForceGraph2D
+        key={themeKey} // Force remount on theme change for canvas repaint
         ref={graphRef}
         graphData={graphData}
         width={width}
@@ -409,8 +314,13 @@ export const MiniGraph = memo(function MiniGraph({
           ctx.fillStyle = color;
           ctx.fill();
         }}
-        // Link configuration
-        linkCanvasObject={paintLink}
+        // Link configuration - use built-in directional arrows
+        linkColor={() => linkColor}
+        linkWidth={SIZES.linkWidth}
+        linkDirectionalArrowLength={SIZES.arrowSize}
+        linkDirectionalArrowRelPos={1}
+        linkDirectionalArrowColor={() => linkColor}
+        linkCurvature={(link: GraphLink) => link.isBidirectional ? 0.15 : 0}
         // Disable zoom/pan for compact view
         enableZoomInteraction={false}
         enablePanInteraction={false}

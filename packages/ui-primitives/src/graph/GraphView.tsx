@@ -138,10 +138,10 @@ const MAX_NODE_RADIUS = 15;
 const HIGHLIGHT_RADIUS_MULTIPLIER = 1.5;
 
 /** Arrow head length in pixels */
-const ARROW_LENGTH = 6;
+const ARROW_LENGTH = 4.5;
 
 /** Arrow position relative to target (0=source, 1=target) */
-const ARROW_REL_POS = 0.85;
+const ARROW_REL_POS = 1.25;
 
 /** Curvature for bidirectional links to separate arrows */
 const BIDIRECTIONAL_CURVATURE = 0.15;
