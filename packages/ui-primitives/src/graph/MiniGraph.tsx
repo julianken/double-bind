@@ -198,6 +198,7 @@ export const MiniGraph = memo(function MiniGraph({
   className,
 }: MiniGraphProps) {
   const graphRef = useRef<ForceGraphMethods<GraphNode, GraphLink> | undefined>(undefined);
+  const hasPerformedInitialCenter = useRef(false);
   const { textColor, linkColor, themeKey } = useThemeColors();
 
   // Transform nodes to include isCenter flag
@@ -217,10 +218,44 @@ export const MiniGraph = memo(function MiniGraph({
     return { nodes: graphNodes, links: graphLinks };
   }, [nodes, edges, centerNodeId]);
 
-  // Note: We intentionally don't call zoomToFit or zoom after render.
-  // The default auto-fit behavior provides the best initial view.
-  // Previous attempts to adjust zoom after simulation settles caused
-  // labels to be cut off or the graph to shrink unexpectedly.
+  // Calculate optimal zoom level to fit all nodes with padding
+  const calculateOptimalZoom = useCallback(
+    (bbox: { x: [number, number]; y: [number, number] } | null, viewportWidth: number, viewportHeight: number, padding: number): number => {
+      if (!bbox) return 1;
+      const graphWidth = bbox.x[1] - bbox.x[0];
+      const graphHeight = bbox.y[1] - bbox.y[0];
+      if (graphWidth === 0 && graphHeight === 0) return 1.5; // Single node
+      if (graphWidth === 0 || graphHeight === 0) return 1; // Linear
+      const zoomX = (viewportWidth - padding * 2) / graphWidth;
+      const zoomY = (viewportHeight - padding * 2) / graphHeight;
+      return Math.max(0.1, Math.min(3.0, Math.min(zoomX, zoomY)));
+    },
+    []
+  );
+
+  // Handle engine stop - center selected node and auto-zoom to fit
+  const handleEngineStop = useCallback(() => {
+    if (!graphRef.current) return;
+    const centerNode = graphData.nodes.find(n => n.id === centerNodeId);
+    const bbox = graphRef.current.getGraphBbox();
+    const animationMs = hasPerformedInitialCenter.current ? 400 : 0;
+
+    if (centerNode?.x !== undefined && centerNode?.y !== undefined) {
+      graphRef.current.centerAt(centerNode.x, centerNode.y, animationMs);
+    }
+
+    const optimalZoom = calculateOptimalZoom(bbox, width, height, 15);
+    graphRef.current.zoom(optimalZoom, animationMs);
+    hasPerformedInitialCenter.current = true;
+  }, [centerNodeId, graphData.nodes, width, height, calculateOptimalZoom]);
+
+  // Re-center when center node changes (after initial render)
+  useEffect(() => {
+    if (!graphRef.current || !hasPerformedInitialCenter.current) return;
+    const centerNode = graphData.nodes.find(n => n.id === centerNodeId);
+    if (!centerNode?.x || !centerNode?.y) return;
+    graphRef.current.centerAt(centerNode.x, centerNode.y, 400);
+  }, [centerNodeId, graphData.nodes]);
 
   // Handle node click
   const handleNodeClick = useCallback(
@@ -321,7 +356,9 @@ export const MiniGraph = memo(function MiniGraph({
         linkDirectionalArrowRelPos={1}
         linkDirectionalArrowColor={() => linkColor}
         linkCurvature={(link: GraphLink) => link.isBidirectional ? 0.15 : 0}
-        // Disable zoom/pan for compact view
+        // Centering and zoom
+        onEngineStop={handleEngineStop}
+        // Disable zoom/pan interactions for compact view
         enableZoomInteraction={false}
         enablePanInteraction={false}
         // Force simulation settings for compact layout
