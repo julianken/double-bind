@@ -11,7 +11,8 @@
  */
 
 import * as React from 'react';
-import { Text, StyleSheet, TouchableOpacity, type TextStyle } from 'react-native';
+import { Text, StyleSheet, TouchableOpacity } from 'react-native';
+import type { TextStyle } from 'react-native';
 
 export interface WikiLinkProps {
   /**
@@ -87,6 +88,9 @@ const styles = StyleSheet.create({
     // Inline display equivalent
     flexDirection: 'row',
     alignItems: 'center',
+    // Minimum touch target size per iOS HIG
+    minHeight: 44,
+    minWidth: 44,
   },
 
   baseText: {

@@ -9,7 +9,8 @@
  */
 
 import * as React from 'react';
-import { Text, type TextStyle } from 'react-native';
+import { Text } from 'react-native';
+import type { TextStyle } from 'react-native';
 import { parseContent } from '@double-bind/core';
 import { WikiLink } from './WikiLink';
 
