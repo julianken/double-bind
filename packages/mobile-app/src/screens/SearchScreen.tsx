@@ -95,8 +95,10 @@ export function SearchScreen({ navigation, route }: Props): ReactElement {
     (result: SearchResult) => {
       Keyboard.dismiss();
       // Navigate to the page containing the result
-      // For now, navigate to Page screen with pageId
-      navigation.navigate('SearchResults', { query: result.pageId });
+      navigation.navigate('PagesTab', {
+        screen: 'Page',
+        params: { pageId: result.pageId },
+      });
     },
     [navigation]
   );
