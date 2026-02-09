@@ -33,7 +33,7 @@ import Animated, {
   withSpring,
   runOnJS,
 } from 'react-native-reanimated';
-import type { Block, BlockId } from '@double-bind/types';
+import type { BlockId } from '@double-bind/types';
 import { BlockView, type BlockViewProps } from './BlockView';
 
 // Minimum touch target size per iOS HIG (44pt)
