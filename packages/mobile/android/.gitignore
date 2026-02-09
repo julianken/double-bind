@@ -1,0 +1,20 @@
+# Gradle files
+.gradle/
+build/
+
+# Local configuration file
+local.properties
+
+# IDE files
+.idea/
+*.iml
+*.iws
+.DS_Store
+
+# Log files
+*.log
+
+# Generated files
+captures/
+.externalNativeBuild/
+.cxx/
