@@ -13,12 +13,17 @@ import * as React from 'react';
 import { View, Text, StyleSheet, type ViewStyle, type TextStyle } from 'react-native';
 import { Pressable, Gesture, GestureDetector } from 'react-native-gesture-handler';
 import type { Block, BlockId } from '@double-bind/types';
+import { BlockReference } from './BlockReference';
 
 // Minimum touch target size per iOS HIG (44pt)
 const MIN_TOUCH_TARGET = 44;
 
 // Indentation per nesting level (in pixels)
 const INDENT_SIZE = 24;
+
+// Block reference pattern: ((ULID))
+// ULIDs are exactly 26 characters from Crockford's Base32 (excludes I, L, O, U)
+const BLOCK_REF_PATTERN = /\(\(([0-9A-HJKMNP-TV-Z]{26})\)\)/g;
 
 export interface BlockViewProps {
   /**
@@ -62,9 +67,101 @@ export interface BlockViewProps {
   onToggleCollapse?: (blockId: BlockId) => void;
 
   /**
+   * Function to fetch a block by ID (for rendering block references)
+   */
+  fetchBlock?: (blockId: BlockId) => Promise<Block | null>;
+
+  /**
+   * Callback when a block reference is tapped (to toggle expansion)
+   */
+  onBlockRefPress?: (blockId: BlockId) => void;
+
+  /**
+   * Callback when a block reference is long-pressed (to navigate to source)
+   */
+  onBlockRefLongPress?: (blockId: BlockId) => void;
+
+  /**
+   * Map of block IDs to their expansion state
+   */
+  expandedBlockRefs?: Map<BlockId, boolean>;
+
+  /**
    * Optional test ID for testing
    */
   testID?: string;
+}
+
+/**
+ * Parse content and render with inline block references.
+ * Splits text by ((block-id)) patterns and renders BlockReference components inline.
+ */
+function renderContentWithBlockRefs(
+  content: string,
+  textStyle: TextStyle,
+  fetchBlock?: (blockId: BlockId) => Promise<Block | null>,
+  onBlockRefPress?: (blockId: BlockId) => void,
+  onBlockRefLongPress?: (blockId: BlockId) => void,
+  expandedBlockRefs?: Map<BlockId, boolean>,
+  testID?: string
+): React.ReactNode {
+  if (!fetchBlock) {
+    // No fetch function provided, render as plain text
+    return <Text style={textStyle}>{content}</Text>;
+  }
+
+  const parts: React.ReactNode[] = [];
+  let lastIndex = 0;
+  const regex = new RegExp(BLOCK_REF_PATTERN.source, 'g');
+  let match: RegExpExecArray | null;
+  let refIndex = 0;
+
+  while ((match = regex.exec(content)) !== null) {
+    // Add text before the block reference
+    if (match.index > lastIndex) {
+      const textBefore = content.slice(lastIndex, match.index);
+      parts.push(
+        <Text key={`text-${lastIndex}`} style={textStyle}>
+          {textBefore}
+        </Text>
+      );
+    }
+
+    // Add the block reference component
+    const blockId = match[1] as BlockId;
+    const isExpanded = expandedBlockRefs?.get(blockId) ?? false;
+    parts.push(
+      <BlockReference
+        key={`ref-${refIndex}-${blockId}`}
+        blockId={blockId}
+        fetchBlock={fetchBlock}
+        isExpanded={isExpanded}
+        onPress={onBlockRefPress}
+        onLongPress={onBlockRefLongPress}
+        testID={testID ? `${testID}-ref-${refIndex}` : undefined}
+      />
+    );
+
+    lastIndex = match.index + match[0].length;
+    refIndex++;
+  }
+
+  // Add remaining text after the last block reference
+  if (lastIndex < content.length) {
+    const textAfter = content.slice(lastIndex);
+    parts.push(
+      <Text key={`text-${lastIndex}`} style={textStyle}>
+        {textAfter}
+      </Text>
+    );
+  }
+
+  // If no block references were found, return plain text
+  if (parts.length === 0) {
+    return <Text style={textStyle}>{content}</Text>;
+  }
+
+  return <View style={styles.mixedContentContainer}>{parts}</View>;
 }
 
 /**
@@ -75,6 +172,7 @@ export interface BlockViewProps {
  * - Visual feedback on press
  * - Gesture handler for tap and long-press
  * - Proper accessibility labels
+ * - Inline block reference rendering
  *
  * @example
  * ```tsx
@@ -83,6 +181,8 @@ export interface BlockViewProps {
  *   depth={0}
  *   onPress={handlePress}
  *   onLongPress={handleLongPress}
+ *   fetchBlock={blockService.getById}
+ *   onBlockRefPress={handleRefPress}
  * />
  * ```
  */
@@ -95,6 +195,10 @@ export function BlockView({
   onPress,
   onLongPress,
   onToggleCollapse,
+  fetchBlock,
+  onBlockRefPress,
+  onBlockRefLongPress,
+  expandedBlockRefs,
   testID,
 }: BlockViewProps): React.ReactElement {
   const handlePress = React.useCallback(() => {
@@ -137,7 +241,15 @@ export function BlockView({
   const renderContent = () => {
     switch (block.contentType) {
       case 'heading':
-        return <Text style={styles.headingText}>{block.content}</Text>;
+        return renderContentWithBlockRefs(
+          block.content,
+          styles.headingText,
+          fetchBlock,
+          onBlockRefPress,
+          onBlockRefLongPress,
+          expandedBlockRefs,
+          testID
+        );
       case 'code':
         return (
           <View style={styles.codeContainer}>
@@ -148,7 +260,15 @@ export function BlockView({
         return (
           <View style={styles.todoContainer}>
             <View style={styles.todoCheckbox} />
-            <Text style={styles.contentText}>{block.content}</Text>
+            {renderContentWithBlockRefs(
+              block.content,
+              styles.contentText,
+              fetchBlock,
+              onBlockRefPress,
+              onBlockRefLongPress,
+              expandedBlockRefs,
+              testID
+            )}
           </View>
         );
       case 'query':
@@ -159,7 +279,15 @@ export function BlockView({
           </View>
         );
       default:
-        return <Text style={styles.contentText}>{block.content}</Text>;
+        return renderContentWithBlockRefs(
+          block.content,
+          styles.contentText,
+          fetchBlock,
+          onBlockRefPress,
+          onBlockRefLongPress,
+          expandedBlockRefs,
+          testID
+        );
     }
   };
 
@@ -317,6 +445,11 @@ const styles = StyleSheet.create({
     color: '#856404',
     marginBottom: 4,
   } as TextStyle,
+
+  mixedContentContainer: {
+    flexDirection: 'column',
+    gap: 4,
+  } as ViewStyle,
 });
 
 export default BlockView;
