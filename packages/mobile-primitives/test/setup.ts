@@ -6,6 +6,16 @@
 
 import { vi } from 'vitest';
 
+// Mock component factory - used across all React Native mocks
+const createMockComponent = (name: string) => {
+  const Component = (props: { children?: React.ReactNode }) => {
+    // Mock component that passes through children
+    return props.children;
+  };
+  Component.displayName = name;
+  return Component;
+};
+
 // Store dimension change listeners for testing
 export const dimensionListeners: Array<
   (event: {
@@ -38,16 +48,6 @@ export function simulateDimensionChange(width: number, height: number) {
 
 // Mock React Native
 vi.mock('react-native', () => {
-  // Mock component factory
-  const createMockComponent = (name: string) => {
-    const Component = (props: { children?: React.ReactNode }) => {
-      // Mock component that passes through children
-      return props.children;
-    };
-    Component.displayName = name;
-    return Component;
-  };
-
   return {
     StyleSheet: {
       create: <T extends Record<string, unknown>>(styles: T) => styles,
@@ -100,12 +100,6 @@ vi.mock('react-native', () => {
 
 // Mock react-native-gesture-handler
 vi.mock('react-native-gesture-handler', () => {
-  const createMockComponent = (name: string) => {
-    const Component = (props: { children?: React.ReactNode }) => props.children;
-    Component.displayName = name;
-    return Component;
-  };
-
   return {
     Gesture: {
       Tap: vi.fn(() => ({
@@ -133,12 +127,6 @@ vi.mock('react-native-gesture-handler', () => {
 
 // Mock react-native-reanimated
 vi.mock('react-native-reanimated', () => {
-  const createMockComponent = (name: string) => {
-    const Component = (props: { children?: React.ReactNode }) => props.children;
-    Component.displayName = name;
-    return Component;
-  };
-
   return {
     default: {
       View: createMockComponent('Animated.View'),
@@ -155,12 +143,6 @@ vi.mock('react-native-reanimated', () => {
 
 // Mock react-native-safe-area-context
 vi.mock('react-native-safe-area-context', () => {
-  const createMockComponent = (name: string) => {
-    const Component = (props: { children?: React.ReactNode }) => props.children;
-    Component.displayName = name;
-    return Component;
-  };
-
   return {
     SafeAreaView: createMockComponent('SafeAreaView'),
     SafeAreaProvider: createMockComponent('SafeAreaProvider'),
