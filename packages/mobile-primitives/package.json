@@ -1,0 +1,44 @@
+{
+  "name": "@double-bind/mobile-primitives",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Mobile-specific UI components for Double-Bind",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src --ext .ts,.tsx"
+  },
+  "keywords": [
+    "double-bind",
+    "mobile",
+    "react-native",
+    "ui-primitives"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@double-bind/types": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "react": "^18.2.0",
+    "react-native": "^0.73.0",
+    "typescript": "^5.7.0",
+    "vitest": "^2.0.0"
+  },
+  "peerDependencies": {
+    "react": ">=18.0.0",
+    "react-native": ">=0.70.0"
+  }
+}

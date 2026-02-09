@@ -281,6 +281,28 @@ importers:
         specifier: ^2.0.0
         version: 2.1.9(@types/node@25.2.1)(jsdom@28.0.0)(terser@5.46.0)
 
+  packages/mobile-primitives:
+    dependencies:
+      '@double-bind/types':
+        specifier: workspace:*
+        version: link:../types
+    devDependencies:
+      '@types/react':
+        specifier: ^18.2.0
+        version: 18.3.28
+      react:
+        specifier: ^18.2.0
+        version: 18.3.1
+      react-native:
+        specifier: ^0.73.0
+        version: 0.73.11(@babel/core@7.29.0)(@babel/preset-env@7.29.0(@babel/core@7.29.0))(react@18.3.1)
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^2.0.0
+        version: 2.1.9(@types/node@25.2.1)(jsdom@28.0.0)(terser@5.46.0)
+
   packages/query-lang:
     dependencies:
       '@double-bind/types':
