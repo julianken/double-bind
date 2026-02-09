@@ -207,4 +207,137 @@ describe('BlockView', () => {
       expect(() => <BlockView {...props} />).not.toThrow();
     });
   });
+
+  describe('block references', () => {
+    const mockFetchBlock = vi.fn();
+    const mockOnBlockRefPress = vi.fn();
+    const mockOnBlockRefLongPress = vi.fn();
+
+    beforeEach(() => {
+      mockFetchBlock.mockClear();
+      mockOnBlockRefPress.mockClear();
+      mockOnBlockRefLongPress.mockClear();
+    });
+
+    it('should render plain text when no fetchBlock provided', () => {
+      const block = createMockBlock({
+        content: 'Text with ((01HXQABCDEFGHJKMNPQRSTUVWX)) reference',
+      });
+      const props: BlockViewProps = { block };
+
+      expect(() => <BlockView {...props} />).not.toThrow();
+    });
+
+    it('should parse and render block references when fetchBlock provided', () => {
+      const block = createMockBlock({
+        content: 'Text with ((01HXQABCDEFGHJKMNPQRSTUVWX)) reference',
+      });
+      const referencedBlock = createMockBlock({
+        blockId: '01HXQABCDEFGHJKMNPQRSTUVWX',
+        content: 'Referenced block content',
+      });
+      mockFetchBlock.mockResolvedValue(referencedBlock);
+
+      const props: BlockViewProps = {
+        block,
+        fetchBlock: mockFetchBlock,
+        onBlockRefPress: mockOnBlockRefPress,
+        onBlockRefLongPress: mockOnBlockRefLongPress,
+      };
+
+      expect(() => <BlockView {...props} />).not.toThrow();
+    });
+
+    it('should handle multiple block references in content', () => {
+      const block = createMockBlock({
+        content: 'First ((01HXQFIRST000000000000000)) and second ((01HXQSECOND0000000000000)) refs',
+      });
+      mockFetchBlock.mockResolvedValue(createMockBlock());
+
+      const props: BlockViewProps = {
+        block,
+        fetchBlock: mockFetchBlock,
+      };
+
+      expect(() => <BlockView {...props} />).not.toThrow();
+    });
+
+    it('should support expandedBlockRefs map', () => {
+      const block = createMockBlock({
+        content: 'Text with ((01HXQABCDEFGHJKMNPQRSTUVWX)) reference',
+      });
+      mockFetchBlock.mockResolvedValue(createMockBlock());
+      const expandedRefs = new Map([['01HXQABCDEFGHJKMNPQRSTUVWX', true]]);
+
+      const props: BlockViewProps = {
+        block,
+        fetchBlock: mockFetchBlock,
+        expandedBlockRefs: expandedRefs,
+      };
+
+      expect(() => <BlockView {...props} />).not.toThrow();
+    });
+
+    it('should render block references in heading content', () => {
+      const block = createMockBlock({
+        contentType: 'heading',
+        content: 'Heading with ((01HXQABCDEFGHJKMNPQRSTUVWX)) ref',
+      });
+      mockFetchBlock.mockResolvedValue(createMockBlock());
+
+      const props: BlockViewProps = {
+        block,
+        fetchBlock: mockFetchBlock,
+      };
+
+      expect(() => <BlockView {...props} />).not.toThrow();
+    });
+
+    it('should render block references in todo content', () => {
+      const block = createMockBlock({
+        contentType: 'todo',
+        content: 'Todo with ((01HXQABCDEFGHJKMNPQRSTUVWX)) ref',
+      });
+      mockFetchBlock.mockResolvedValue(createMockBlock());
+
+      const props: BlockViewProps = {
+        block,
+        fetchBlock: mockFetchBlock,
+      };
+
+      expect(() => <BlockView {...props} />).not.toThrow();
+    });
+
+    it('should not parse block references in code content', () => {
+      const block = createMockBlock({
+        contentType: 'code',
+        content: 'const id = "((01HXQABCDEFGHJKMNPQRSTUVWX))";',
+      });
+
+      const props: BlockViewProps = {
+        block,
+        fetchBlock: mockFetchBlock,
+      };
+
+      expect(() => <BlockView {...props} />).not.toThrow();
+      // fetchBlock should not be called for code blocks
+      expect(mockFetchBlock).not.toHaveBeenCalled();
+    });
+
+    it('should not parse block references in query content', () => {
+      const block = createMockBlock({
+        contentType: 'query',
+        content: '?[x] <- [[block, "((01HXQABCDEFGHJKMNPQRSTUVWX))"]]',
+      });
+
+      const props: BlockViewProps = {
+        block,
+        fetchBlock: mockFetchBlock,
+      };
+
+      expect(() => <BlockView {...props} />).not.toThrow();
+      // fetchBlock should not be called for query blocks
+      expect(mockFetchBlock).not.toHaveBeenCalled();
+    });
+  });
 });

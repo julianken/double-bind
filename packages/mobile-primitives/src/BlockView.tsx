@@ -15,12 +15,17 @@ import type { ViewStyle, TextStyle } from 'react-native';
 import { Pressable, Gesture, GestureDetector } from 'react-native-gesture-handler';
 import type { Block, BlockId } from '@double-bind/types';
 import { RichText } from './RichText';
+import { BlockReference } from './BlockReference';
 
 // Minimum touch target size per iOS HIG (44pt)
 const MIN_TOUCH_TARGET = 44;
 
 // Indentation per nesting level (in pixels)
 const INDENT_SIZE = 24;
+
+// Block reference pattern: ((ULID))
+// ULIDs are exactly 26 characters from Crockford's Base32 (excludes I, L, O, U)
+const BLOCK_REF_PATTERN = /\(\(([0-9A-HJKMNP-TV-Z]{26})\)\)/g;
 
 export interface BlockViewProps {
   /**
@@ -74,9 +79,145 @@ export interface BlockViewProps {
   checkPageExists?: (pageTitle: string) => boolean | Promise<boolean>;
 
   /**
+   * Function to fetch a block by ID (for rendering block references)
+   */
+  fetchBlock?: (blockId: BlockId) => Promise<Block | null>;
+
+  /**
+   * Callback when a block reference is tapped (to toggle expansion)
+   */
+  onBlockRefPress?: (blockId: BlockId) => void;
+
+  /**
+   * Callback when a block reference is long-pressed (to navigate to source)
+   */
+  onBlockRefLongPress?: (blockId: BlockId) => void;
+
+  /**
+   * Map of block IDs to their expansion state
+   */
+  expandedBlockRefs?: Map<BlockId, boolean>;
+
+  /**
    * Optional test ID for testing
    */
   testID?: string;
+}
+
+/**
+ * Options for rendering content with block references and wiki links.
+ */
+interface RenderContentOptions {
+  content: string;
+  textStyle: TextStyle;
+  fetchBlock?: (blockId: BlockId) => Promise<Block | null>;
+  onBlockRefPress?: (blockId: BlockId) => void;
+  onBlockRefLongPress?: (blockId: BlockId) => void;
+  expandedBlockRefs?: Map<BlockId, boolean>;
+  checkPageExists?: (pageTitle: string) => boolean | Promise<boolean>;
+  onWikiLinkPress?: (pageTitle: string) => void;
+  testID?: string;
+}
+
+/**
+ * Parse content and render with inline block references and wiki links.
+ * Splits text by ((block-id)) patterns, renders BlockReference components,
+ * and passes remaining text through RichText for wiki link parsing.
+ */
+function renderContentWithBlockRefsAndWikiLinks({
+  content,
+  textStyle,
+  fetchBlock,
+  onBlockRefPress,
+  onBlockRefLongPress,
+  expandedBlockRefs,
+  checkPageExists,
+  onWikiLinkPress,
+  testID,
+}: RenderContentOptions): React.ReactNode {
+  // If no block ref handler, just use RichText for wiki links
+  if (!fetchBlock) {
+    return (
+      <RichText
+        content={content}
+        checkPageExists={checkPageExists ?? (() => false)}
+        onWikiLinkPress={onWikiLinkPress ?? (() => {})}
+        textStyle={textStyle}
+        testID={testID ? `${testID}-richtext` : undefined}
+      />
+    );
+  }
+
+  const parts: React.ReactNode[] = [];
+  let lastIndex = 0;
+  const regex = new RegExp(BLOCK_REF_PATTERN.source, 'g');
+  let match: RegExpExecArray | null;
+  let refIndex = 0;
+
+  while ((match = regex.exec(content)) !== null) {
+    // Add text before the block reference (using RichText for wiki links)
+    if (match.index > lastIndex) {
+      const textBefore = content.slice(lastIndex, match.index);
+      parts.push(
+        <RichText
+          key={`text-${lastIndex}`}
+          content={textBefore}
+          checkPageExists={checkPageExists ?? (() => false)}
+          onWikiLinkPress={onWikiLinkPress ?? (() => {})}
+          textStyle={textStyle}
+          testID={testID ? `${testID}-richtext-${lastIndex}` : undefined}
+        />
+      );
+    }
+
+    // Add the block reference component
+    const blockId = match[1] as BlockId;
+    const isExpanded = expandedBlockRefs?.get(blockId) ?? false;
+    parts.push(
+      <BlockReference
+        key={`ref-${refIndex}-${blockId}`}
+        blockId={blockId}
+        fetchBlock={fetchBlock}
+        isExpanded={isExpanded}
+        onPress={onBlockRefPress}
+        onLongPress={onBlockRefLongPress}
+        testID={testID ? `${testID}-ref-${refIndex}` : undefined}
+      />
+    );
+
+    lastIndex = match.index + match[0].length;
+    refIndex++;
+  }
+
+  // Add remaining text after the last block reference (using RichText for wiki links)
+  if (lastIndex < content.length) {
+    const textAfter = content.slice(lastIndex);
+    parts.push(
+      <RichText
+        key={`text-${lastIndex}`}
+        content={textAfter}
+        checkPageExists={checkPageExists ?? (() => false)}
+        onWikiLinkPress={onWikiLinkPress ?? (() => {})}
+        textStyle={textStyle}
+        testID={testID ? `${testID}-richtext-${lastIndex}` : undefined}
+      />
+    );
+  }
+
+  // If no block references were found, use RichText for wiki links
+  if (parts.length === 0) {
+    return (
+      <RichText
+        content={content}
+        checkPageExists={checkPageExists ?? (() => false)}
+        onWikiLinkPress={onWikiLinkPress ?? (() => {})}
+        textStyle={textStyle}
+        testID={testID ? `${testID}-richtext` : undefined}
+      />
+    );
+  }
+
+  return <View style={styles.mixedContentContainer}>{parts}</View>;
 }
 
 /**
@@ -87,6 +228,7 @@ export interface BlockViewProps {
  * - Visual feedback on press
  * - Gesture handler for tap and long-press
  * - Proper accessibility labels
+ * - Inline block reference rendering
  *
  * @example
  * ```tsx
@@ -95,6 +237,8 @@ export interface BlockViewProps {
  *   depth={0}
  *   onPress={handlePress}
  *   onLongPress={handleLongPress}
+ *   fetchBlock={blockService.getById}
+ *   onBlockRefPress={handleRefPress}
  * />
  * ```
  */
@@ -109,6 +253,10 @@ export function BlockView({
   onToggleCollapse,
   onWikiLinkPress,
   checkPageExists,
+  fetchBlock,
+  onBlockRefPress,
+  onBlockRefLongPress,
+  expandedBlockRefs,
   testID,
 }: BlockViewProps): React.ReactElement {
   const handlePress = React.useCallback(() => {
@@ -147,25 +295,28 @@ export function BlockView({
     ...(isFocused ? [styles.containerFocused] : []),
   ];
 
-  // Default implementations for optional callbacks
-  const handleWikiLinkPress = onWikiLinkPress ?? (() => {});
-  const handleCheckPageExists = checkPageExists ?? (() => false);
-
   // Render content based on block type
   const renderContent = () => {
+    // Common options for content rendering
+    const baseOptions = {
+      fetchBlock,
+      onBlockRefPress,
+      onBlockRefLongPress,
+      expandedBlockRefs,
+      checkPageExists,
+      onWikiLinkPress,
+      testID,
+    };
+
     switch (block.contentType) {
       case 'heading':
-        return (
-          <RichText
-            content={block.content}
-            checkPageExists={handleCheckPageExists}
-            onWikiLinkPress={handleWikiLinkPress}
-            textStyle={styles.headingText}
-            testID={testID ? `${testID}-richtext` : undefined}
-          />
-        );
+        return renderContentWithBlockRefsAndWikiLinks({
+          content: block.content,
+          textStyle: styles.headingText,
+          ...baseOptions,
+        });
       case 'code':
-        // Code blocks don't parse wiki links
+        // Code blocks don't parse wiki links or block refs
         return (
           <View style={styles.codeContainer}>
             <Text style={styles.codeText}>{block.content}</Text>
@@ -175,17 +326,15 @@ export function BlockView({
         return (
           <View style={styles.todoContainer}>
             <View style={styles.todoCheckbox} />
-            <RichText
-              content={block.content}
-              checkPageExists={handleCheckPageExists}
-              onWikiLinkPress={handleWikiLinkPress}
-              textStyle={styles.contentText}
-              testID={testID ? `${testID}-richtext` : undefined}
-            />
+            {renderContentWithBlockRefsAndWikiLinks({
+              content: block.content,
+              textStyle: styles.contentText,
+              ...baseOptions,
+            })}
           </View>
         );
       case 'query':
-        // Query blocks don't parse wiki links in the query itself
+        // Query blocks don't parse wiki links or block refs
         return (
           <View style={styles.queryContainer}>
             <Text style={styles.queryLabel}>Query</Text>
@@ -193,15 +342,11 @@ export function BlockView({
           </View>
         );
       default:
-        return (
-          <RichText
-            content={block.content}
-            checkPageExists={handleCheckPageExists}
-            onWikiLinkPress={handleWikiLinkPress}
-            textStyle={styles.contentText}
-            testID={testID ? `${testID}-richtext` : undefined}
-          />
-        );
+        return renderContentWithBlockRefsAndWikiLinks({
+          content: block.content,
+          textStyle: styles.contentText,
+          ...baseOptions,
+        });
     }
   };
 
@@ -359,6 +504,11 @@ const styles = StyleSheet.create({
     color: '#856404',
     marginBottom: 4,
   } as TextStyle,
+
+  mixedContentContainer: {
+    flexDirection: 'column',
+    gap: 4,
+  } as ViewStyle,
 });
 
 export default BlockView;

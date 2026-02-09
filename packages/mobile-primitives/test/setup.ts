@@ -45,6 +45,7 @@ vi.mock('react-native', () => ({
   View: 'View',
   Text: 'Text',
   ScrollView: 'ScrollView',
+  FlatList: 'FlatList',
   TouchableOpacity: 'TouchableOpacity',
   Pressable: 'Pressable',
   ActivityIndicator: 'ActivityIndicator',
