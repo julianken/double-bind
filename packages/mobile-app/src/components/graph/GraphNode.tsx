@@ -31,7 +31,7 @@ function truncateLabel(text: string, maxLength: number): string {
  *
  * Features:
  * - Circle representation with fill color based on center/selection state
- * - Text label below the node
+ * - Text label below the node (optional based on LOD)
  * - Tap handling for node selection
  * - Scale-aware rendering for zoom support
  */
@@ -41,6 +41,7 @@ export const GraphNode = memo(function GraphNode({
   isSelected,
   onPress,
   scale,
+  showLabel = true,
 }: GraphNodeProps) {
   const handlePress = useCallback(() => {
     onPress?.(node.id);
@@ -71,19 +72,27 @@ export const GraphNode = memo(function GraphNode({
         strokeWidth={strokeWidth}
       />
       {/* Larger invisible touch target - minimum 44px diameter per WCAG guidelines */}
-      <Circle cx={node.x} cy={node.y} r={Math.max(22, radius + 10)} fill="transparent" onPress={handlePress} />
-      {/* Label */}
-      <Text
-        x={node.x}
-        y={labelY}
-        fontSize={fontSize}
-        fill={labelColor}
-        fontWeight={fontWeight}
-        textAnchor="middle"
-        alignmentBaseline="hanging"
-      >
-        {labelText}
-      </Text>
+      <Circle
+        cx={node.x}
+        cy={node.y}
+        r={Math.max(22, radius + 10)}
+        fill="transparent"
+        onPress={handlePress}
+      />
+      {/* Label (conditionally rendered based on LOD) */}
+      {showLabel && (
+        <Text
+          x={node.x}
+          y={labelY}
+          fontSize={fontSize}
+          fill={labelColor}
+          fontWeight={fontWeight}
+          textAnchor="middle"
+          alignmentBaseline="hanging"
+        >
+          {labelText}
+        </Text>
+      )}
     </G>
   );
 });
