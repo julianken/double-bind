@@ -248,6 +248,7 @@ export function PageView({ pageId }: PageViewProps) {
       await pageService.updateTitle(pageId, newTitle);
       invalidateQueries(['pages']);
       invalidateQueries(['page', 'withBlocks']);
+      invalidateQueries(['graph']); // Update MiniGraph node titles
     },
     [pageService, pageId]
   );

@@ -255,18 +255,6 @@ function SidebarGraphSection({ onNavigate }: SidebarGraphSectionProps) {
       );
     }
 
-    // Empty state: no connections (only the current page)
-    if (nodes.length <= 1) {
-      return (
-        <div
-          className={styles.graphIsolated}
-          data-testid="sidebar-graph-isolated"
-        >
-          No connections
-        </div>
-      );
-    }
-
     return (
       <div ref={containerRef} className={styles.graphContent}>
         {dimensions && (
