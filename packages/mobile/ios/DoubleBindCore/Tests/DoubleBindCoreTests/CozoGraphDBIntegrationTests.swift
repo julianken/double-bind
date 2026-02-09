@@ -368,9 +368,17 @@ final class CozoGraphDBMemoryTests: XCTestCase {
         do {
             let _: QueryResult<Any> = try await db!.query("?[id] := *reuse{ id }")
             XCTFail("Relation should not exist in new database")
-        } catch {
-            // Expected - relation doesn't exist
-            XCTAssertTrue(true)
+        } catch let error as GraphDBError {
+            // Expected - relation doesn't exist, should throw queryError
+            if case .queryError = error {
+                // Success - got the expected error type
+            } else {
+                XCTFail("Expected GraphDBError.queryError, got \(error)")
+            }
+        } catch let error as NSError {
+            // Mock implementation throws NSError - verify it's about nonexistent relation
+            XCTAssertEqual(error.domain, "CozoDB", "Expected CozoDB error domain")
+            XCTAssertEqual(error.code, 6, "Expected 'relation does not exist' error code (6)")
         }
 
         try await db!.close()

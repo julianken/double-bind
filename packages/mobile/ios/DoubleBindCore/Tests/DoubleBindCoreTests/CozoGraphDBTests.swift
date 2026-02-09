@@ -375,9 +375,11 @@ final class CozoGraphDBTests: XCTestCase {
         do {
             let _: QueryResult<Any> = try await localDb.query("?[x] := x = 1")
             XCTFail("Expected error after close")
-        } catch {
+        } catch let error as GraphDBError {
             // Expected - database is closed
-            XCTAssertTrue(true)
+            XCTAssertEqual(error, .databaseClosed, "Expected databaseClosed error, got \(error)")
+        } catch {
+            XCTFail("Expected GraphDBError.databaseClosed, got \(type(of: error)): \(error)")
         }
     }
 
@@ -388,8 +390,7 @@ final class CozoGraphDBTests: XCTestCase {
         try await localDb.close()
         try await localDb.close()
 
-        // No assertion needed - just verify no crash
-        XCTAssertTrue(true)
+        // No assertion needed - test passes if no exception thrown
     }
 
     func testSuspendFlushesWrites() async throws {
@@ -459,9 +460,17 @@ final class CozoGraphDBTests: XCTestCase {
         do {
             let _: QueryResult<Any> = try await db.query("this is not valid datalog")
             XCTFail("Expected error for invalid syntax")
-        } catch {
-            // Expected - invalid query should throw
-            XCTAssertTrue(true)
+        } catch let error as GraphDBError {
+            // Expected - invalid query should throw queryError
+            if case .queryError = error {
+                // Success - got the expected error type
+            } else {
+                XCTFail("Expected GraphDBError.queryError, got \(error)")
+            }
+        } catch let error as NSError {
+            // Mock implementation throws NSError - verify it's a query-related error
+            XCTAssertEqual(error.domain, "CozoDB", "Expected CozoDB error domain")
+            XCTAssertTrue([3, 8].contains(error.code), "Expected query error code (3 or 8), got \(error.code)")
         }
     }
 
@@ -469,9 +478,17 @@ final class CozoGraphDBTests: XCTestCase {
         do {
             let _: QueryResult<Any> = try await db.query("?[id] := *nonexistent{ id }")
             XCTFail("Expected error for nonexistent relation")
-        } catch {
-            // Expected - relation doesn't exist
-            XCTAssertTrue(true)
+        } catch let error as GraphDBError {
+            // Expected - relation doesn't exist, should throw queryError
+            if case .queryError = error {
+                // Success - got the expected error type
+            } else {
+                XCTFail("Expected GraphDBError.queryError, got \(error)")
+            }
+        } catch let error as NSError {
+            // Mock implementation throws NSError - verify it's about nonexistent relation
+            XCTAssertEqual(error.domain, "CozoDB", "Expected CozoDB error domain")
+            XCTAssertEqual(error.code, 6, "Expected 'relation does not exist' error code (6)")
         }
     }
 
@@ -479,9 +496,17 @@ final class CozoGraphDBTests: XCTestCase {
         do {
             _ = try await db.mutate("invalid mutation syntax")
             XCTFail("Expected error for invalid mutation")
-        } catch {
-            // Expected
-            XCTAssertTrue(true)
+        } catch let error as GraphDBError {
+            // Expected - invalid mutation should throw queryError
+            if case .queryError = error {
+                // Success - got the expected error type
+            } else {
+                XCTFail("Expected GraphDBError.queryError, got \(error)")
+            }
+        } catch let error as NSError {
+            // Mock implementation throws NSError - verify it's a syntax error
+            XCTAssertEqual(error.domain, "CozoDB", "Expected CozoDB error domain")
+            XCTAssertEqual(error.code, 3, "Expected 'invalid syntax' error code (3)")
         }
     }
 
@@ -489,9 +514,17 @@ final class CozoGraphDBTests: XCTestCase {
         do {
             _ = try await db.mutate("?[id] <- [[1]] :put ghost_relation { id }")
             XCTFail("Expected error for nonexistent relation")
-        } catch {
-            // Expected - relation doesn't exist
-            XCTAssertTrue(true)
+        } catch let error as GraphDBError {
+            // Expected - relation doesn't exist, should throw queryError
+            if case .queryError = error {
+                // Success - got the expected error type
+            } else {
+                XCTFail("Expected GraphDBError.queryError, got \(error)")
+            }
+        } catch let error as NSError {
+            // Mock implementation throws NSError - verify it's about nonexistent relation
+            XCTAssertEqual(error.domain, "CozoDB", "Expected CozoDB error domain")
+            XCTAssertEqual(error.code, 6, "Expected 'relation does not exist' error code (6)")
         }
     }
 
@@ -499,9 +532,21 @@ final class CozoGraphDBTests: XCTestCase {
         do {
             try await db.backup(to: "/nonexistent/directory/backup.db")
             XCTFail("Expected error for invalid backup path")
-        } catch {
-            // Expected - directory doesn't exist
-            XCTAssertTrue(true)
+        } catch let error as GraphDBError {
+            // Expected - directory doesn't exist, should throw backupError or fileSystemError
+            switch error {
+            case .backupError, .fileSystemError:
+                // Success - got an expected error type
+                break
+            default:
+                XCTFail("Expected GraphDBError.backupError or .fileSystemError, got \(error)")
+            }
+        } catch let error as NSError {
+            // Mock implementation throws NSError from Foundation - verify it's a file error
+            XCTAssertTrue(
+                error.domain == "CozoDB" || error.domain == NSCocoaErrorDomain,
+                "Expected CozoDB or Cocoa error domain, got \(error.domain)"
+            )
         }
     }
 
@@ -509,9 +554,25 @@ final class CozoGraphDBTests: XCTestCase {
         do {
             try await db.restore(from: "/nonexistent/backup.db")
             XCTFail("Expected error for nonexistent backup file")
-        } catch {
-            // Expected - file doesn't exist
-            XCTAssertTrue(true)
+        } catch let error as GraphDBError {
+            // Expected - file doesn't exist, should throw restoreError or fileSystemError
+            switch error {
+            case .restoreError, .fileSystemError:
+                // Success - got an expected error type
+                break
+            default:
+                XCTFail("Expected GraphDBError.restoreError or .fileSystemError, got \(error)")
+            }
+        } catch let error as NSError {
+            // Mock implementation throws NSError from Foundation - verify it's a file error
+            XCTAssertTrue(
+                error.domain == "CozoDB" || error.domain == NSCocoaErrorDomain,
+                "Expected CozoDB or Cocoa error domain, got \(error.domain)"
+            )
+            // Cocoa error 260 is file not found
+            if error.domain == NSCocoaErrorDomain {
+                XCTAssertEqual(error.code, 260, "Expected file not found error code (260)")
+            }
         }
     }
 
@@ -526,9 +587,25 @@ final class CozoGraphDBTests: XCTestCase {
 
             try await newDb.restore(from: corruptedPath)
             XCTFail("Expected error for corrupted backup")
-        } catch {
-            // Expected - invalid backup format
-            XCTAssertTrue(true)
+        } catch let error as GraphDBError {
+            // Expected - invalid backup format, should throw restoreError
+            if case .restoreError = error {
+                // Success - got the expected error type
+            } else {
+                XCTFail("Expected GraphDBError.restoreError, got \(error)")
+            }
+        } catch let error as NSError {
+            // Mock implementation throws NSError - verify it's about invalid JSON/format
+            XCTAssertTrue(
+                error.domain == "CozoDB" || error.domain == NSCocoaErrorDomain,
+                "Expected CozoDB or Cocoa error domain, got \(error.domain)"
+            )
+            // Cocoa error 3840 is JSON parsing error
+            if error.domain == NSCocoaErrorDomain {
+                XCTAssertEqual(error.code, 3840, "Expected JSON parsing error code (3840)")
+            } else if error.domain == "CozoDB" {
+                XCTAssertEqual(error.code, 10, "Expected 'invalid backup format' error code (10)")
+            }
         }
     }
 
@@ -536,33 +613,41 @@ final class CozoGraphDBTests: XCTestCase {
         let localDb = try CozoGraphDB(engine: .mem, path: "")
         try await localDb.close()
 
-        // All operations should throw after close
+        // All operations should throw databaseClosed after close
         do {
             let _: QueryResult<Any> = try await localDb.query("?[x] := x = 1")
             XCTFail("Query should throw after close")
+        } catch let error as GraphDBError {
+            XCTAssertEqual(error, .databaseClosed, "Expected databaseClosed error for query, got \(error)")
         } catch {
-            XCTAssertTrue(true)
+            XCTFail("Expected GraphDBError.databaseClosed for query, got \(type(of: error)): \(error)")
         }
 
         do {
             _ = try await localDb.mutate(":create test { id: Int }")
             XCTFail("Mutate should throw after close")
+        } catch let error as GraphDBError {
+            XCTAssertEqual(error, .databaseClosed, "Expected databaseClosed error for mutate, got \(error)")
         } catch {
-            XCTAssertTrue(true)
+            XCTFail("Expected GraphDBError.databaseClosed for mutate, got \(type(of: error)): \(error)")
         }
 
         do {
             try await localDb.importRelations([:])
             XCTFail("Import should throw after close")
+        } catch let error as GraphDBError {
+            XCTAssertEqual(error, .databaseClosed, "Expected databaseClosed error for import, got \(error)")
         } catch {
-            XCTAssertTrue(true)
+            XCTFail("Expected GraphDBError.databaseClosed for import, got \(type(of: error)): \(error)")
         }
 
         do {
             _ = try await localDb.exportRelations([])
             XCTFail("Export should throw after close")
+        } catch let error as GraphDBError {
+            XCTAssertEqual(error, .databaseClosed, "Expected databaseClosed error for export, got \(error)")
         } catch {
-            XCTAssertTrue(true)
+            XCTFail("Expected GraphDBError.databaseClosed for export, got \(type(of: error)): \(error)")
         }
     }
 
@@ -576,12 +661,19 @@ final class CozoGraphDBTests: XCTestCase {
             "import_target": [["not an int"]] // id expects Int
         ]
 
-        // Mock may not throw, but real implementation would
+        // Mock may not throw, but real implementation would throw importError
         do {
             try await db.importRelations(invalidData)
+            // Mock may succeed - that's acceptable for this test
+        } catch let error as GraphDBError {
+            // Real implementation should throw importError
+            if case .importError = error {
+                // Success - got the expected error type
+            } else {
+                XCTFail("Expected GraphDBError.importError, got \(error)")
+            }
         } catch {
-            // Expected in real implementation
-            XCTAssertTrue(true)
+            XCTFail("Expected GraphDBError.importError, got \(type(of: error)): \(error)")
         }
     }
 
