@@ -114,3 +114,13 @@ export type {
   SyncDataValidationError,
   SyncDataValidation,
 } from './sync.js';
+
+// Battery optimization types
+export type {
+  BatteryState,
+  ScheduleConstraints,
+  ScheduleConfig,
+  ScheduleResult,
+  BatteryOptimizationStats,
+} from './battery.js';
+export { ActivityPriority } from './battery.js';
