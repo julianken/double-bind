@@ -1,0 +1,1346 @@
+{
+  "numTotalTestSuites": 32,
+  "numPassedTestSuites": 3,
+  "numFailedTestSuites": 29,
+  "numPendingTestSuites": 0,
+  "numTotalTests": 99,
+  "numPassedTests": 22,
+  "numFailedTests": 77,
+  "numPendingTests": 0,
+  "numTodoTests": 0,
+  "snapshot": {
+    "added": 0,
+    "failure": false,
+    "filesAdded": 0,
+    "filesRemoved": 0,
+    "filesRemovedList": [],
+    "filesUnmatched": 0,
+    "filesUpdated": 0,
+    "matched": 0,
+    "total": 0,
+    "unchecked": 0,
+    "uncheckedKeysByFile": [],
+    "unmatched": 0,
+    "updated": 0,
+    "didUpdate": false
+  },
+  "startTime": 1770669667688,
+  "success": false,
+  "testResults": [
+    {
+      "assertionResults": [
+        {
+          "ancestorTitles": ["Core Service Integration - Mobile Bridge", "PageService Integration"],
+          "fullName": "Core Service Integration - Mobile Bridge PageService Integration should create page through mobile bridge",
+          "status": "failed",
+          "title": "should create page through mobile bridge",
+          "duration": 3.9399589999999876,
+          "failureMessages": [
+            "DoubleBindError: A page with the title \"Welcome\" already exists\n    at PageRepository.create (/Users/j/repos/wt-DBB-417-integration-tests/packages/core/src/repositories/page-repository.ts:127:13)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at PageService.createPage (/Users/j/repos/wt-DBB-417-integration-tests/packages/core/src/services/page-service.ts:76:22)\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/CoreServiceIntegration.test.ts:45:20\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:5\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:11)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runFiles (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)"
+          ],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": ["Core Service Integration - Mobile Bridge", "PageService Integration"],
+          "fullName": "Core Service Integration - Mobile Bridge PageService Integration should retrieve page with blocks through mobile bridge",
+          "status": "failed",
+          "title": "should retrieve page with blocks through mobile bridge",
+          "duration": 1.0309579999999983,
+          "failureMessages": [
+            "AssertionError: expected 0 to be greater than 0\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/CoreServiceIntegration.test.ts:66:37\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:5\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:11)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runFiles (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)\n    at startTests (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1271:3)\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/vitest@2.1.9_@types+node@25.2.1_jsdom@28.0.0_terser@5.46.0/node_modules/vitest/dist/chunks/runBaseTests.3qpJUEJM.js:126:11"
+          ],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": ["Core Service Integration - Mobile Bridge", "PageService Integration"],
+          "fullName": "Core Service Integration - Mobile Bridge PageService Integration should update page title through mobile bridge",
+          "status": "failed",
+          "title": "should update page title through mobile bridge",
+          "duration": 0.20533399999999347,
+          "failureMessages": [
+            "TypeError: ctx.pageService.updatePage is not a function\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/CoreServiceIntegration.test.ts:77:29\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:146:14\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:11\n    at runWithTimeout (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:39:7)\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:17)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runFiles (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)"
+          ],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": ["Core Service Integration - Mobile Bridge", "PageService Integration"],
+          "fullName": "Core Service Integration - Mobile Bridge PageService Integration should delete page through mobile bridge",
+          "status": "failed",
+          "title": "should delete page through mobile bridge",
+          "duration": 0.19287499999995816,
+          "failureMessages": [
+            "DoubleBindError: A page with the title \"Welcome\" already exists\n    at PageRepository.create (/Users/j/repos/wt-DBB-417-integration-tests/packages/core/src/repositories/page-repository.ts:127:13)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at PageService.createPage (/Users/j/repos/wt-DBB-417-integration-tests/packages/core/src/services/page-service.ts:76:22)\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/CoreServiceIntegration.test.ts:86:20\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:5\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:11)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runFiles (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)"
+          ],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": ["Core Service Integration - Mobile Bridge", "PageService Integration"],
+          "fullName": "Core Service Integration - Mobile Bridge PageService Integration should get page backlinks through mobile bridge",
+          "status": "failed",
+          "title": "should get page backlinks through mobile bridge",
+          "duration": 0.1566670000000272,
+          "failureMessages": [
+            "TypeError: ctx.pageService.getBacklinks is not a function\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/CoreServiceIntegration.test.ts:106:47\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:146:14\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:11\n    at runWithTimeout (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:39:7)\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:17)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runFiles (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)"
+          ],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": ["Core Service Integration - Mobile Bridge", "PageService Integration"],
+          "fullName": "Core Service Integration - Mobile Bridge PageService Integration should handle page creation with duplicate title",
+          "status": "failed",
+          "title": "should handle page creation with duplicate title",
+          "duration": 0.1717909999999847,
+          "failureMessages": [
+            "DoubleBindError: A page with the title \"Welcome\" already exists\n    at PageRepository.create (/Users/j/repos/wt-DBB-417-integration-tests/packages/core/src/repositories/page-repository.ts:127:13)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at PageService.createPage (/Users/j/repos/wt-DBB-417-integration-tests/packages/core/src/services/page-service.ts:76:22)\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/CoreServiceIntegration.test.ts:118:21\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:5\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:11)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runFiles (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)"
+          ],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Core Service Integration - Mobile Bridge",
+            "BlockService Integration"
+          ],
+          "fullName": "Core Service Integration - Mobile Bridge BlockService Integration should create block through mobile bridge",
+          "status": "failed",
+          "title": "should create block through mobile bridge",
+          "duration": 1.2632079999999632,
+          "failureMessages": [
+            "DoubleBindError: Failed to retrieve created block: 01KH225XSWS4MJH94086F98C8P\n    at BlockService.createBlock (/Users/j/repos/wt-DBB-417-integration-tests/packages/core/src/services/block-service.ts:150:15)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/CoreServiceIntegration.test.ts:142:21\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:5\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:11)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runFiles (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)\n    at startTests (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1271:3)"
+          ],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Core Service Integration - Mobile Bridge",
+            "BlockService Integration"
+          ],
+          "fullName": "Core Service Integration - Mobile Bridge BlockService Integration should update block content through mobile bridge",
+          "status": "failed",
+          "title": "should update block content through mobile bridge",
+          "duration": 3.155417,
+          "failureMessages": [
+            "AssertionError: expected 'Welcome to [[Getting Started]]' to be 'Updated from mobile' // Object.is equality\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/CoreServiceIntegration.test.ts:164:30\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:5\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:11)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runFiles (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)\n    at startTests (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1271:3)\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/vitest@2.1.9_@types+node@25.2.1_jsdom@28.0.0_terser@5.46.0/node_modules/vitest/dist/chunks/runBaseTests.3qpJUEJM.js:126:11"
+          ],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Core Service Integration - Mobile Bridge",
+            "BlockService Integration"
+          ],
+          "fullName": "Core Service Integration - Mobile Bridge BlockService Integration should delete block through mobile bridge",
+          "status": "failed",
+          "title": "should delete block through mobile bridge",
+          "duration": 0.3323750000000132,
+          "failureMessages": [
+            "DoubleBindError: Failed to retrieve created block: 01KH225XT1GTD5JQN21BV5PTAT\n    at BlockService.createBlock (/Users/j/repos/wt-DBB-417-integration-tests/packages/core/src/services/block-service.ts:150:15)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/CoreServiceIntegration.test.ts:169:21\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:5\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:11)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runFiles (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)\n    at startTests (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1271:3)"
+          ],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Core Service Integration - Mobile Bridge",
+            "BlockService Integration"
+          ],
+          "fullName": "Core Service Integration - Mobile Bridge BlockService Integration should create nested blocks through mobile bridge",
+          "status": "failed",
+          "title": "should create nested blocks through mobile bridge",
+          "duration": 0.24945900000000165,
+          "failureMessages": [
+            "DoubleBindError: Failed to retrieve created block: 01KH225XT11N54QH0WEV8M9CQM\n    at BlockService.createBlock (/Users/j/repos/wt-DBB-417-integration-tests/packages/core/src/services/block-service.ts:150:15)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/CoreServiceIntegration.test.ts:186:27\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:5\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:11)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runFiles (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)\n    at startTests (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1271:3)"
+          ],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Core Service Integration - Mobile Bridge",
+            "BlockService Integration"
+          ],
+          "fullName": "Core Service Integration - Mobile Bridge BlockService Integration should indent and outdent blocks through mobile bridge",
+          "status": "failed",
+          "title": "should indent and outdent blocks through mobile bridge",
+          "duration": 0.23145799999997507,
+          "failureMessages": [
+            "DoubleBindError: Failed to retrieve created block: 01KH225XT125X3Q386AH32RP9M\n    at BlockService.createBlock (/Users/j/repos/wt-DBB-417-integration-tests/packages/core/src/services/block-service.ts:150:15)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/CoreServiceIntegration.test.ts:210:22\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:5\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:11)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runFiles (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)\n    at startTests (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1271:3)"
+          ],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Core Service Integration - Mobile Bridge",
+            "BlockService Integration"
+          ],
+          "fullName": "Core Service Integration - Mobile Bridge BlockService Integration should extract wiki links from block content",
+          "status": "failed",
+          "title": "should extract wiki links from block content",
+          "duration": 0.33970799999997325,
+          "failureMessages": [
+            "DoubleBindError: A page with the title \"Welcome\" already exists\n    at PageRepository.create (/Users/j/repos/wt-DBB-417-integration-tests/packages/core/src/repositories/page-repository.ts:127:13)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at PageRepository.getOrCreateByTitle (/Users/j/repos/wt-DBB-417-integration-tests/packages/core/src/repositories/page-repository.ts:301:20)\n    at BlockService.syncParsedContent (/Users/j/repos/wt-DBB-417-integration-tests/packages/core/src/services/block-service.ts:827:26)\n    at BlockService.createBlock (/Users/j/repos/wt-DBB-417-integration-tests/packages/core/src/services/block-service.ts:145:7)\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/CoreServiceIntegration.test.ts:239:21\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:5\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:11)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)"
+          ],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Core Service Integration - Mobile Bridge",
+            "GraphService Integration"
+          ],
+          "fullName": "Core Service Integration - Mobile Bridge GraphService Integration should get graph data for page through mobile bridge",
+          "status": "passed",
+          "title": "should get graph data for page through mobile bridge",
+          "duration": 0.4216250000000059,
+          "failureMessages": [],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Core Service Integration - Mobile Bridge",
+            "GraphService Integration"
+          ],
+          "fullName": "Core Service Integration - Mobile Bridge GraphService Integration should get full graph through mobile bridge",
+          "status": "passed",
+          "title": "should get full graph through mobile bridge",
+          "duration": 0.20724999999998772,
+          "failureMessages": [],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Core Service Integration - Mobile Bridge",
+            "GraphService Integration"
+          ],
+          "fullName": "Core Service Integration - Mobile Bridge GraphService Integration should suggest links through mobile bridge",
+          "status": "failed",
+          "title": "should suggest links through mobile bridge",
+          "duration": 0.27745799999996734,
+          "failureMessages": [
+            "TypeError: ctx.graphService.suggestLinks is not a function\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/CoreServiceIntegration.test.ts:284:50\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:146:14\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:11\n    at runWithTimeout (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:39:7)\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:17)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runFiles (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)"
+          ],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Core Service Integration - Mobile Bridge",
+            "Cross-Service Integration"
+          ],
+          "fullName": "Core Service Integration - Mobile Bridge Cross-Service Integration should create page with blocks atomically",
+          "status": "failed",
+          "title": "should create page with blocks atomically",
+          "duration": 0.1720409999999788,
+          "failureMessages": [
+            "DoubleBindError: A page with the title \"Welcome\" already exists\n    at PageRepository.create (/Users/j/repos/wt-DBB-417-integration-tests/packages/core/src/repositories/page-repository.ts:127:13)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at PageService.createPage (/Users/j/repos/wt-DBB-417-integration-tests/packages/core/src/services/page-service.ts:76:22)\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/CoreServiceIntegration.test.ts:300:20\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:5\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:11)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runFiles (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)"
+          ],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Core Service Integration - Mobile Bridge",
+            "Cross-Service Integration"
+          ],
+          "fullName": "Core Service Integration - Mobile Bridge Cross-Service Integration should update graph when creating wiki links",
+          "status": "failed",
+          "title": "should update graph when creating wiki links",
+          "duration": 0.14012500000001182,
+          "failureMessages": [
+            "DoubleBindError: A page with the title \"Welcome\" already exists\n    at PageRepository.create (/Users/j/repos/wt-DBB-417-integration-tests/packages/core/src/repositories/page-repository.ts:127:13)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at PageService.createPage (/Users/j/repos/wt-DBB-417-integration-tests/packages/core/src/services/page-service.ts:76:22)\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/CoreServiceIntegration.test.ts:316:21\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:5\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:11)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runFiles (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)"
+          ],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Core Service Integration - Mobile Bridge",
+            "Cross-Service Integration"
+          ],
+          "fullName": "Core Service Integration - Mobile Bridge Cross-Service Integration should maintain referential integrity on page deletion",
+          "status": "failed",
+          "title": "should maintain referential integrity on page deletion",
+          "duration": 0.13633299999997917,
+          "failureMessages": [
+            "DoubleBindError: A page with the title \"Welcome\" already exists\n    at PageRepository.create (/Users/j/repos/wt-DBB-417-integration-tests/packages/core/src/repositories/page-repository.ts:127:13)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at PageService.createPage (/Users/j/repos/wt-DBB-417-integration-tests/packages/core/src/services/page-service.ts:76:22)\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/CoreServiceIntegration.test.ts:332:20\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:5\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:11)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runFiles (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)"
+          ],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Core Service Integration - Mobile Bridge",
+            "Mobile Lifecycle Integration"
+          ],
+          "fullName": "Core Service Integration - Mobile Bridge Mobile Lifecycle Integration should handle mobile app suspend/resume",
+          "status": "failed",
+          "title": "should handle mobile app suspend/resume",
+          "duration": 0.13550000000003593,
+          "failureMessages": [
+            "DoubleBindError: A page with the title \"Welcome\" already exists\n    at PageRepository.create (/Users/j/repos/wt-DBB-417-integration-tests/packages/core/src/repositories/page-repository.ts:127:13)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at PageService.createPage (/Users/j/repos/wt-DBB-417-integration-tests/packages/core/src/services/page-service.ts:76:22)\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/CoreServiceIntegration.test.ts:352:20\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:5\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:11)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runFiles (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)"
+          ],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Core Service Integration - Mobile Bridge",
+            "Mobile Lifecycle Integration"
+          ],
+          "fullName": "Core Service Integration - Mobile Bridge Mobile Lifecycle Integration should handle mobile memory pressure",
+          "status": "failed",
+          "title": "should handle mobile memory pressure",
+          "duration": 0.14058299999999235,
+          "failureMessages": [
+            "DoubleBindError: A page with the title \"Welcome\" already exists\n    at PageRepository.create (/Users/j/repos/wt-DBB-417-integration-tests/packages/core/src/repositories/page-repository.ts:127:13)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at PageService.createPage (/Users/j/repos/wt-DBB-417-integration-tests/packages/core/src/services/page-service.ts:76:22)\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/CoreServiceIntegration.test.ts:373:22\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:5\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:11)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runFiles (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)"
+          ],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Core Service Integration - Mobile Bridge",
+            "Touch Gesture Integration"
+          ],
+          "fullName": "Core Service Integration - Mobile Bridge Touch Gesture Integration should handle long-press gesture to select block",
+          "status": "passed",
+          "title": "should handle long-press gesture to select block",
+          "duration": 0.8372499999999832,
+          "failureMessages": [],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Core Service Integration - Mobile Bridge",
+            "Touch Gesture Integration"
+          ],
+          "fullName": "Core Service Integration - Mobile Bridge Touch Gesture Integration should handle swipe gesture to delete block",
+          "status": "failed",
+          "title": "should handle swipe gesture to delete block",
+          "duration": 0.3003339999999639,
+          "failureMessages": [
+            "DoubleBindError: Failed to retrieve created block: 01KH225XT4EAPV8K30J6T2E6A3\n    at BlockService.createBlock (/Users/j/repos/wt-DBB-417-integration-tests/packages/core/src/services/block-service.ts:150:15)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/CoreServiceIntegration.test.ts:408:21\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:5\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:11)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runFiles (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)\n    at startTests (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1271:3)"
+          ],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Core Service Integration - Mobile Bridge",
+            "Touch Gesture Integration"
+          ],
+          "fullName": "Core Service Integration - Mobile Bridge Touch Gesture Integration should handle drag gesture to reorder blocks",
+          "status": "failed",
+          "title": "should handle drag gesture to reorder blocks",
+          "duration": 0.21395800000004783,
+          "failureMessages": [
+            "DoubleBindError: Failed to retrieve created block: 01KH225XT5A3S1KNKW7QXPPW0Y\n    at BlockService.createBlock (/Users/j/repos/wt-DBB-417-integration-tests/packages/core/src/services/block-service.ts:150:15)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/CoreServiceIntegration.test.ts:432:22\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:5\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:11)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runFiles (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)\n    at startTests (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1271:3)"
+          ],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": ["Core Service Integration - Mobile Bridge", "Error Handling"],
+          "fullName": "Core Service Integration - Mobile Bridge Error Handling should handle invalid page ID gracefully",
+          "status": "failed",
+          "title": "should handle invalid page ID gracefully",
+          "duration": 0.1864999999999668,
+          "failureMessages": [
+            "DoubleBindError: Page not found: non-existent-page\n    at PageService.getPageWithBlocks (/Users/j/repos/wt-DBB-417-integration-tests/packages/core/src/services/page-service.ts:118:15)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/CoreServiceIntegration.test.ts:457:22\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:5\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:11)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runFiles (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)\n    at startTests (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1271:3)"
+          ],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": ["Core Service Integration - Mobile Bridge", "Error Handling"],
+          "fullName": "Core Service Integration - Mobile Bridge Error Handling should handle invalid block ID gracefully",
+          "status": "passed",
+          "title": "should handle invalid block ID gracefully",
+          "duration": 0.1022090000000162,
+          "failureMessages": [],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": ["Core Service Integration - Mobile Bridge", "Error Handling"],
+          "fullName": "Core Service Integration - Mobile Bridge Error Handling should handle concurrent operations on same block",
+          "status": "failed",
+          "title": "should handle concurrent operations on same block",
+          "duration": 0.262833999999998,
+          "failureMessages": [
+            "DoubleBindError: Failed to retrieve created block: 01KH225XT5DFAFXZMT0TFA16T4\n    at BlockService.createBlock (/Users/j/repos/wt-DBB-417-integration-tests/packages/core/src/services/block-service.ts:150:15)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/CoreServiceIntegration.test.ts:470:21\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:5\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:11)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runFiles (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)\n    at startTests (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1271:3)"
+          ],
+          "meta": {}
+        }
+      ],
+      "startTime": 1770669668150,
+      "endTime": 1770669668165.263,
+      "status": "failed",
+      "message": "",
+      "name": "/Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/CoreServiceIntegration.test.ts"
+    },
+    {
+      "assertionResults": [
+        {
+          "ancestorTitles": [
+            "Database Integration - Mobile Adapters",
+            "Page Repository Operations"
+          ],
+          "fullName": "Database Integration - Mobile Adapters Page Repository Operations should create page through repository",
+          "status": "failed",
+          "title": "should create page through repository",
+          "duration": 3.7848749999999995,
+          "failureMessages": [
+            "DoubleBindError: A page with the title \"Welcome\" already exists\n    at PageRepository.create (/Users/j/repos/wt-DBB-417-integration-tests/packages/core/src/repositories/page-repository.ts:127:13)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/DatabaseIntegration.test.ts:41:20\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:5\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:11)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runFiles (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)\n    at startTests (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1271:3)"
+          ],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Database Integration - Mobile Adapters",
+            "Page Repository Operations"
+          ],
+          "fullName": "Database Integration - Mobile Adapters Page Repository Operations should retrieve page by ID through repository",
+          "status": "passed",
+          "title": "should retrieve page by ID through repository",
+          "duration": 0.5598339999999666,
+          "failureMessages": [],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Database Integration - Mobile Adapters",
+            "Page Repository Operations"
+          ],
+          "fullName": "Database Integration - Mobile Adapters Page Repository Operations should list all pages through repository",
+          "status": "failed",
+          "title": "should list all pages through repository",
+          "duration": 0.21758299999999053,
+          "failureMessages": [
+            "TypeError: ctx.pageRepo.listPages is not a function\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/DatabaseIntegration.test.ts:60:40\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:146:14\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:11\n    at runWithTimeout (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:39:7)\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:17)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runFiles (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)"
+          ],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Database Integration - Mobile Adapters",
+            "Page Repository Operations"
+          ],
+          "fullName": "Database Integration - Mobile Adapters Page Repository Operations should update page through repository",
+          "status": "failed",
+          "title": "should update page through repository",
+          "duration": 2.3772089999999935,
+          "failureMessages": [
+            "AssertionError: expected 'Welcome' to be 'Updated Title' // Object.is equality\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/DatabaseIntegration.test.ts:74:30\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:5\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:11)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runFiles (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)\n    at startTests (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1271:3)\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/vitest@2.1.9_@types+node@25.2.1_jsdom@28.0.0_terser@5.46.0/node_modules/vitest/dist/chunks/runBaseTests.3qpJUEJM.js:126:11"
+          ],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Database Integration - Mobile Adapters",
+            "Page Repository Operations"
+          ],
+          "fullName": "Database Integration - Mobile Adapters Page Repository Operations should soft delete page through repository",
+          "status": "failed",
+          "title": "should soft delete page through repository",
+          "duration": 0.22024999999996453,
+          "failureMessages": [
+            "TypeError: ctx.pageRepo.delete is not a function\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/DatabaseIntegration.test.ts:80:26\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:146:14\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:11\n    at runWithTimeout (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:39:7)\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:17)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runFiles (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)"
+          ],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Database Integration - Mobile Adapters",
+            "Page Repository Operations"
+          ],
+          "fullName": "Database Integration - Mobile Adapters Page Repository Operations should handle daily note queries",
+          "status": "failed",
+          "title": "should handle daily note queries",
+          "duration": 0.4704590000000053,
+          "failureMessages": [
+            "DoubleBindError: A page with the title \"Welcome\" already exists\n    at PageRepository.create (/Users/j/repos/wt-DBB-417-integration-tests/packages/core/src/repositories/page-repository.ts:127:13)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/DatabaseIntegration.test.ts:90:25\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:5\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:11)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runFiles (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)\n    at startTests (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1271:3)"
+          ],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Database Integration - Mobile Adapters",
+            "Block Repository Operations"
+          ],
+          "fullName": "Database Integration - Mobile Adapters Block Repository Operations should create block through repository",
+          "status": "failed",
+          "title": "should create block through repository",
+          "duration": 0.7988750000000095,
+          "failureMessages": [
+            "AssertionError: expected undefined to be 'New block content' // Object.is equality\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/DatabaseIntegration.test.ts:109:29\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:5\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:11)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runFiles (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)\n    at startTests (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1271:3)\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/vitest@2.1.9_@types+node@25.2.1_jsdom@28.0.0_terser@5.46.0/node_modules/vitest/dist/chunks/runBaseTests.3qpJUEJM.js:126:11"
+          ],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Database Integration - Mobile Adapters",
+            "Block Repository Operations"
+          ],
+          "fullName": "Database Integration - Mobile Adapters Block Repository Operations should retrieve block by ID through repository",
+          "status": "passed",
+          "title": "should retrieve block by ID through repository",
+          "duration": 0.9145420000000399,
+          "failureMessages": [],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Database Integration - Mobile Adapters",
+            "Block Repository Operations"
+          ],
+          "fullName": "Database Integration - Mobile Adapters Block Repository Operations should get blocks by page through repository",
+          "status": "failed",
+          "title": "should get blocks by page through repository",
+          "duration": 0.23787500000003092,
+          "failureMessages": [
+            "TypeError: ctx.blockRepo.getBlocksByPage is not a function\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/DatabaseIntegration.test.ts:127:42\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:146:14\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:11\n    at runWithTimeout (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:39:7)\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:17)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runFiles (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)"
+          ],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Database Integration - Mobile Adapters",
+            "Block Repository Operations"
+          ],
+          "fullName": "Database Integration - Mobile Adapters Block Repository Operations should update block content through repository",
+          "status": "failed",
+          "title": "should update block content through repository",
+          "duration": 0.18379200000003948,
+          "failureMessages": [
+            "TypeError: ctx.blockRepo.updateContent is not a function\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/DatabaseIntegration.test.ts:138:27\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:146:14\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:11\n    at runWithTimeout (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:39:7)\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:17)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runFiles (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)"
+          ],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Database Integration - Mobile Adapters",
+            "Block Repository Operations"
+          ],
+          "fullName": "Database Integration - Mobile Adapters Block Repository Operations should update block parent through repository",
+          "status": "failed",
+          "title": "should update block parent through repository",
+          "duration": 0.1645000000000323,
+          "failureMessages": [
+            "TypeError: ctx.blockRepo.updateParent is not a function\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/DatabaseIntegration.test.ts:148:27\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:146:14\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:11\n    at runWithTimeout (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:39:7)\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:17)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runFiles (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)"
+          ],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Database Integration - Mobile Adapters",
+            "Block Repository Operations"
+          ],
+          "fullName": "Database Integration - Mobile Adapters Block Repository Operations should soft delete block through repository",
+          "status": "failed",
+          "title": "should soft delete block through repository",
+          "duration": 0.12670800000000781,
+          "failureMessages": [
+            "TypeError: ctx.blockRepo.delete is not a function\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/DatabaseIntegration.test.ts:157:27\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:146:14\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:11\n    at runWithTimeout (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:39:7)\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:17)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runFiles (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)"
+          ],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Database Integration - Mobile Adapters",
+            "Block Repository Operations"
+          ],
+          "fullName": "Database Integration - Mobile Adapters Block Repository Operations should get block tree structure",
+          "status": "failed",
+          "title": "should get block tree structure",
+          "duration": 0.2680410000000393,
+          "failureMessages": [
+            "TypeError: ctx.blockRepo.getBlocksByPage is not a function\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/DatabaseIntegration.test.ts:170:42\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:5\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:11)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runFiles (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)\n    at startTests (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1271:3)\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/vitest@2.1.9_@types+node@25.2.1_jsdom@28.0.0_terser@5.46.0/node_modules/vitest/dist/chunks/runBaseTests.3qpJUEJM.js:126:11"
+          ],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Database Integration - Mobile Adapters",
+            "Link Repository Operations"
+          ],
+          "fullName": "Database Integration - Mobile Adapters Link Repository Operations should create link through repository",
+          "status": "failed",
+          "title": "should create link through repository",
+          "duration": 0.12283299999995734,
+          "failureMessages": [
+            "TypeError: ctx.linkRepo.create is not a function\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/DatabaseIntegration.test.ts:187:39\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:146:14\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:11\n    at runWithTimeout (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:39:7)\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:17)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runFiles (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)"
+          ],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Database Integration - Mobile Adapters",
+            "Link Repository Operations"
+          ],
+          "fullName": "Database Integration - Mobile Adapters Link Repository Operations should get outgoing links through repository",
+          "status": "failed",
+          "title": "should get outgoing links through repository",
+          "duration": 0.12725000000000364,
+          "failureMessages": [
+            "TypeError: ctx.linkRepo.getOutgoingLinks is not a function\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/DatabaseIntegration.test.ts:198:40\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:146:14\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:11\n    at runWithTimeout (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:39:7)\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:17)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runFiles (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)"
+          ],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Database Integration - Mobile Adapters",
+            "Link Repository Operations"
+          ],
+          "fullName": "Database Integration - Mobile Adapters Link Repository Operations should get incoming links through repository",
+          "status": "failed",
+          "title": "should get incoming links through repository",
+          "duration": 0.127666999999974,
+          "failureMessages": [
+            "TypeError: ctx.linkRepo.getIncomingLinks is not a function\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/DatabaseIntegration.test.ts:208:40\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:146:14\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:11\n    at runWithTimeout (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:39:7)\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:17)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runFiles (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)"
+          ],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Database Integration - Mobile Adapters",
+            "Link Repository Operations"
+          ],
+          "fullName": "Database Integration - Mobile Adapters Link Repository Operations should delete link through repository",
+          "status": "failed",
+          "title": "should delete link through repository",
+          "duration": 0.11112500000001546,
+          "failureMessages": [
+            "TypeError: ctx.linkRepo.delete is not a function\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/DatabaseIntegration.test.ts:219:26\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:146:14\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:11\n    at runWithTimeout (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:39:7)\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:17)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runFiles (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)"
+          ],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": ["Database Integration - Mobile Adapters", "Tag Repository Operations"],
+          "fullName": "Database Integration - Mobile Adapters Tag Repository Operations should create tag through repository",
+          "status": "failed",
+          "title": "should create tag through repository",
+          "duration": 0.21633399999996072,
+          "failureMessages": [
+            "AssertionError: expected undefined to be defined\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/DatabaseIntegration.test.ts:235:19\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:5\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:11)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runFiles (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)\n    at startTests (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1271:3)\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/vitest@2.1.9_@types+node@25.2.1_jsdom@28.0.0_terser@5.46.0/node_modules/vitest/dist/chunks/runBaseTests.3qpJUEJM.js:126:11"
+          ],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": ["Database Integration - Mobile Adapters", "Tag Repository Operations"],
+          "fullName": "Database Integration - Mobile Adapters Tag Repository Operations should get tags by entity through repository",
+          "status": "failed",
+          "title": "should get tags by entity through repository",
+          "duration": 0.12629200000003493,
+          "failureMessages": [
+            "TypeError: ctx.tagRepo.getTagsByEntity is not a function\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/DatabaseIntegration.test.ts:247:38\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:5\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:11)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runFiles (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)\n    at startTests (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1271:3)\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/vitest@2.1.9_@types+node@25.2.1_jsdom@28.0.0_terser@5.46.0/node_modules/vitest/dist/chunks/runBaseTests.3qpJUEJM.js:126:11"
+          ],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": ["Database Integration - Mobile Adapters", "Tag Repository Operations"],
+          "fullName": "Database Integration - Mobile Adapters Tag Repository Operations should remove tag through repository",
+          "status": "failed",
+          "title": "should remove tag through repository",
+          "duration": 0.12608299999999417,
+          "failureMessages": [
+            "TypeError: ctx.tagRepo.getTagsByEntity is not a function\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/DatabaseIntegration.test.ts:262:38\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:5\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:11)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runFiles (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)\n    at startTests (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1271:3)\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/vitest@2.1.9_@types+node@25.2.1_jsdom@28.0.0_terser@5.46.0/node_modules/vitest/dist/chunks/runBaseTests.3qpJUEJM.js:126:11"
+          ],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Database Integration - Mobile Adapters",
+            "Property Repository Operations"
+          ],
+          "fullName": "Database Integration - Mobile Adapters Property Repository Operations should set property through repository",
+          "status": "failed",
+          "title": "should set property through repository",
+          "duration": 0.11620800000002873,
+          "failureMessages": [
+            "TypeError: ctx.propertyRepo.setProperty is not a function\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/DatabaseIntegration.test.ts:275:47\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:146:14\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:11\n    at runWithTimeout (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:39:7)\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:17)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runFiles (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)"
+          ],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Database Integration - Mobile Adapters",
+            "Property Repository Operations"
+          ],
+          "fullName": "Database Integration - Mobile Adapters Property Repository Operations should get properties by entity through repository",
+          "status": "failed",
+          "title": "should get properties by entity through repository",
+          "duration": 0.11387500000000728,
+          "failureMessages": [
+            "TypeError: ctx.propertyRepo.setProperty is not a function\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/DatabaseIntegration.test.ts:288:30\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:146:14\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:11\n    at runWithTimeout (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:39:7)\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:17)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runFiles (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)"
+          ],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Database Integration - Mobile Adapters",
+            "Property Repository Operations"
+          ],
+          "fullName": "Database Integration - Mobile Adapters Property Repository Operations should update property value through repository",
+          "status": "failed",
+          "title": "should update property value through repository",
+          "duration": 0.13920799999999645,
+          "failureMessages": [
+            "TypeError: ctx.propertyRepo.setProperty is not a function\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/DatabaseIntegration.test.ts:303:30\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:146:14\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:11\n    at runWithTimeout (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:39:7)\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:17)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runFiles (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)"
+          ],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Database Integration - Mobile Adapters",
+            "Property Repository Operations"
+          ],
+          "fullName": "Database Integration - Mobile Adapters Property Repository Operations should remove property through repository",
+          "status": "failed",
+          "title": "should remove property through repository",
+          "duration": 0.11345800000003692,
+          "failureMessages": [
+            "TypeError: ctx.propertyRepo.setProperty is not a function\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/DatabaseIntegration.test.ts:316:30\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:146:14\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:11\n    at runWithTimeout (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:39:7)\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:17)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runFiles (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)"
+          ],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Database Integration - Mobile Adapters",
+            "Database Query Performance"
+          ],
+          "fullName": "Database Integration - Mobile Adapters Database Query Performance should handle batch page creation efficiently",
+          "status": "failed",
+          "title": "should handle batch page creation efficiently",
+          "duration": 0.3138749999999959,
+          "failureMessages": [
+            "DoubleBindError: A page with the title \"Welcome\" already exists\n    at PageRepository.create (/Users/j/repos/wt-DBB-417-integration-tests/packages/core/src/repositories/page-repository.ts:127:13)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async Promise.all (index 0)\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/DatabaseIntegration.test.ts:331:21\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:5\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:11)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runFiles (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)"
+          ],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Database Integration - Mobile Adapters",
+            "Database Query Performance"
+          ],
+          "fullName": "Database Integration - Mobile Adapters Database Query Performance should handle batch block creation efficiently",
+          "status": "failed",
+          "title": "should handle batch block creation efficiently",
+          "duration": 1.0693749999999795,
+          "failureMessages": [
+            "AssertionError: expected false to be true // Object.is equality\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/DatabaseIntegration.test.ts:360:58\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:5\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:11)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runFiles (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)\n    at startTests (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1271:3)\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/vitest@2.1.9_@types+node@25.2.1_jsdom@28.0.0_terser@5.46.0/node_modules/vitest/dist/chunks/runBaseTests.3qpJUEJM.js:126:11"
+          ],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Database Integration - Mobile Adapters",
+            "Database Query Performance"
+          ],
+          "fullName": "Database Integration - Mobile Adapters Database Query Performance should handle complex graph queries efficiently",
+          "status": "passed",
+          "title": "should handle complex graph queries efficiently",
+          "duration": 0.29845900000003667,
+          "failureMessages": [],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Database Integration - Mobile Adapters",
+            "Database State Consistency"
+          ],
+          "fullName": "Database Integration - Mobile Adapters Database State Consistency should maintain consistency during concurrent writes",
+          "status": "failed",
+          "title": "should maintain consistency during concurrent writes",
+          "duration": 0.3619579999999587,
+          "failureMessages": [
+            "AssertionError: expected false to be true // Object.is equality\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/DatabaseIntegration.test.ts:390:54\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:5\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:11)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runFiles (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)\n    at startTests (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1271:3)\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/vitest@2.1.9_@types+node@25.2.1_jsdom@28.0.0_terser@5.46.0/node_modules/vitest/dist/chunks/runBaseTests.3qpJUEJM.js:126:11"
+          ],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Database Integration - Mobile Adapters",
+            "Database State Consistency"
+          ],
+          "fullName": "Database Integration - Mobile Adapters Database State Consistency should maintain referential integrity on cascade delete",
+          "status": "failed",
+          "title": "should maintain referential integrity on cascade delete",
+          "duration": 0.13816600000001245,
+          "failureMessages": [
+            "DoubleBindError: A page with the title \"Welcome\" already exists\n    at PageRepository.create (/Users/j/repos/wt-DBB-417-integration-tests/packages/core/src/repositories/page-repository.ts:127:13)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/DatabaseIntegration.test.ts:398:20\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:5\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:11)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runFiles (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)\n    at startTests (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1271:3)"
+          ],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Database Integration - Mobile Adapters",
+            "Database State Consistency"
+          ],
+          "fullName": "Database Integration - Mobile Adapters Database State Consistency should handle orphaned blocks correctly",
+          "status": "failed",
+          "title": "should handle orphaned blocks correctly",
+          "duration": 0.26937499999996817,
+          "failureMessages": [
+            "TypeError: ctx.blockRepo.delete is not a function\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/DatabaseIntegration.test.ts:427:27\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:5\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:11)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runFiles (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)\n    at startTests (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1271:3)\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/vitest@2.1.9_@types+node@25.2.1_jsdom@28.0.0_terser@5.46.0/node_modules/vitest/dist/chunks/runBaseTests.3qpJUEJM.js:126:11"
+          ],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": ["Database Integration - Mobile Adapters", "Mobile Platform Adapter"],
+          "fullName": "Database Integration - Mobile Adapters Mobile Platform Adapter should handle database initialization",
+          "status": "passed",
+          "title": "should handle database initialization",
+          "duration": 0.1322499999999991,
+          "failureMessages": [],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": ["Database Integration - Mobile Adapters", "Mobile Platform Adapter"],
+          "fullName": "Database Integration - Mobile Adapters Mobile Platform Adapter should track database queries",
+          "status": "passed",
+          "title": "should track database queries",
+          "duration": 0.09020799999996143,
+          "failureMessages": [],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": ["Database Integration - Mobile Adapters", "Mobile Platform Adapter"],
+          "fullName": "Database Integration - Mobile Adapters Mobile Platform Adapter should track database mutations",
+          "status": "passed",
+          "title": "should track database mutations",
+          "duration": 0.1156249999999659,
+          "failureMessages": [],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": ["Database Integration - Mobile Adapters", "Mobile Platform Adapter"],
+          "fullName": "Database Integration - Mobile Adapters Mobile Platform Adapter should handle database errors gracefully",
+          "status": "passed",
+          "title": "should handle database errors gracefully",
+          "duration": 1.3953339999999912,
+          "failureMessages": [],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": ["Database Integration - Mobile Adapters", "Memory Management"],
+          "fullName": "Database Integration - Mobile Adapters Memory Management should handle large result sets efficiently",
+          "status": "failed",
+          "title": "should handle large result sets efficiently",
+          "duration": 0.9915419999999813,
+          "failureMessages": [
+            "DoubleBindError: A page with the title \"Welcome\" already exists\n    at PageRepository.create (/Users/j/repos/wt-DBB-417-integration-tests/packages/core/src/repositories/page-repository.ts:127:13)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async Promise.all (index 0)\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/DatabaseIntegration.test.ts:480:7\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:5\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:11)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runFiles (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)"
+          ],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": ["Database Integration - Mobile Adapters", "Memory Management"],
+          "fullName": "Database Integration - Mobile Adapters Memory Management should handle deep block hierarchies",
+          "status": "failed",
+          "title": "should handle deep block hierarchies",
+          "duration": 1.5198330000000055,
+          "failureMessages": [
+            "TypeError: ctx.blockRepo.getBlocksByPage is not a function\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/DatabaseIntegration.test.ts:507:45\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:5\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:11)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runFiles (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)\n    at startTests (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1271:3)\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/vitest@2.1.9_@types+node@25.2.1_jsdom@28.0.0_terser@5.46.0/node_modules/vitest/dist/chunks/runBaseTests.3qpJUEJM.js:126:11"
+          ],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Database Integration - Mobile Adapters",
+            "Platform-Specific Behavior"
+          ],
+          "fullName": "Database Integration - Mobile Adapters Platform-Specific Behavior should handle iOS-specific database paths",
+          "status": "passed",
+          "title": "should handle iOS-specific database paths",
+          "duration": 0.09208300000000236,
+          "failureMessages": [],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Database Integration - Mobile Adapters",
+            "Platform-Specific Behavior"
+          ],
+          "fullName": "Database Integration - Mobile Adapters Platform-Specific Behavior should handle Android-specific database paths",
+          "status": "passed",
+          "title": "should handle Android-specific database paths",
+          "duration": 0.04454099999998107,
+          "failureMessages": [],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Database Integration - Mobile Adapters",
+            "Platform-Specific Behavior"
+          ],
+          "fullName": "Database Integration - Mobile Adapters Platform-Specific Behavior should handle database backup on iOS",
+          "status": "passed",
+          "title": "should handle database backup on iOS",
+          "duration": 0.05195800000001327,
+          "failureMessages": [],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Database Integration - Mobile Adapters",
+            "Platform-Specific Behavior"
+          ],
+          "fullName": "Database Integration - Mobile Adapters Platform-Specific Behavior should handle database restore on Android",
+          "status": "passed",
+          "title": "should handle database restore on Android",
+          "duration": 0.04224999999996726,
+          "failureMessages": [],
+          "meta": {}
+        }
+      ],
+      "startTime": 1770669668151,
+      "endTime": 1770669668170.092,
+      "status": "failed",
+      "message": "",
+      "name": "/Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/DatabaseIntegration.test.ts"
+    },
+    {
+      "assertionResults": [
+        {
+          "ancestorTitles": [
+            "Service Integration - Cross-Service Scenarios",
+            "Page-Block Service Integration"
+          ],
+          "fullName": "Service Integration - Cross-Service Scenarios Page-Block Service Integration should create page with blocks in single operation",
+          "status": "failed",
+          "title": "should create page with blocks in single operation",
+          "duration": 4.1895000000000095,
+          "failureMessages": [
+            "DoubleBindError: A page with the title \"Welcome\" already exists\n    at PageRepository.create (/Users/j/repos/wt-DBB-417-integration-tests/packages/core/src/repositories/page-repository.ts:127:13)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at PageService.createPage (/Users/j/repos/wt-DBB-417-integration-tests/packages/core/src/services/page-service.ts:76:22)\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/ServiceIntegration.test.ts:46:20\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:5\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:11)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runFiles (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)"
+          ],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Service Integration - Cross-Service Scenarios",
+            "Page-Block Service Integration"
+          ],
+          "fullName": "Service Integration - Cross-Service Scenarios Page-Block Service Integration should update page title and block content atomically",
+          "status": "failed",
+          "title": "should update page title and block content atomically",
+          "duration": 0.4212079999999787,
+          "failureMessages": [
+            "TypeError: ctx.pageService.updatePage is not a function\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/ServiceIntegration.test.ts:69:25\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:146:14\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:11\n    at runWithTimeout (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:39:7)\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:17)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runFiles (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)"
+          ],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Service Integration - Cross-Service Scenarios",
+            "Page-Block Service Integration"
+          ],
+          "fullName": "Service Integration - Cross-Service Scenarios Page-Block Service Integration should delete page and cascade to blocks",
+          "status": "failed",
+          "title": "should delete page and cascade to blocks",
+          "duration": 0.40345800000000054,
+          "failureMessages": [
+            "DoubleBindError: A page with the title \"Welcome\" already exists\n    at PageRepository.create (/Users/j/repos/wt-DBB-417-integration-tests/packages/core/src/repositories/page-repository.ts:127:13)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at PageService.createPage (/Users/j/repos/wt-DBB-417-integration-tests/packages/core/src/services/page-service.ts:76:22)\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/ServiceIntegration.test.ts:82:20\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:5\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:11)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runFiles (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)"
+          ],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Service Integration - Cross-Service Scenarios",
+            "Block-Graph Service Integration"
+          ],
+          "fullName": "Service Integration - Cross-Service Scenarios Block-Graph Service Integration should update graph when adding wiki links",
+          "status": "failed",
+          "title": "should update graph when adding wiki links",
+          "duration": 0.20541700000001129,
+          "failureMessages": [
+            "DoubleBindError: A page with the title \"Welcome\" already exists\n    at PageRepository.create (/Users/j/repos/wt-DBB-417-integration-tests/packages/core/src/repositories/page-repository.ts:127:13)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at PageService.createPage (/Users/j/repos/wt-DBB-417-integration-tests/packages/core/src/services/page-service.ts:76:22)\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/ServiceIntegration.test.ts:104:26\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:5\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:11)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runFiles (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)"
+          ],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Service Integration - Cross-Service Scenarios",
+            "Block-Graph Service Integration"
+          ],
+          "fullName": "Service Integration - Cross-Service Scenarios Block-Graph Service Integration should update graph when removing wiki links",
+          "status": "passed",
+          "title": "should update graph when removing wiki links",
+          "duration": 2.2111249999999814,
+          "failureMessages": [],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Service Integration - Cross-Service Scenarios",
+            "Block-Graph Service Integration"
+          ],
+          "fullName": "Service Integration - Cross-Service Scenarios Block-Graph Service Integration should maintain graph consistency on block deletion",
+          "status": "passed",
+          "title": "should maintain graph consistency on block deletion",
+          "duration": 0.4797910000000343,
+          "failureMessages": [],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Service Integration - Cross-Service Scenarios",
+            "Search Service Integration"
+          ],
+          "fullName": "Service Integration - Cross-Service Scenarios Search Service Integration should find pages by title",
+          "status": "failed",
+          "title": "should find pages by title",
+          "duration": 0.38450000000000273,
+          "failureMessages": [
+            "TypeError: Cannot read properties of undefined (reading 'searchPages')\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/ServiceIntegration.test.ts:157:47\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:146:14\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:11\n    at runWithTimeout (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:39:7)\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:17)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runFiles (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)"
+          ],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Service Integration - Cross-Service Scenarios",
+            "Search Service Integration"
+          ],
+          "fullName": "Service Integration - Cross-Service Scenarios Search Service Integration should find blocks by content",
+          "status": "failed",
+          "title": "should find blocks by content",
+          "duration": 0.19483400000001438,
+          "failureMessages": [
+            "TypeError: Cannot read properties of undefined (reading 'searchBlocks')\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/ServiceIntegration.test.ts:167:47\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:146:14\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:11\n    at runWithTimeout (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:39:7)\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:17)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runFiles (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)"
+          ],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Service Integration - Cross-Service Scenarios",
+            "Search Service Integration"
+          ],
+          "fullName": "Service Integration - Cross-Service Scenarios Search Service Integration should update search index when creating page",
+          "status": "failed",
+          "title": "should update search index when creating page",
+          "duration": 0.219208999999978,
+          "failureMessages": [
+            "DoubleBindError: A page with the title \"Welcome\" already exists\n    at PageRepository.create (/Users/j/repos/wt-DBB-417-integration-tests/packages/core/src/repositories/page-repository.ts:127:13)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at PageService.createPage (/Users/j/repos/wt-DBB-417-integration-tests/packages/core/src/services/page-service.ts:76:22)\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/ServiceIntegration.test.ts:177:7\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:5\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:11)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runFiles (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)"
+          ],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Service Integration - Cross-Service Scenarios",
+            "Search Service Integration"
+          ],
+          "fullName": "Service Integration - Cross-Service Scenarios Search Service Integration should update search index when creating block",
+          "status": "failed",
+          "title": "should update search index when creating block",
+          "duration": 1.3412500000000023,
+          "failureMessages": [
+            "DoubleBindError: Failed to retrieve created block: 01KH225XT0P29NAFSSS45MF9CY\n    at BlockService.createBlock (/Users/j/repos/wt-DBB-417-integration-tests/packages/core/src/services/block-service.ts:150:15)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/ServiceIntegration.test.ts:191:7\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:5\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:11)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runFiles (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)\n    at startTests (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1271:3)"
+          ],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Service Integration - Cross-Service Scenarios",
+            "Search Service Integration"
+          ],
+          "fullName": "Service Integration - Cross-Service Scenarios Search Service Integration should handle full-text search across pages and blocks",
+          "status": "failed",
+          "title": "should handle full-text search across pages and blocks",
+          "duration": 0.1932080000000269,
+          "failureMessages": [
+            "TypeError: Cannot read properties of undefined (reading 'searchPages')\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/ServiceIntegration.test.ts:203:51\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:146:14\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:11\n    at runWithTimeout (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:39:7)\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:17)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runFiles (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)"
+          ],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Service Integration - Cross-Service Scenarios",
+            "Mobile Lifecycle Integration"
+          ],
+          "fullName": "Service Integration - Cross-Service Scenarios Mobile Lifecycle Integration should handle app foreground/background transitions",
+          "status": "failed",
+          "title": "should handle app foreground/background transitions",
+          "duration": 0.177791999999954,
+          "failureMessages": [
+            "DoubleBindError: A page with the title \"Welcome\" already exists\n    at PageRepository.create (/Users/j/repos/wt-DBB-417-integration-tests/packages/core/src/repositories/page-repository.ts:127:13)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at PageService.createPage (/Users/j/repos/wt-DBB-417-integration-tests/packages/core/src/services/page-service.ts:76:22)\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/ServiceIntegration.test.ts:212:20\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:5\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:11)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runFiles (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)"
+          ],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Service Integration - Cross-Service Scenarios",
+            "Mobile Lifecycle Integration"
+          ],
+          "fullName": "Service Integration - Cross-Service Scenarios Mobile Lifecycle Integration should flush pending operations on app suspend",
+          "status": "failed",
+          "title": "should flush pending operations on app suspend",
+          "duration": 0.2703339999999912,
+          "failureMessages": [
+            "DoubleBindError: A page with the title \"Welcome\" already exists\n    at PageRepository.create (/Users/j/repos/wt-DBB-417-integration-tests/packages/core/src/repositories/page-repository.ts:127:13)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at PageService.createPage (/Users/j/repos/wt-DBB-417-integration-tests/packages/core/src/services/page-service.ts:76:22)\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/ServiceIntegration.test.ts:239:20\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:5\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:11)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runFiles (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)"
+          ],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Service Integration - Cross-Service Scenarios",
+            "Mobile Lifecycle Integration"
+          ],
+          "fullName": "Service Integration - Cross-Service Scenarios Mobile Lifecycle Integration should recover from app termination simulation",
+          "status": "failed",
+          "title": "should recover from app termination simulation",
+          "duration": 0.18254100000001472,
+          "failureMessages": [
+            "DoubleBindError: A page with the title \"Welcome\" already exists\n    at PageRepository.create (/Users/j/repos/wt-DBB-417-integration-tests/packages/core/src/repositories/page-repository.ts:127:13)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at PageService.createPage (/Users/j/repos/wt-DBB-417-integration-tests/packages/core/src/services/page-service.ts:76:22)\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/ServiceIntegration.test.ts:244:20\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:5\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:11)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runFiles (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)"
+          ],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Service Integration - Cross-Service Scenarios",
+            "Mobile Lifecycle Integration"
+          ],
+          "fullName": "Service Integration - Cross-Service Scenarios Mobile Lifecycle Integration should handle memory warnings gracefully",
+          "status": "failed",
+          "title": "should handle memory warnings gracefully",
+          "duration": 0.30483300000003055,
+          "failureMessages": [
+            "DoubleBindError: A page with the title \"Welcome\" already exists\n    at PageRepository.create (/Users/j/repos/wt-DBB-417-integration-tests/packages/core/src/repositories/page-repository.ts:127:13)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at PageService.createPage (/Users/j/repos/wt-DBB-417-integration-tests/packages/core/src/services/page-service.ts:76:22)\n    at async Promise.all (index 0)\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/ServiceIntegration.test.ts:257:21\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:5\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:11)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)"
+          ],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Service Integration - Cross-Service Scenarios",
+            "Sync Service Integration"
+          ],
+          "fullName": "Service Integration - Cross-Service Scenarios Sync Service Integration should track changes for sync",
+          "status": "failed",
+          "title": "should track changes for sync",
+          "duration": 0.17712499999998954,
+          "failureMessages": [
+            "DoubleBindError: A page with the title \"Welcome\" already exists\n    at PageRepository.create (/Users/j/repos/wt-DBB-417-integration-tests/packages/core/src/repositories/page-repository.ts:127:13)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at PageService.createPage (/Users/j/repos/wt-DBB-417-integration-tests/packages/core/src/services/page-service.ts:76:22)\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/ServiceIntegration.test.ts:283:20\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:5\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:11)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runFiles (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)"
+          ],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Service Integration - Cross-Service Scenarios",
+            "Sync Service Integration"
+          ],
+          "fullName": "Service Integration - Cross-Service Scenarios Sync Service Integration should handle sync conflicts",
+          "status": "failed",
+          "title": "should handle sync conflicts",
+          "duration": 0.15766600000000608,
+          "failureMessages": [
+            "TypeError: ctx.pageService.updatePage is not a function\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/ServiceIntegration.test.ts:300:29\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:146:14\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:11\n    at runWithTimeout (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:39:7)\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:17)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runFiles (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)"
+          ],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Service Integration - Cross-Service Scenarios",
+            "Sync Service Integration"
+          ],
+          "fullName": "Service Integration - Cross-Service Scenarios Sync Service Integration should batch sync operations for efficiency",
+          "status": "failed",
+          "title": "should batch sync operations for efficiency",
+          "duration": 0.15099999999995362,
+          "failureMessages": [
+            "DoubleBindError: A page with the title \"Welcome\" already exists\n    at PageRepository.create (/Users/j/repos/wt-DBB-417-integration-tests/packages/core/src/repositories/page-repository.ts:127:13)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at PageService.createPage (/Users/j/repos/wt-DBB-417-integration-tests/packages/core/src/services/page-service.ts:76:22)\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/ServiceIntegration.test.ts:323:21\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:5\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:11)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runFiles (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)"
+          ],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Service Integration - Cross-Service Scenarios",
+            "Sync Service Integration"
+          ],
+          "fullName": "Service Integration - Cross-Service Scenarios Sync Service Integration should handle sync retry on failure",
+          "status": "passed",
+          "title": "should handle sync retry on failure",
+          "duration": 0.14066700000000765,
+          "failureMessages": [],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Service Integration - Cross-Service Scenarios",
+            "Sync Service Integration"
+          ],
+          "fullName": "Service Integration - Cross-Service Scenarios Sync Service Integration should maintain data consistency during sync",
+          "status": "failed",
+          "title": "should maintain data consistency during sync",
+          "duration": 0.144457999999986,
+          "failureMessages": [
+            "DoubleBindError: A page with the title \"Welcome\" already exists\n    at PageRepository.create (/Users/j/repos/wt-DBB-417-integration-tests/packages/core/src/repositories/page-repository.ts:127:13)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at PageService.createPage (/Users/j/repos/wt-DBB-417-integration-tests/packages/core/src/services/page-service.ts:76:22)\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/ServiceIntegration.test.ts:356:20\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:5\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:11)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runFiles (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)"
+          ],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Service Integration - Cross-Service Scenarios",
+            "Error Propagation Across Services"
+          ],
+          "fullName": "Service Integration - Cross-Service Scenarios Error Propagation Across Services should propagate page creation errors",
+          "status": "passed",
+          "title": "should propagate page creation errors",
+          "duration": 0.9117089999999735,
+          "failureMessages": [],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Service Integration - Cross-Service Scenarios",
+            "Error Propagation Across Services"
+          ],
+          "fullName": "Service Integration - Cross-Service Scenarios Error Propagation Across Services should propagate block creation errors",
+          "status": "passed",
+          "title": "should propagate block creation errors",
+          "duration": 0.15945799999997234,
+          "failureMessages": [],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Service Integration - Cross-Service Scenarios",
+            "Error Propagation Across Services"
+          ],
+          "fullName": "Service Integration - Cross-Service Scenarios Error Propagation Across Services should handle cascading errors gracefully",
+          "status": "passed",
+          "title": "should handle cascading errors gracefully",
+          "duration": 0.2752079999999637,
+          "failureMessages": [],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Service Integration - Cross-Service Scenarios",
+            "Performance Under Load"
+          ],
+          "fullName": "Service Integration - Cross-Service Scenarios Performance Under Load should handle rapid page creation",
+          "status": "failed",
+          "title": "should handle rapid page creation",
+          "duration": 0.9187500000000455,
+          "failureMessages": [
+            "DoubleBindError: A page with the title \"Welcome\" already exists\n    at PageRepository.create (/Users/j/repos/wt-DBB-417-integration-tests/packages/core/src/repositories/page-repository.ts:127:13)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at PageService.createPage (/Users/j/repos/wt-DBB-417-integration-tests/packages/core/src/services/page-service.ts:76:22)\n    at async Promise.all (index 0)\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/ServiceIntegration.test.ts:413:21\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:5\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:11)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)"
+          ],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Service Integration - Cross-Service Scenarios",
+            "Performance Under Load"
+          ],
+          "fullName": "Service Integration - Cross-Service Scenarios Performance Under Load should handle rapid block creation on same page",
+          "status": "failed",
+          "title": "should handle rapid block creation on same page",
+          "duration": 0.6398750000000177,
+          "failureMessages": [
+            "DoubleBindError: A page with the title \"Welcome\" already exists\n    at PageRepository.create (/Users/j/repos/wt-DBB-417-integration-tests/packages/core/src/repositories/page-repository.ts:127:13)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at PageService.createPage (/Users/j/repos/wt-DBB-417-integration-tests/packages/core/src/services/page-service.ts:76:22)\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/ServiceIntegration.test.ts:427:20\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:5\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:11)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runFiles (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)"
+          ],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Service Integration - Cross-Service Scenarios",
+            "Performance Under Load"
+          ],
+          "fullName": "Service Integration - Cross-Service Scenarios Performance Under Load should handle complex graph queries under load",
+          "status": "failed",
+          "title": "should handle complex graph queries under load",
+          "duration": 0.6867080000000101,
+          "failureMessages": [
+            "DoubleBindError: A page with the title \"Welcome\" already exists\n    at PageRepository.create (/Users/j/repos/wt-DBB-417-integration-tests/packages/core/src/repositories/page-repository.ts:127:13)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at PageService.createPage (/Users/j/repos/wt-DBB-417-integration-tests/packages/core/src/services/page-service.ts:76:22)\n    at async Promise.all (index 0)\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/ServiceIntegration.test.ts:447:21\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:5\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:11)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)"
+          ],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Service Integration - Cross-Service Scenarios",
+            "Data Consistency Across Services"
+          ],
+          "fullName": "Service Integration - Cross-Service Scenarios Data Consistency Across Services should maintain consistency during concurrent operations",
+          "status": "failed",
+          "title": "should maintain consistency during concurrent operations",
+          "duration": 0.17325000000005275,
+          "failureMessages": [
+            "DoubleBindError: A page with the title \"Welcome\" already exists\n    at PageRepository.create (/Users/j/repos/wt-DBB-417-integration-tests/packages/core/src/repositories/page-repository.ts:127:13)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at PageService.createPage (/Users/j/repos/wt-DBB-417-integration-tests/packages/core/src/services/page-service.ts:76:22)\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/ServiceIntegration.test.ts:476:20\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:5\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:11)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runFiles (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)"
+          ],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Service Integration - Cross-Service Scenarios",
+            "Data Consistency Across Services"
+          ],
+          "fullName": "Service Integration - Cross-Service Scenarios Data Consistency Across Services should handle interleaved read/write operations",
+          "status": "failed",
+          "title": "should handle interleaved read/write operations",
+          "duration": 0.1430000000000291,
+          "failureMessages": [
+            "DoubleBindError: A page with the title \"Welcome\" already exists\n    at PageRepository.create (/Users/j/repos/wt-DBB-417-integration-tests/packages/core/src/repositories/page-repository.ts:127:13)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at PageService.createPage (/Users/j/repos/wt-DBB-417-integration-tests/packages/core/src/services/page-service.ts:76:22)\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/ServiceIntegration.test.ts:496:20\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:5\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:11)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runFiles (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)"
+          ],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Service Integration - Cross-Service Scenarios",
+            "Data Consistency Across Services"
+          ],
+          "fullName": "Service Integration - Cross-Service Scenarios Data Consistency Across Services should maintain order during batch operations",
+          "status": "failed",
+          "title": "should maintain order during batch operations",
+          "duration": 0.13416599999999335,
+          "failureMessages": [
+            "DoubleBindError: A page with the title \"Welcome\" already exists\n    at PageRepository.create (/Users/j/repos/wt-DBB-417-integration-tests/packages/core/src/repositories/page-repository.ts:127:13)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at PageService.createPage (/Users/j/repos/wt-DBB-417-integration-tests/packages/core/src/services/page-service.ts:76:22)\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/ServiceIntegration.test.ts:514:20\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:5\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:11)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runFiles (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)"
+          ],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Service Integration - Cross-Service Scenarios",
+            "Mobile UI Component Integration"
+          ],
+          "fullName": "Service Integration - Cross-Service Scenarios Mobile UI Component Integration should support page list view operations",
+          "status": "failed",
+          "title": "should support page list view operations",
+          "duration": 0.20454200000000355,
+          "failureMessages": [
+            "DoubleBindError: A page with the title \"Welcome\" already exists\n    at PageRepository.create (/Users/j/repos/wt-DBB-417-integration-tests/packages/core/src/repositories/page-repository.ts:127:13)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at PageService.createPage (/Users/j/repos/wt-DBB-417-integration-tests/packages/core/src/services/page-service.ts:76:22)\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/ServiceIntegration.test.ts:538:7\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:5\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:11)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runFiles (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)"
+          ],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Service Integration - Cross-Service Scenarios",
+            "Mobile UI Component Integration"
+          ],
+          "fullName": "Service Integration - Cross-Service Scenarios Mobile UI Component Integration should support page detail view operations",
+          "status": "failed",
+          "title": "should support page detail view operations",
+          "duration": 1.7383749999999623,
+          "failureMessages": [
+            "DoubleBindError: A page with the title \"Welcome\" already exists\n    at PageRepository.create (/Users/j/repos/wt-DBB-417-integration-tests/packages/core/src/repositories/page-repository.ts:127:13)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at PageService.createPage (/Users/j/repos/wt-DBB-417-integration-tests/packages/core/src/services/page-service.ts:76:22)\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/ServiceIntegration.test.ts:552:20\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:5\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:11)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runFiles (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)"
+          ],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Service Integration - Cross-Service Scenarios",
+            "Mobile UI Component Integration"
+          ],
+          "fullName": "Service Integration - Cross-Service Scenarios Mobile UI Component Integration should support graph visualization component",
+          "status": "passed",
+          "title": "should support graph visualization component",
+          "duration": 0.25162499999999,
+          "failureMessages": [],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": [
+            "Service Integration - Cross-Service Scenarios",
+            "Mobile UI Component Integration"
+          ],
+          "fullName": "Service Integration - Cross-Service Scenarios Mobile UI Component Integration should support search results view",
+          "status": "failed",
+          "title": "should support search results view",
+          "duration": 0.18804199999999582,
+          "failureMessages": [
+            "TypeError: Cannot read properties of undefined (reading 'searchPages')\n    at /Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/ServiceIntegration.test.ts:583:51\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:146:14\n    at file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:11\n    at runWithTimeout (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:39:7)\n    at runTest (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:17)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runSuite (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)\n    at runFiles (file:///Users/j/repos/wt-DBB-417-integration-tests/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)"
+          ],
+          "meta": {}
+        }
+      ],
+      "startTime": 1770669668151,
+      "endTime": 1770669668169.2517,
+      "status": "failed",
+      "message": "",
+      "name": "/Users/j/repos/wt-DBB-417-integration-tests/packages/mobile-primitives/test/integration/ServiceIntegration.test.ts"
+    }
+  ]
+}

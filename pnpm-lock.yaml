@@ -311,6 +311,12 @@ importers:
         specifier: ^2.3.0
         version: 2.4.0
     devDependencies:
+      '@double-bind/migrations':
+        specifier: workspace:*
+        version: link:../migrations
+      '@double-bind/test-utils':
+        specifier: workspace:*
+        version: link:../test-utils
       '@testing-library/react-hooks':
         specifier: ^8.0.1
         version: 8.0.1(@types/react@18.3.28)(react-test-renderer@18.3.1(react@18.3.1))(react@18.3.1)
@@ -320,6 +326,9 @@ importers:
       '@types/react':
         specifier: ^18.2.0
         version: 18.3.28
+      cozo-node:
+        specifier: ^0.7.6
+        version: 0.7.6
       react:
         specifier: ^18.2.0
         version: 18.3.1
