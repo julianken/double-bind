@@ -93,6 +93,7 @@ export {
   type RebalanceCallback,
   GraphService,
   type GraphResult,
+  SearchService,
   SavedQueryService,
   type ListSavedQueriesOptions,
   createServices,

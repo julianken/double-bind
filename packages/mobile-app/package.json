@@ -22,12 +22,14 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "@double-bind/core": "workspace:*",
     "@double-bind/mobile": "workspace:*",
     "@double-bind/types": "workspace:*",
     "react-native-webview": "^13.6.0"
   },
   "devDependencies": {
     "@testing-library/react-hooks": "^8.0.1",
+    "@testing-library/react-native": "^12.4.0",
     "@types/react": "^18.2.0",
     "react": "^18.2.0",
     "react-native": "^0.73.0",
