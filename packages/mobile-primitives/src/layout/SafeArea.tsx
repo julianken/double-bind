@@ -7,7 +7,8 @@
 
 import * as React from 'react';
 import { StyleSheet, View, ViewStyle, StyleProp } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets, type Edge } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import type { Edge } from 'react-native-safe-area-context';
 
 /**
  * Edge configuration options

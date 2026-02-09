@@ -22,7 +22,8 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { SafeArea, type SafeAreaEdges } from './SafeArea';
+import { SafeArea } from './SafeArea';
+import type { SafeAreaEdges } from './SafeArea';
 import { ResponsiveContainer } from './ResponsiveContainer';
 import { useDeviceOrientation } from './useDeviceOrientation';
 

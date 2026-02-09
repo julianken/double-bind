@@ -12,5 +12,9 @@
 export { BlockView, type BlockViewProps } from './BlockView';
 export { BlockList, type BlockListProps, type BlockListItem } from './BlockList';
 
+// Rich Text Components
+export { WikiLink, type WikiLinkProps } from './WikiLink';
+export { RichText, type RichTextProps } from './RichText';
+
 // Layout components and utilities
 export * from './layout';
