@@ -95,25 +95,13 @@ public final class CozoGraphDB: GraphDB, @unchecked Sendable {
         _ script: String,
         params: [String: Any]? = nil
     ) async throws -> QueryResult<T> {
-        try await withCheckedThrowingContinuation { continuation in
-            dbQueue.async { [weak self] in
-                guard let self = self else {
-                    continuation.resume(throwing: GraphDBError.databaseClosed)
-                    return
-                }
-
-                do {
-                    let result = try self.executeQuery(script, params: params)
-                    // Convert rows to typed result
-                    let typedRows = result.rows.compactMap { row -> [T]? in
-                        row.compactMap { $0 as? T }
-                    }
-                    let queryResult = QueryResult<T>(headers: result.headers, rows: typedRows)
-                    continuation.resume(returning: queryResult)
-                } catch {
-                    continuation.resume(throwing: error)
-                }
+        try await withDatabase { _ in
+            let result = try self.executeQuery(script, params: params)
+            // Convert rows to typed result
+            let typedRows = result.rows.compactMap { row -> [T]? in
+                row.compactMap { $0 as? T }
             }
+            return QueryResult<T>(headers: result.headers, rows: typedRows)
         }
     }
 
@@ -122,180 +110,76 @@ public final class CozoGraphDB: GraphDB, @unchecked Sendable {
         _ script: String,
         params: [String: Any]? = nil
     ) async throws -> MutationResult {
-        try await withCheckedThrowingContinuation { continuation in
-            dbQueue.async { [weak self] in
-                guard let self = self else {
-                    continuation.resume(throwing: GraphDBError.databaseClosed)
-                    return
-                }
-
-                do {
-                    let result = try self.executeQuery(script, params: params)
-                    let mutationResult = MutationResult(headers: result.headers, rows: result.rows)
-                    continuation.resume(returning: mutationResult)
-                } catch let error as GraphDBError {
-                    // Re-wrap as mutation error for better context
-                    if case .queryFailed(_, let underlying) = error {
-                        continuation.resume(throwing: GraphDBError.mutationFailed(
-                            script: script,
-                            underlying: underlying
-                        ))
-                    } else {
-                        continuation.resume(throwing: error)
-                    }
-                } catch {
-                    continuation.resume(throwing: GraphDBError.mutationFailed(
-                        script: script,
-                        underlying: error
-                    ))
-                }
-            }
+        try await withDatabase { _ in
+            let result = try self.executeQuery(script, params: params)
+            return MutationResult(headers: result.headers, rows: result.rows)
         }
     }
 
     /// Import data into multiple relations at once.
     public func importRelations(_ data: [String: [[Any]]]) async throws {
-        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-            dbQueue.async { [weak self] in
-                guard let self = self else {
-                    continuation.resume(throwing: GraphDBError.databaseClosed)
-                    return
-                }
-
-                do {
-                    let db = try self.getDatabase()
-
-                    // Convert data to JSON format expected by CozoDB
-                    let jsonData = try JSONSerialization.data(withJSONObject: data)
-                    guard let jsonString = String(data: jsonData, encoding: .utf8) else {
-                        throw GraphDBError.parameterSerializationFailed(
-                            underlying: NSError(
-                                domain: "CozoGraphDB",
-                                code: -1,
-                                userInfo: [NSLocalizedDescriptionKey: "Failed to convert JSON data to string"]
-                            )
-                        )
-                    }
-
-                    try db.importRelations(data: jsonString)
-                    continuation.resume()
-                } catch let error as GraphDBError {
-                    continuation.resume(throwing: error)
-                } catch {
-                    continuation.resume(throwing: GraphDBError.importFailed(underlying: error))
-                }
+        try await withDatabase { db in
+            // Convert data to JSON format expected by CozoDB
+            let jsonData = try JSONSerialization.data(withJSONObject: data)
+            guard let jsonString = String(data: jsonData, encoding: .utf8) else {
+                throw GraphDBError.parameterSerializationFailed(
+                    underlying: NSError(
+                        domain: "CozoGraphDB",
+                        code: -1,
+                        userInfo: [NSLocalizedDescriptionKey: "Failed to convert JSON data to string"]
+                    )
+                )
             }
+
+            try db.importRelations(data: jsonString)
         }
     }
 
     /// Export data from specified relations.
     public func exportRelations(_ relations: [String]) async throws -> [String: [[Any]]] {
-        try await withCheckedThrowingContinuation { continuation in
-            dbQueue.async { [weak self] in
-                guard let self = self else {
-                    continuation.resume(throwing: GraphDBError.databaseClosed)
-                    return
+        try await withDatabase { db in
+            let jsonResult = try db.exportRelations(relations: relations)
+
+            // Parse JSON result to dictionary
+            guard let jsonString = jsonResult as? String,
+                  let jsonData = jsonString.data(using: .utf8),
+                  let result = try JSONSerialization.jsonObject(with: jsonData) as? [String: [[Any]]]
+            else {
+                // Try direct cast if already parsed
+                if let directResult = jsonResult as? [String: [[Any]]] {
+                    return directResult
                 }
-
-                do {
-                    let db = try self.getDatabase()
-                    let jsonResult = try db.exportRelations(relations: relations)
-
-                    // Parse JSON result to dictionary
-                    guard let jsonString = jsonResult as? String,
-                          let jsonData = jsonString.data(using: .utf8),
-                          let result = try JSONSerialization.jsonObject(with: jsonData) as? [String: [[Any]]]
-                    else {
-                        // Try direct cast if already parsed
-                        if let directResult = jsonResult as? [String: [[Any]]] {
-                            continuation.resume(returning: directResult)
-                            return
-                        }
-                        throw GraphDBError.resultDeserializationFailed(
-                            underlying: NSError(
-                                domain: "CozoGraphDB",
-                                code: -1,
-                                userInfo: [NSLocalizedDescriptionKey: "Failed to parse export result"]
-                            )
-                        )
-                    }
-
-                    continuation.resume(returning: result)
-                } catch let error as GraphDBError {
-                    continuation.resume(throwing: error)
-                } catch {
-                    continuation.resume(throwing: GraphDBError.exportFailed(underlying: error))
-                }
+                throw GraphDBError.resultDeserializationFailed(
+                    underlying: NSError(
+                        domain: "CozoGraphDB",
+                        code: -1,
+                        userInfo: [NSLocalizedDescriptionKey: "Failed to parse export result"]
+                    )
+                )
             }
+
+            return result
         }
     }
 
     /// Create a backup of the database.
     public func backup(to path: String) async throws {
-        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-            dbQueue.async { [weak self] in
-                guard let self = self else {
-                    continuation.resume(throwing: GraphDBError.databaseClosed)
-                    return
-                }
-
-                do {
-                    let db = try self.getDatabase()
-                    try db.backup(path: path)
-                    continuation.resume()
-                } catch let error as GraphDBError {
-                    continuation.resume(throwing: error)
-                } catch {
-                    continuation.resume(throwing: GraphDBError.backupFailed(path: path, underlying: error))
-                }
-            }
+        try await withDatabase { db in
+            try db.backup(path: path)
         }
     }
 
     /// Restore the database from a backup file.
     public func restore(from path: String) async throws {
-        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-            dbQueue.async { [weak self] in
-                guard let self = self else {
-                    continuation.resume(throwing: GraphDBError.databaseClosed)
-                    return
-                }
-
-                do {
-                    let db = try self.getDatabase()
-                    try db.restore(path: path)
-                    continuation.resume()
-                } catch let error as GraphDBError {
-                    continuation.resume(throwing: error)
-                } catch {
-                    continuation.resume(throwing: GraphDBError.restoreFailed(path: path, underlying: error))
-                }
-            }
+        try await withDatabase { db in
+            try db.restore(path: path)
         }
     }
 
     /// Import specific relations from a backup file.
     public func importRelationsFromBackup(path: String, relations: [String]) async throws {
-        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-            dbQueue.async { [weak self] in
-                guard let self = self else {
-                    continuation.resume(throwing: GraphDBError.databaseClosed)
-                    return
-                }
-
-                do {
-                    let db = try self.getDatabase()
-                    try db.importRelationsFromBackup(path: path, relations: relations)
-                    continuation.resume()
-                } catch let error as GraphDBError {
-                    continuation.resume(throwing: error)
-                } catch {
-                    continuation.resume(throwing: GraphDBError.importFromBackupFailed(
-                        path: path,
-                        underlying: error
-                    ))
-                }
-            }
+        try await withDatabase { db in
+            try db.importRelationsFromBackup(path: path, relations: relations)
         }
     }
 
@@ -357,28 +241,9 @@ public final class CozoGraphDB: GraphDB, @unchecked Sendable {
     /// Called when the app returns to the foreground.
     /// Validates database state is still valid.
     public func resume() async throws {
-        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-            dbQueue.async { [weak self] in
-                guard let self = self else {
-                    continuation.resume(throwing: GraphDBError.databaseClosed)
-                    return
-                }
-
-                do {
-                    // Verify database is still accessible
-                    let db = try self.getDatabase()
-                    // Run a simple query to verify connection
-                    _ = try db.run("?[] <- [[1]]")
-                    continuation.resume()
-                } catch let error as GraphDBError {
-                    continuation.resume(throwing: error)
-                } catch {
-                    continuation.resume(throwing: GraphDBError.queryFailed(
-                        script: "resume validation",
-                        underlying: error
-                    ))
-                }
-            }
+        try await withDatabase { db in
+            // Run a simple query to verify connection
+            _ = try db.run("?[] <- [[1]]")
         }
     }
 
@@ -396,6 +261,39 @@ public final class CozoGraphDB: GraphDB, @unchecked Sendable {
     }
 
     // MARK: - Private Helpers
+
+    /// Execute an operation on the database with proper async handling and thread safety.
+    ///
+    /// This helper encapsulates the common pattern of:
+    /// 1. Dispatching to the serial database queue
+    /// 2. Checking for deallocated self
+    /// 3. Getting the database instance
+    /// 4. Executing the operation
+    /// 5. Resuming the continuation with success or error
+    ///
+    /// - Parameter operation: A throwing closure that receives the CozoDB instance and returns a result.
+    /// - Returns: The result of the operation.
+    /// - Throws: `GraphDBError.databaseClosed` if the database is closed, or any error thrown by the operation.
+    private func withDatabase<T>(
+        _ operation: @escaping (CozoDB) throws -> T
+    ) async throws -> T {
+        try await withCheckedThrowingContinuation { continuation in
+            dbQueue.async { [weak self] in
+                guard let self = self else {
+                    continuation.resume(throwing: GraphDBError.databaseClosed)
+                    return
+                }
+
+                do {
+                    let db = try self.getDatabase()
+                    let result = try operation(db)
+                    continuation.resume(returning: result)
+                } catch {
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
+    }
 
     /// Get the database instance, throwing if closed.
     private func getDatabase() throws -> CozoDB {
