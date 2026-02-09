@@ -6,3 +6,13 @@ export { useGraphData, type UseGraphDataOptions, type UseGraphDataResult } from 
 export { useDailyNote } from './useDailyNote';
 export type { UseDailyNoteResult } from './useDailyNote';
 export { useCreatePage, type UseCreatePageResult, type CreatePageResult } from './useCreatePage';
+export {
+  useAutocomplete,
+  type UseAutocompleteOptions,
+  type UseAutocompleteResult,
+} from './useAutocomplete';
+export {
+  useWikiLinkAutocomplete,
+  type UseWikiLinkAutocompleteResult,
+  type AutocompleteSelection,
+} from './useWikiLinkAutocomplete';
