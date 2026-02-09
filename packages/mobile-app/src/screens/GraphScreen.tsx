@@ -1,149 +1,117 @@
 /**
- * GraphScreen - Knowledge graph visualization screen.
+ * GraphScreen - Knowledge graph visualization screen with interactive exploration.
  *
- * Displays the full knowledge graph showing:
- * - All pages as nodes
- * - Links between pages as edges
- * - Interactive zoom (pinch) and pan
- * - Tap to select and navigate to nodes
+ * Features:
+ * - Toggle between full graph and local (neighborhood) view
+ * - Interactive zoom (pinch) and pan gestures
+ * - Tap to select nodes and view details
+ * - Detail panel with connection counts
+ * - Navigate from graph to page view
  */
 
-import { useCallback, useEffect, useState } from 'react';
-import { View, StyleSheet, useWindowDimensions } from 'react-native';
+import { useCallback, useState } from 'react';
+import { View, StyleSheet, useWindowDimensions, TouchableOpacity, Text } from 'react-native';
 import type { PageId } from '@double-bind/types';
 import type { GraphStackScreenProps } from '../navigation/types';
-import { useDatabase } from '../hooks/useDatabase';
-import { MobileGraph, type MobileGraphNode, type MobileGraphEdge } from '../components/graph';
+import {
+  MobileGraph,
+  GraphDetailPanel,
+} from '../components/graph';
 import { LoadingSpinner, ErrorMessage, EmptyState } from '../components';
+import { useGraphData } from '../hooks';
 
 type Props = GraphStackScreenProps<'Graph'>;
 
 /**
- * GraphScreen displays an interactive knowledge graph.
+ * GraphScreen displays an interactive knowledge graph with exploration features.
  *
- * Features:
- * - Loads all pages and links from the database
- * - Pinch-to-zoom for exploration
- * - Pan gesture for navigation
- * - Tap nodes to view details or navigate
+ * Users can:
+ * - Switch between full graph (all pages) and local graph (page neighborhood)
+ * - Tap nodes to view details (title, connection counts)
+ * - Navigate from detail panel to page view
+ * - Pinch-to-zoom and pan for exploration
  */
 export function GraphScreen({ navigation }: Props): React.ReactElement {
-  const { db, status, error: dbError } = useDatabase();
   const { width, height } = useWindowDimensions();
-  const [nodes, setNodes] = useState<MobileGraphNode[]>([]);
-  const [edges, setEdges] = useState<MobileGraphEdge[]>([]);
-  const [centerNodeId, setCenterNodeId] = useState<PageId | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  // Calculate graph dimensions (full screen minus padding)
+  // Graph view mode and center page
+  const [viewMode, setViewMode] = useState<'full' | 'local'>('full');
+  const [centerPageId, setCenterPageId] = useState<PageId | null>(null);
+
+  // Selected node for detail panel
+  const [selectedNode, setSelectedNode] = useState<{
+    pageId: PageId;
+    pageTitle: string;
+  } | null>(null);
+
+  // Fetch graph data based on current mode
+  const { nodes, edges, loading, error } = useGraphData({
+    mode: viewMode,
+    centerPageId: centerPageId || undefined,
+    depth: 1,
+  });
+
+  // Calculate graph dimensions (full screen minus header, controls, and tab bar)
   const graphWidth = width - 32; // 16px padding on each side
-  const graphHeight = height - 200; // Account for header and tab bar
+  const graphHeight = height - 280; // Account for header, controls, tab bar, and detail panel
 
-  // Load graph data from database
-  useEffect(() => {
-    let isMounted = true;
+  // Set initial center node when nodes are loaded
+  const effectiveCenterNodeId = centerPageId || (nodes.length > 0 ? nodes[0].id : null);
 
-    async function loadGraphData() {
-      if (!db || status !== 'ready') return;
-
-      try {
-        setLoading(true);
-        setError(null);
-
-        // Query all pages - returns [pageId, title] rows
-        const pagesResult = await db.query(
-          `?[pageId, title] := *page{pageId, title, isDeleted}, isDeleted = false`
-        );
-
-        // Query all links - returns [sourceId, targetId] rows
-        const linksResult = await db.query(`?[sourceId, targetId] := *link{sourceId, targetId}`);
-
-        // Abort if component unmounted during async operations
-        if (!isMounted) return;
-
-        // Transform to graph format with validation
-        const graphNodes: MobileGraphNode[] = pagesResult.rows
-          .filter((row): row is [string, string] => {
-            return Array.isArray(row) && row.length >= 2 && typeof row[0] === 'string';
-          })
-          .map((row) => {
-            const [pageId, title] = row;
-            return {
-              id: pageId,
-              title: title || 'Untitled',
-            };
-          });
-
-        // Create edge map to detect bidirectional links
-        const edgeSet = new Set<string>();
-        const graphEdges: MobileGraphEdge[] = [];
-
-        for (const row of linksResult.rows) {
-          // Validate row structure before processing
-          if (!Array.isArray(row) || row.length < 2 || typeof row[0] !== 'string' || typeof row[1] !== 'string') {
-            continue;
-          }
-          const [sourceId, targetId] = row;
-          const key = `${sourceId}-${targetId}`;
-          const reverseKey = `${targetId}-${sourceId}`;
-
-          // Check if reverse edge already exists
-          if (edgeSet.has(reverseKey)) {
-            // Mark the existing edge as bidirectional
-            const existingEdge = graphEdges.find(
-              (e) => e.source === targetId && e.target === sourceId
-            );
-            if (existingEdge) {
-              existingEdge.isBidirectional = true;
-            }
-          } else {
-            edgeSet.add(key);
-            graphEdges.push({
-              source: sourceId,
-              target: targetId,
-            });
-          }
-        }
-
-        if (isMounted) {
-          setNodes(graphNodes);
-          setEdges(graphEdges);
-
-          // Set center node to the first page (or a specific one if available)
-          const firstNode = graphNodes[0];
-          if (firstNode) {
-            setCenterNodeId(firstNode.id);
-          }
-        }
-      } catch (err) {
-        if (isMounted) {
-          setError(err instanceof Error ? err.message : 'Unknown error');
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
+  // Toggle between full and local view
+  const handleToggleView = useCallback(() => {
+    if (viewMode === 'full' && effectiveCenterNodeId) {
+      // Switch to local view centered on first node
+      setCenterPageId(effectiveCenterNodeId);
+      setViewMode('local');
+    } else {
+      // Switch back to full view
+      setViewMode('full');
+      setCenterPageId(null);
     }
+  }, [viewMode, effectiveCenterNodeId]);
 
-    void loadGraphData();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [db, status]);
-
-  // Handle node press - navigate to node details
+  // Handle node press - show detail panel
   const handleNodePress = useCallback(
     (nodeId: PageId) => {
-      navigation.navigate('GraphNode', { nodeId });
+      const node = nodes.find((n) => n.id === nodeId);
+      if (node) {
+        setSelectedNode({ pageId: nodeId, pageTitle: node.title });
+
+        // If in full view mode, also switch to local view centered on this node
+        if (viewMode === 'full') {
+          setCenterPageId(nodeId);
+          setViewMode('local');
+        }
+      }
+    },
+    [nodes, viewMode]
+  );
+
+  // Handle "Open Page" from detail panel
+  const handleOpenPage = useCallback(
+    (pageId: PageId) => {
+      // Close detail panel
+      setSelectedNode(null);
+      // Navigate to page view (through PagesTab stack)
+      navigation.navigate('MainTabs', {
+        screen: 'PagesTab',
+        params: {
+          screen: 'Page',
+          params: { pageId },
+        },
+      });
     },
     [navigation]
   );
 
+  // Handle detail panel dismiss
+  const handleDismissDetail = useCallback(() => {
+    setSelectedNode(null);
+  }, []);
+
   // Loading state
-  if (status === 'initializing' || loading) {
+  if (loading) {
     return (
       <View style={styles.container}>
         <LoadingSpinner />
@@ -152,10 +120,10 @@ export function GraphScreen({ navigation }: Props): React.ReactElement {
   }
 
   // Error state
-  if (status === 'error' || error || dbError) {
+  if (error) {
     return (
       <View style={styles.container}>
-        <ErrorMessage message={error || dbError || 'Database error'} />
+        <ErrorMessage message={error} />
       </View>
     );
   }
@@ -169,7 +137,13 @@ export function GraphScreen({ navigation }: Props): React.ReactElement {
           description="Create your first page to see it in the graph."
           actionLabel="Create Page"
           onAction={() => {
-            // Navigate to create page - this would be implemented based on navigation structure
+            // Navigate to create page
+            navigation.navigate('MainTabs', {
+              screen: 'PagesTab',
+              params: {
+                screen: 'PageList',
+              },
+            });
           }}
         />
       </View>
@@ -178,10 +152,33 @@ export function GraphScreen({ navigation }: Props): React.ReactElement {
 
   return (
     <View style={styles.container}>
+      {/* View mode toggle */}
+      <View style={styles.controls}>
+        <TouchableOpacity
+          style={[styles.toggleButton, viewMode === 'full' && styles.toggleButtonActive]}
+          onPress={handleToggleView}
+          accessibilityRole="button"
+          accessibilityLabel={
+            viewMode === 'full' ? 'Switch to local graph view' : 'Switch to full graph view'
+          }
+          testID="graph-view-toggle"
+        >
+          <Text style={[styles.toggleText, viewMode === 'full' && styles.toggleTextActive]}>
+            {viewMode === 'full' ? 'Full Graph' : 'Local View'}
+          </Text>
+        </TouchableOpacity>
+        {viewMode === 'local' && centerPageId && (
+          <Text style={styles.viewModeHint} numberOfLines={1}>
+            Showing connections for: {nodes.find((n) => n.id === centerPageId)?.title || 'Unknown'}
+          </Text>
+        )}
+      </View>
+
+      {/* Graph visualization */}
       <View style={styles.graphWrapper}>
-        {centerNodeId && (
+        {effectiveCenterNodeId && (
           <MobileGraph
-            centerNodeId={centerNodeId}
+            centerNodeId={effectiveCenterNodeId}
             nodes={nodes}
             edges={edges}
             width={graphWidth}
@@ -191,6 +188,19 @@ export function GraphScreen({ navigation }: Props): React.ReactElement {
           />
         )}
       </View>
+
+      {/* Detail panel */}
+      {selectedNode && (
+        <GraphDetailPanel
+          pageId={selectedNode.pageId}
+          pageTitle={selectedNode.pageTitle}
+          edges={edges}
+          visible={true}
+          onOpenPage={handleOpenPage}
+          onDismiss={handleDismissDetail}
+          testID="graph-detail-panel"
+        />
+      )}
     </View>
   );
 }
@@ -199,6 +209,37 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F2F2F7',
+  },
+  controls: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5EA',
+  },
+  toggleButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: '#F2F2F7',
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+    minHeight: 44, // WCAG touch target
+  },
+  toggleButtonActive: {
+    backgroundColor: '#3b82f6',
+  },
+  toggleText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#3C3C43',
+  },
+  toggleTextActive: {
+    color: '#FFFFFF',
+  },
+  viewModeHint: {
+    fontSize: 13,
+    color: '#8E8E93',
+    marginTop: 8,
   },
   graphWrapper: {
     flex: 1,
