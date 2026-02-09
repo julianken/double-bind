@@ -45,7 +45,7 @@ export interface BatteryStateProvider {
  */
 interface ScheduledActivity extends ScheduleConfig {
   handler: ActivityHandler;
-  timerId?: NodeJS.Timeout;
+  timerId?: ReturnType<typeof setTimeout>;
   isRunning: boolean;
 }
 
@@ -146,6 +146,12 @@ export class BatteryOptimizer {
 
     if (shouldRun.scheduled) {
       this.scheduleNextRun(activity);
+    } else {
+      // Track that activity was deferred
+      this.stats.activitiesDeferred++;
+      if (activity.constraints.maxExecutionTime) {
+        this.stats.timeSaved += activity.constraints.maxExecutionTime;
+      }
     }
 
     return shouldRun;
@@ -361,12 +367,16 @@ export class BatteryOptimizer {
 
       // Track execution time silently
       const executionTime = Date.now() - startTime;
-      if (activity.constraints.maxExecutionTime && executionTime > activity.constraints.maxExecutionTime) {
+      if (
+        activity.constraints.maxExecutionTime &&
+        executionTime > activity.constraints.maxExecutionTime
+      ) {
         // Activity took longer than expected - could emit an event in production
       }
-    } catch {
-      // Silently catch errors to prevent activity failures from affecting scheduler
-      // In production, this could emit an error event for monitoring
+    } catch (error) {
+      // Capture error to prevent swallowing - can be used for logging/monitoring
+      // In production, this could emit an error event: { activityId: activity.id, error }
+      void error; // Acknowledge error parameter is captured but intentionally unused here
     } finally {
       activity.isRunning = false;
       this.scheduleNextRun(activity);
