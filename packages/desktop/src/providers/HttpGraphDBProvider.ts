@@ -1,11 +1,16 @@
 /**
- * HTTP Bridge GraphDB - Browser-only implementation for E2E testing
+ * HttpGraphDBProvider - GraphDB provider for browser-based E2E testing.
  *
- * Routes GraphDB calls to the HTTP bridge server (localhost:3001) which
- * wraps cozo-node. Used when running outside of Tauri (browser dev/testing).
+ * This provider routes GraphDB calls through an HTTP bridge server (localhost:3001)
+ * which wraps cozo-node. Used when running outside of Tauri for development
+ * and E2E testing in a browser context.
+ *
+ * @module
  */
+
 import type { GraphDB, QueryResult, MutationResult } from '@double-bind/types';
 import { DoubleBindError, ErrorCode } from '@double-bind/types';
+import type { GraphDBProvider } from './TauriGraphDBProvider.js';
 
 const BRIDGE_URL = 'http://localhost:3001';
 
@@ -48,7 +53,7 @@ async function bridgeInvoke<T>(cmd: string, args: Record<string, unknown>): Prom
  * HTTP Bridge GraphDB implementation for browser-only testing.
  * All methods delegate to the HTTP bridge server.
  */
-export const httpGraphDB: GraphDB = {
+const httpGraphDB: GraphDB = {
   async query<T = unknown>(
     script: string,
     params: Record<string, unknown> = {}
@@ -71,11 +76,61 @@ export const httpGraphDB: GraphDB = {
   async backup(path: string): Promise<void> {
     return bridgeInvoke<void>('backup', { path });
   },
+
+  async restore(path: string): Promise<void> {
+    return bridgeInvoke<void>('restore', { path });
+  },
+
+  async importRelationsFromBackup(path: string, relations: string[]): Promise<void> {
+    return bridgeInvoke<void>('import_relations_from_backup', { path, relations });
+  },
+
+  async close(): Promise<void> {
+    // HTTP bridge manages its own lifecycle. This is a no-op for compatibility.
+    return Promise.resolve();
+  },
 };
 
 /**
- * Detect if running inside Tauri.
+ * HttpGraphDBProvider - GraphDB provider for browser-based E2E testing.
+ *
+ * This provider is used when running outside of Tauri (in a browser) for
+ * development and E2E testing. It communicates with the HTTP bridge server
+ * which wraps cozo-node.
+ *
+ * @example
+ * ```typescript
+ * const provider = new HttpGraphDBProvider();
+ * await provider.initialize();
+ * const graphDB = provider.getGraphDB();
+ * const result = await graphDB.query('?[x] <- [[1], [2], [3]]');
+ * ```
  */
-export function isInTauri(): boolean {
-  return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
+export class HttpGraphDBProvider implements GraphDBProvider {
+  private initialized = false;
+
+  /**
+   * Get the GraphDB instance for HTTP bridge.
+   * Returns the singleton httpGraphDB that communicates via HTTP.
+   */
+  getGraphDB(): GraphDB {
+    return httpGraphDB;
+  }
+
+  /**
+   * Initialize the provider.
+   * For HTTP bridge, we could optionally check if the bridge server is running.
+   */
+  async initialize(): Promise<void> {
+    // Optionally verify bridge is running:
+    // await httpGraphDB.query('?[x] <- [[1]]');
+    this.initialized = true;
+  }
+
+  /**
+   * Check if the provider is ready to use.
+   */
+  isReady(): boolean {
+    return this.initialized;
+  }
 }

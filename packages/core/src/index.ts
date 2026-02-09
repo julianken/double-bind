@@ -72,9 +72,6 @@ export {
   type ParsedProperty,
 } from './parsers/index.js';
 
-// Client implementations
-export { tauriGraphDB, httpGraphDB, isInTauri } from './client/index.js';
-
 // Utils - ordering and other utilities
 export {
   keyBetween,

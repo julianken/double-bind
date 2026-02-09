@@ -1,16 +1,24 @@
 /**
  * Main entry point for the Double-Bind desktop application.
  *
- * Initializes services using the Tauri GraphDB client and renders the app
- * wrapped in ServiceProvider and QueryClientProvider for dependency injection.
+ * Initializes services using the appropriate GraphDB provider based on
+ * the runtime environment (Tauri desktop or browser for E2E testing).
+ * Renders the app wrapped in ServiceProvider and QueryClientProvider
+ * for dependency injection.
  */
 
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { QueryClientProvider } from '@tanstack/react-query';
-import { tauriGraphDB, httpGraphDB, isInTauri, createServices } from '@double-bind/core';
+import { createServices } from '@double-bind/core';
 import { runMigrations } from '@double-bind/migrations';
-import { ServiceProvider } from './providers/ServiceProvider.js';
+import {
+  ServiceProvider,
+  TauriGraphDBProvider,
+  HttpGraphDBProvider,
+  isInTauri,
+  type GraphDBProvider,
+} from './providers/index.js';
 import { App } from './App.js';
 import { queryClient } from './lib/queryClient.js';
 import { invalidateQueries } from './hooks/useCozoQuery.js';
@@ -30,10 +38,25 @@ if (!rootElement) {
 // Type assertion is safe because we throw above if null
 const root = rootElement as HTMLElement;
 
+/**
+ * Create the appropriate GraphDB provider based on runtime environment.
+ * Uses TauriGraphDBProvider in the desktop app, HttpGraphDBProvider in browser.
+ */
+function createGraphDBProvider(): GraphDBProvider {
+  if (isInTauri()) {
+    return new TauriGraphDBProvider();
+  }
+  return new HttpGraphDBProvider();
+}
+
 // Run migrations and then render the app
 async function initializeApp() {
-  // Auto-detect environment: use Tauri IPC in desktop app, HTTP bridge in browser
-  const graphDB = isInTauri() ? tauriGraphDB : httpGraphDB;
+  // Create the appropriate provider for this environment
+  const provider = createGraphDBProvider();
+  await provider.initialize();
+
+  // Get the GraphDB instance from the provider
+  const graphDB = provider.getGraphDB();
 
   try {
     // Run database migrations before rendering

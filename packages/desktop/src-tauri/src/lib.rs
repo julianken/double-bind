@@ -97,6 +97,24 @@ fn backup(db: tauri::State<'_, DbState>, path: String) -> Result<(), String> {
     db.0.backup_db(&path).map_err(|e| e.to_string())
 }
 
+/// Restore database from backup (database must be empty)
+#[tauri::command]
+fn restore(db: tauri::State<'_, DbState>, path: String) -> Result<(), String> {
+    db.0.restore_backup(&path).map_err(|e| e.to_string())
+}
+
+/// Import specific relations from a backup file
+#[tauri::command]
+fn import_relations_from_backup(
+    db: tauri::State<'_, DbState>,
+    path: String,
+    relations: Vec<String>,
+) -> Result<(), String> {
+    let relations_json = serde_json::to_string(&relations).map_err(|e| e.to_string())?;
+    db.0.import_from_backup_str(&path, &relations_json)
+        .map_err(|e| e.to_string())
+}
+
 /// Get platform-correct database path
 fn get_db_path(app: &tauri::AppHandle) -> PathBuf {
     let data_dir = app
@@ -153,6 +171,8 @@ pub fn run() {
             import_relations,
             export_relations,
             backup,
+            restore,
+            import_relations_from_backup,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

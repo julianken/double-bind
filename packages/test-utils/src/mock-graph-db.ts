@@ -201,6 +201,45 @@ export class MockGraphDB implements GraphDB {
   }
 
   /**
+   * Restore from a backup (no-op for mock).
+   *
+   * @param _path - File path (ignored)
+   */
+  async restore(_path: string): Promise<void> {
+    // No-op for mock - restores are not simulated
+  }
+
+  /**
+   * Import relations from a backup (no-op for mock).
+   *
+   * @param _path - File path (ignored)
+   * @param _relations - Relation names (ignored)
+   */
+  async importRelationsFromBackup(_path: string, _relations: string[]): Promise<void> {
+    // No-op for mock - backup imports are not simulated
+  }
+
+  /**
+   * Track if the mock has been closed.
+   */
+  private _closed = false;
+
+  /**
+   * Close the database (no-op for mock).
+   * After calling, all methods will throw.
+   */
+  async close(): Promise<void> {
+    this._closed = true;
+  }
+
+  /**
+   * Check if the mock has been closed.
+   */
+  get isClosed(): boolean {
+    return this._closed;
+  }
+
+  /**
    * History of all query calls made to this mock.
    */
   get queries(): RecordedCall[] {
