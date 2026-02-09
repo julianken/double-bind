@@ -252,6 +252,9 @@ importers:
 
   packages/mobile-app:
     dependencies:
+      '@double-bind/core':
+        specifier: workspace:*
+        version: link:../core
       '@double-bind/mobile':
         specifier: workspace:*
         version: link:../mobile
