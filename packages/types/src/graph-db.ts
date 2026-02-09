@@ -34,10 +34,7 @@ export interface GraphDB {
    * @param params - Optional named parameters for the query
    * @returns Query results with headers and typed rows
    */
-  query<T = unknown>(
-    script: string,
-    params?: Record<string, unknown>,
-  ): Promise<QueryResult<T>>;
+  query<T = unknown>(script: string, params?: Record<string, unknown>): Promise<QueryResult<T>>;
 
   /**
    * Execute a mutation (insert, update, delete) operation.
@@ -46,10 +43,7 @@ export interface GraphDB {
    * @param params - Optional named parameters for the mutation
    * @returns Mutation result with operation metadata
    */
-  mutate(
-    script: string,
-    params?: Record<string, unknown>,
-  ): Promise<MutationResult>;
+  mutate(script: string, params?: Record<string, unknown>): Promise<MutationResult>;
 
   /**
    * Import data into multiple relations at once.
@@ -74,4 +68,45 @@ export interface GraphDB {
    * @param path - File path for the backup
    */
   backup(path: string): Promise<void>;
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Mobile Lifecycle Methods (optional)
+  // These methods support mobile platform lifecycle events.
+  // Desktop implementations can omit these.
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Called when the app transitions to the background (mobile).
+   * Implementations should flush pending writes and prepare for suspension.
+   * This ensures data integrity if the OS terminates the app while backgrounded.
+   *
+   * @remarks
+   * - iOS: Called during applicationDidEnterBackground
+   * - Android: Called during onPause/onStop
+   * - Desktop: Not used (can be omitted from implementation)
+   */
+  suspend?(): Promise<void>;
+
+  /**
+   * Called when the app returns to the foreground (mobile).
+   * Implementations may refresh connections or validate database state.
+   *
+   * @remarks
+   * - iOS: Called during applicationWillEnterForeground
+   * - Android: Called during onResume
+   * - Desktop: Not used (can be omitted from implementation)
+   */
+  resume?(): Promise<void>;
+
+  /**
+   * Called when the system signals memory pressure (mobile).
+   * Implementations should release non-essential caches and resources.
+   * This helps prevent the OS from terminating the app.
+   *
+   * @remarks
+   * - iOS: Called during applicationDidReceiveMemoryWarning
+   * - Android: Called during onTrimMemory with TRIM_MEMORY_RUNNING_LOW or higher
+   * - Desktop: Not used (can be omitted from implementation)
+   */
+  onLowMemory?(): Promise<void>;
 }
