@@ -114,3 +114,16 @@ export type {
   SyncDataValidationError,
   SyncDataValidation,
 } from './sync.js';
+
+// Pagination types
+export type {
+  PaginationCursor,
+  PageSize,
+  PaginationOptions,
+  PaginatedResult,
+  PaginatedQueryState,
+  PaginatedQueryActions,
+  PaginatedQuery,
+  PageFetcher,
+  InfiniteScrollOptions,
+} from './pagination.js';
