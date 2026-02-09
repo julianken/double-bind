@@ -121,26 +121,7 @@ export const ShareReceiver: React.FC<ShareReceiverProps> = ({
     setResult({ state: 'processing' });
 
     try {
-      // Parse the shared content
-      const shared: SharedContent = parseSharedContent(rawContent, {
-        extractUrls: true,
-        preserveWikiLinks: true,
-      });
-
-      // Validate the content
-      const validation = validateShareContent(shared);
-      if (!validation.valid) {
-        throw new Error(validation.error || 'Invalid content');
-      }
-
-      // Use sanitized content
-      const content = validation.sanitized || shared.content;
-
-      // Generate note title
-      const title = generateNoteTitle(shared);
-
-      // Create the note
-      const { pageId } = await noteService.createNote(title, content);
+      const { pageId, title } = await processSharedContent(rawContent, noteService);
 
       // Update state
       setResult({
@@ -217,6 +198,38 @@ function generateNoteTitle(shared: SharedContent): string {
 }
 
 /**
+ * Core processing logic for shared content
+ * Shared between ShareReceiver component and useShareProcessor hook
+ */
+async function processSharedContent(
+  rawContent: string,
+  noteService: NoteService
+): Promise<{ pageId: PageId; title: string }> {
+  // Parse the shared content
+  const shared: SharedContent = parseSharedContent(rawContent, {
+    extractUrls: true,
+    preserveWikiLinks: true,
+  });
+
+  // Validate the content
+  const validation = validateShareContent(shared);
+  if (!validation.valid) {
+    throw new Error(validation.error || 'Invalid content');
+  }
+
+  // Use sanitized content
+  const content = validation.sanitized || shared.content;
+
+  // Generate note title
+  const title = generateNoteTitle(shared);
+
+  // Create the note
+  const { pageId } = await noteService.createNote(title, content);
+
+  return { pageId, title };
+}
+
+/**
  * Hook for processing shared content
  *
  * Provides imperative API for processing shared content without
@@ -252,26 +265,7 @@ export function useShareProcessor(noteService: NoteService) {
       setResult({ state: 'processing' });
 
       try {
-        // Parse the shared content
-        const shared: SharedContent = parseSharedContent(rawContent, {
-          extractUrls: true,
-          preserveWikiLinks: true,
-        });
-
-        // Validate the content
-        const validation = validateShareContent(shared);
-        if (!validation.valid) {
-          throw new Error(validation.error || 'Invalid content');
-        }
-
-        // Use sanitized content
-        const content = validation.sanitized || shared.content;
-
-        // Generate note title
-        const title = generateNoteTitle(shared);
-
-        // Create the note
-        const { pageId } = await noteService.createNote(title, content);
+        const { pageId, title } = await processSharedContent(rawContent, noteService);
 
         const successResult: ProcessingResult = {
           state: 'success',

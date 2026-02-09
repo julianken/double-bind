@@ -196,22 +196,24 @@ export function extractWikiLinks(content: string): string[] {
  * ```
  */
 export function convertToMarkdown(content: string, options: { title?: string } = {}): string {
+  // Store original content for URL detection
+  const originalContent = content;
   let markdown = content;
-
-  // Add title if provided
-  if (options.title) {
-    markdown = `# ${options.title}\n\n${markdown}`;
-  }
 
   // Convert plain URLs to markdown links (but preserve wiki links)
   markdown = markdown.replace(URL_PATTERN, (url) => {
     // Do not convert if already in a link format
-    const beforeUrl = markdown.slice(0, markdown.indexOf(url));
+    const beforeUrl = originalContent.slice(0, originalContent.indexOf(url));
     if (beforeUrl.endsWith('[') || beforeUrl.endsWith('[[')) {
       return url;
     }
     return `[${url}](${url})`;
   });
+
+  // Add title after URL conversion to avoid title URLs being converted
+  if (options.title) {
+    markdown = `# ${options.title}\n\n${markdown}`;
+  }
 
   return markdown;
 }
