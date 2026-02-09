@@ -141,3 +141,18 @@ export type {
   BatteryOptimizationStats,
 } from './battery.js';
 export { ActivityPriority } from './battery.js';
+
+// Memory management types
+export type {
+  MemoryState,
+  CacheConfig,
+  CacheEntry,
+  CacheStats,
+  MemoryThreshold,
+  MemoryMonitorOptions,
+  EvictionResult,
+  MemoryLeakDetectionConfig,
+  MemoryLeakDetectionResult,
+  CacheEvictionPolicy,
+} from './memory.js';
+export { MemoryWarning } from './memory.js';
