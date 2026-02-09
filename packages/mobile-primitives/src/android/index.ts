@@ -10,6 +10,8 @@
  * - Share sheet integration (sharing from the app)
  * - Content parsing and validation
  * - Direct share targets
+ * - Home screen widgets (Recent Notes, Quick Capture, Daily Note)
+ * - Widget configuration and appearance settings
  */
 
 // =============================================================================
@@ -114,3 +116,50 @@ export {
   MockDirectShareBridge as MockAndroidDirectShareBridge,
   type DirectShareBridge as AndroidDirectShareBridge,
 } from './DirectShare';
+
+// =============================================================================
+// WIDGET TYPES
+// =============================================================================
+
+export {
+  AndroidWidgetKind,
+  AndroidWidgetSize,
+  getMaxNotesForSize,
+  type AndroidWidgetConfiguration,
+  type AndroidWidgetOptions,
+  type AndroidRecentNotesData,
+  type AndroidQuickCaptureData,
+  type AndroidDailyNoteData,
+  type AndroidWidgetData,
+  type AndroidWidgetUpdatePayload,
+  type AndroidWidgetTapAction,
+} from './WidgetTypes';
+
+// =============================================================================
+// WIDGET PROVIDER
+// =============================================================================
+
+export { AndroidWidgetProvider } from './WidgetProvider';
+
+// =============================================================================
+// WIDGET BRIDGE
+// =============================================================================
+
+export {
+  useAndroidWidgetBridge,
+  MockAndroidWidgetBridge,
+  type AndroidWidgetBridge,
+  type AndroidWidgetTapHandler,
+  type UseAndroidWidgetBridgeOptions,
+  type UseAndroidWidgetBridgeResult,
+} from './WidgetBridge';
+
+// =============================================================================
+// WIDGET CONFIGURATION
+// =============================================================================
+
+export {
+  InMemoryAndroidWidgetConfigStore,
+  AndroidWidgetConfigManager,
+  type AndroidWidgetConfigStore,
+} from './WidgetConfiguration';
