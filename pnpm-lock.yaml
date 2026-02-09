@@ -304,6 +304,9 @@ importers:
       react-native-safe-area-context:
         specifier: ^4.14.0
         version: 4.14.1(react-native@0.73.11(@babel/core@7.29.0)(@babel/preset-env@7.29.0(@babel/core@7.29.0))(react@18.3.1))(react@18.3.1)
+      ulid:
+        specifier: ^2.3.0
+        version: 2.4.0
     devDependencies:
       '@testing-library/react-native':
         specifier: ^12.4.0

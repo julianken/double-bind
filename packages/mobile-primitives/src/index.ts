@@ -19,3 +19,6 @@ export { RichText, type RichTextProps } from './RichText';
 
 // Layout components and utilities
 export * from './layout';
+
+// Sync and conflict resolution utilities
+export * from './sync';
