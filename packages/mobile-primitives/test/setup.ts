@@ -44,6 +44,7 @@ vi.mock('react-native', () => ({
   },
   View: 'View',
   Text: 'Text',
+  TextInput: 'TextInput',
   ScrollView: 'ScrollView',
   FlatList: 'FlatList',
   TouchableOpacity: 'TouchableOpacity',
@@ -51,6 +52,10 @@ vi.mock('react-native', () => ({
   ActivityIndicator: 'ActivityIndicator',
   RefreshControl: 'RefreshControl',
   KeyboardAvoidingView: 'KeyboardAvoidingView',
+  Keyboard: {
+    dismiss: vi.fn(),
+    addListener: vi.fn(() => ({ remove: vi.fn() })),
+  },
   Platform: {
     OS: 'ios',
     select: (obj: Record<string, unknown>) => obj.ios ?? obj.default,

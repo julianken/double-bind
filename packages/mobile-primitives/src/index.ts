@@ -10,6 +10,7 @@
 
 // Block Components
 export { BlockView, type BlockViewProps } from './BlockView';
+export { EditableBlockView, type EditableBlockViewProps } from './EditableBlockView';
 export { BlockList, type BlockListProps, type BlockListItem } from './BlockList';
 export { BlockReference, type BlockReferenceProps } from './BlockReference';
 
