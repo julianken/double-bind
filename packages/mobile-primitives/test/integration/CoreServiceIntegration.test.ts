@@ -315,7 +315,8 @@ describe('Core Service Integration - Mobile Bridge', () => {
       // Verify page and blocks created
       const result = await ctx.pageService.getPageWithBlocks(page.pageId);
       expect(result?.page.title).toBe(pageTitle);
-      expect(result?.blocks.length).toBe(blockContents.length);
+      // createPage() adds 1 initial block, plus 3 more = 4 total
+      expect(result?.blocks.length).toBe(4);
     });
 
     it('should update graph when creating wiki links', async () => {
