@@ -1,0 +1,234 @@
+/**
+ * DatabaseProvider - React context provider for mobile database access.
+ *
+ * This provider manages the lifecycle of the MobileGraphDB instance,
+ * handling initialization, platform detection, and proper cleanup.
+ *
+ * @example
+ * ```tsx
+ * import { DatabaseProvider } from '@double-bind/mobile-app';
+ *
+ * function App() {
+ *   return (
+ *     <DatabaseProvider>
+ *       <YourApp />
+ *     </DatabaseProvider>
+ *   );
+ * }
+ * ```
+ */
+import { createContext, useEffect, useState, useCallback, type ReactNode } from 'react';
+import { Platform, AppState, type AppStateStatus } from 'react-native';
+import type { GraphDB } from '@double-bind/types';
+import { MobileGraphDB } from '@double-bind/mobile';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Types
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Database initialization state.
+ */
+export type DatabaseStatus = 'idle' | 'initializing' | 'ready' | 'error';
+
+/**
+ * Platform type for the current runtime environment.
+ */
+export type MobilePlatform = 'ios' | 'android';
+
+/**
+ * Database context value provided to consumers.
+ */
+export interface DatabaseContextValue {
+  /** The database instance, null until initialized */
+  db: GraphDB | null;
+  /** Current initialization status */
+  status: DatabaseStatus;
+  /** Error message if initialization failed */
+  error: string | null;
+  /** Detected platform */
+  platform: MobilePlatform;
+  /** Retry initialization after an error */
+  retry: () => void;
+}
+
+/**
+ * Props for the DatabaseProvider component.
+ */
+export interface DatabaseProviderProps {
+  /** Child components to render */
+  children: ReactNode;
+  /**
+   * Path to the database file.
+   * Defaults to platform-specific app documents directory.
+   */
+  databasePath?: string;
+  /**
+   * Called when database initialization succeeds.
+   */
+  onReady?: (db: GraphDB) => void;
+  /**
+   * Called when database initialization fails.
+   */
+  onError?: (error: Error) => void;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Context
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * React context for database access.
+ * Use the `useDatabase` hook instead of consuming this directly.
+ */
+export const DatabaseContext = createContext<DatabaseContextValue | null>(null);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Helper Functions
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Detect the current mobile platform.
+ * @returns The platform identifier ('ios' or 'android')
+ */
+function detectPlatform(): MobilePlatform {
+  return Platform.OS === 'ios' ? 'ios' : 'android';
+}
+
+/**
+ * Get the default database path for the current platform.
+ * @param platform The detected platform
+ * @returns Default path for database storage
+ */
+function getDefaultDatabasePath(platform: MobilePlatform): string {
+  // React Native provides platform-specific paths via RNFS or expo-file-system
+  // For now, we use a simple convention that native modules understand
+  const basePath =
+    platform === 'ios' ? 'Library/Application Support' : 'data/data/com.doublebind/files';
+
+  return `${basePath}/double-bind.db`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Provider Component
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Provider component that initializes and manages the database connection.
+ *
+ * Features:
+ * - Auto-detects platform (iOS/Android)
+ * - Async initialization with loading state
+ * - Error handling with retry capability
+ * - Handles app lifecycle (background/foreground transitions)
+ * - Proper cleanup on unmount
+ */
+export function DatabaseProvider({
+  children,
+  databasePath,
+  onReady,
+  onError,
+}: DatabaseProviderProps) {
+  const [db, setDb] = useState<GraphDB | null>(null);
+  const [status, setStatus] = useState<DatabaseStatus>('idle');
+  const [error, setError] = useState<string | null>(null);
+  const [initAttempt, setInitAttempt] = useState(0);
+
+  const platform = detectPlatform();
+  const effectivePath = databasePath ?? getDefaultDatabasePath(platform);
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Database Initialization
+  // ─────────────────────────────────────────────────────────────────────────
+
+  useEffect(() => {
+    let mounted = true;
+    let dbInstance: MobileGraphDB | null = null;
+
+    async function initDatabase() {
+      setStatus('initializing');
+      setError(null);
+
+      try {
+        dbInstance = await MobileGraphDB.create(effectivePath);
+
+        if (!mounted) {
+          // Component unmounted during initialization
+          await dbInstance.close();
+          return;
+        }
+
+        setDb(dbInstance);
+        setStatus('ready');
+        onReady?.(dbInstance);
+      } catch (err) {
+        if (!mounted) return;
+
+        const errorMessage = err instanceof Error ? err.message : 'Unknown database error';
+        setError(errorMessage);
+        setStatus('error');
+        onError?.(err instanceof Error ? err : new Error(errorMessage));
+      }
+    }
+
+    void initDatabase();
+
+    return () => {
+      mounted = false;
+      // Close database on unmount
+      if (dbInstance) {
+        void dbInstance.close();
+      }
+    };
+  }, [effectivePath, initAttempt, onReady, onError]);
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // App State Handling (Background/Foreground)
+  // ─────────────────────────────────────────────────────────────────────────
+
+  useEffect(() => {
+    if (!db) return;
+
+    const mobileDb = db as MobileGraphDB;
+
+    function handleAppStateChange(nextState: AppStateStatus) {
+      if (nextState === 'background' || nextState === 'inactive') {
+        // App is going to background - suspend database
+        void mobileDb.suspend();
+      } else if (nextState === 'active') {
+        // App is returning to foreground - resume database
+        void mobileDb.resume();
+      }
+    }
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+
+    return () => {
+      subscription.remove();
+    };
+  }, [db]);
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Retry Handler
+  // ─────────────────────────────────────────────────────────────────────────
+
+  const retry = useCallback(() => {
+    if (status === 'error') {
+      setInitAttempt((prev) => prev + 1);
+    }
+  }, [status]);
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Render
+  // ─────────────────────────────────────────────────────────────────────────
+
+  const contextValue: DatabaseContextValue = {
+    db,
+    status,
+    error,
+    platform,
+    retry,
+  };
+
+  return <DatabaseContext.Provider value={contextValue}>{children}</DatabaseContext.Provider>;
+}
