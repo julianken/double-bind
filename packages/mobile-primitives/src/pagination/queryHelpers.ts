@@ -63,6 +63,13 @@ export function buildPaginatedQuery(options: BuildPaginatedQueryOptions): string
     cursor,
   } = options;
 
+  // Validate cursorColumn to prevent injection
+  if (!/^[a-z_][a-z0-9_]*$/i.test(cursorColumn)) {
+    throw new Error(
+      `Invalid cursorColumn: "${cursorColumn}". Must match pattern /^[a-z_][a-z0-9_]*$/i`
+    );
+  }
+
   // Clamp page size
   const clampedPageSize = Math.min(Math.max(1, pageSize), MAX_PAGE_SIZE);
 
@@ -114,6 +121,11 @@ export function extractPaginatedResult<T>(
   cursorColumnIndex: number,
   pageSize: number
 ): PaginatedResult<T> {
+  // Validate cursorColumnIndex
+  if (cursorColumnIndex < 0) {
+    throw new Error(`cursorColumnIndex must be non-negative, got: ${cursorColumnIndex}`);
+  }
+
   const hasMore = rows.length > pageSize;
   const items = (hasMore ? rows.slice(0, pageSize) : rows) as T[];
 
@@ -121,6 +133,14 @@ export function extractPaginatedResult<T>(
   let nextCursor: string | null = null;
   if (hasMore && items.length > 0) {
     const lastItem = rows[pageSize] as unknown[];
+
+    // Validate cursorColumnIndex is within bounds
+    if (cursorColumnIndex >= lastItem.length) {
+      throw new Error(
+        `cursorColumnIndex ${cursorColumnIndex} is out of bounds for row with ${lastItem.length} columns`
+      );
+    }
+
     const cursorValue = lastItem[cursorColumnIndex];
 
     // Convert cursor to string
@@ -187,10 +207,7 @@ export function buildQueryParams(
  */
 export function createPageFetcher<T>(
   queryBuilder: (options: PaginationOptions) => string,
-  queryExecutor: (
-    query: string,
-    params: Record<string, unknown>
-  ) => Promise<{ rows: unknown[][] }>,
+  queryExecutor: (query: string, params: Record<string, unknown>) => Promise<{ rows: unknown[][] }>,
   cursorColumnIndex: number
 ): (options: PaginationOptions) => Promise<PaginatedResult<T>> {
   return async (options: PaginationOptions): Promise<PaginatedResult<T>> => {
