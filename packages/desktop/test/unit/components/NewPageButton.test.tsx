@@ -17,7 +17,7 @@ import type { Page } from '@double-bind/types';
 const createTestQueryClient = () =>
   new QueryClient({
     defaultOptions: {
-      queries: { retry: false, staleTime: 0, gcTime: Infinity },
+      queries: { retry: false, staleTime: 0, gcTime: 0 },
       mutations: { retry: false },
     },
   });

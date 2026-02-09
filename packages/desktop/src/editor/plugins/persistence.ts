@@ -2,20 +2,22 @@
  * Persistence Plugin for ProseMirror
  *
  * Saves block content to CozoDB with debouncing during typing.
- * Provides immediate save on blur with query invalidation.
+ * Invalidates TanStack Query caches after every save to keep UI in sync.
  *
  * Features:
  * - Debounced save (300ms) triggers after last keystroke
  * - Immediate save fires on editor blur/deactivation
- * - Query invalidation (['blocks'], ['backlinks'], ['search'], ['links']) on blur
+ * - Query invalidation after EVERY save (not just blur) to prevent stale cache
+ * - Invalidates: blocks, dailyNote, page, backlinks, search, links
  * - Pending debounce is cancelled and flushed on blur
  */
 
 import { Plugin, PluginKey } from 'prosemirror-state';
 import type { EditorView } from 'prosemirror-view';
-import type { BlockId } from '@double-bind/types';
+import type { Block, BlockId } from '@double-bind/types';
 import type { BlockService } from '@double-bind/core';
 import { invalidateQueries } from '../../hooks/useCozoQuery.js';
+import { queryClient } from '../../lib/queryClient.js';
 
 /**
  * Plugin key for the persistence plugin.
@@ -103,7 +105,28 @@ export function createPersistencePlugin(options: PersistencePluginOptions): Plug
   };
 
   /**
-   * Save content to the database.
+   * Invalidate all relevant query caches after content changes.
+   * This ensures any view showing this data will refetch.
+   */
+  const invalidateAllQueries = (): void => {
+    invalidateQueries(['blocks']); // BlockNode uses ['blocks', 'detail', blockId]
+    invalidateQueries(['dailyNote']); // DailyNotesView uses ['dailyNote', 'withBlocks', date]
+    invalidateQueries(['pages']); // PageView uses ['pages', 'withBlocks', pageId] (note: plural 'pages')
+    invalidateQueries(['backlinks']);
+    invalidateQueries(['search']);
+    invalidateQueries(['links']);
+  };
+
+  /**
+   * Save content to the database and invalidate query caches.
+   *
+   * IMPORTANT: Invalidation happens after EVERY save, not just on blur.
+   * This prevents a race condition where:
+   * 1. User types → debounce saves content
+   * 2. User navigates away → new view queries stale cache
+   * 3. Blur fires → invalidation happens too late
+   *
+   * By invalidating after every save, the cache is always fresh.
    */
   const saveContent = async (content: string): Promise<void> => {
     if (isSaving) {
@@ -117,6 +140,18 @@ export function createPersistencePlugin(options: PersistencePluginOptions): Plug
       await blockService.updateContent(blockId, content);
       // Track what we saved so we can detect changes on blur
       lastSavedContent = content;
+
+      // CRITICAL: Optimistically update the block cache immediately.
+      // This ensures StaticBlockContent renders with fresh data when
+      // the editor loses focus, without waiting for a refetch.
+      // Without this, the 30s staleTime causes a race condition where
+      // the old cached data is shown briefly before refetch completes.
+      queryClient.setQueryData(['block', blockId], (oldBlock: Block | undefined) =>
+        oldBlock ? { ...oldBlock, content } : undefined
+      );
+
+      // Invalidate queries to ensure other views (backlinks, search) refetch
+      invalidateAllQueries();
     } finally {
       isSaving = false;
 
@@ -143,6 +178,9 @@ export function createPersistencePlugin(options: PersistencePluginOptions): Plug
   /**
    * Flush any pending save immediately.
    * Called on blur to ensure content is saved before deactivation.
+   *
+   * Note: saveContent() now handles invalidation, so we don't need to
+   * invalidate here. We just ensure any pending content is saved.
    */
   const flushPendingSave = async (view: EditorView): Promise<void> => {
     // Cancel the debounce timer
@@ -152,22 +190,16 @@ export function createPersistencePlugin(options: PersistencePluginOptions): Plug
     // Get current content from the editor
     const content = view.state.doc.textContent;
 
-    // Only save and invalidate if there were actual changes:
+    // Only save if there were actual changes:
     // 1. There was a pending debounce timer (user was typing), OR
     // 2. Content differs from last saved (if we've saved before)
     // If lastSavedContent is null, we haven't saved yet, so only save if there was typing
     const contentChanged = lastSavedContent !== null && content !== lastSavedContent;
-    const shouldSaveAndInvalidate = hadPendingTimer || contentChanged;
+    const shouldSave = hadPendingTimer || contentChanged;
 
-    if (shouldSaveAndInvalidate) {
-      // Save immediately
+    if (shouldSave) {
+      // Save immediately - saveContent handles invalidation
       await saveContent(content);
-
-      // Invalidate queries only when content actually changed
-      invalidateQueries(['blocks']);
-      invalidateQueries(['backlinks']);
-      invalidateQueries(['search']);
-      invalidateQueries(['links']);
     }
 
     // Invoke the onBlur callback if provided

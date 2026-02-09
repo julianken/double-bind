@@ -87,6 +87,12 @@ export interface BlockEditorProps {
   nextBlockId?: BlockId | null;
 
   /**
+   * Parent block ID (for creating siblings at the correct level).
+   * Pass null for root-level blocks.
+   */
+  parentId?: BlockId | null;
+
+  /**
    * Callback to get content of a specific block by ID.
    * Required for Delete-at-end merge operations.
    */
@@ -282,6 +288,7 @@ export function BlockEditor({
   pageId,
   previousBlockId,
   nextBlockId,
+  parentId,
   getBlockContent,
   focusBlock,
   onBlocksChanged,
@@ -317,6 +324,7 @@ export function BlockEditor({
     contextRef.current = {
       blockId,
       pageId: pageId!,
+      parentId: parentId ?? null,
       previousBlockId: previousBlockId ?? null,
       nextBlockId: nextBlockId ?? null,
       getContentBeforeCursor: (view: EditorView) => {

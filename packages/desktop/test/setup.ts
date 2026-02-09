@@ -12,6 +12,6 @@ import { cleanup } from '@testing-library/react';
 // Cleanup after each test
 afterEach(() => {
   cleanup();
-  // Clear the document body safely
-  document.body.textContent = '';
+  // Clear the document body safely (innerHTML removes child nodes properly)
+  document.body.innerHTML = '';
 });

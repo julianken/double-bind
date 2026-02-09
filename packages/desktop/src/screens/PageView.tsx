@@ -99,12 +99,23 @@ function ErrorState({ error }: ErrorStateProps) {
 
 /**
  * EmptyState - Shown when page has no blocks.
+ * Clicking creates the first block.
  */
-function EmptyState() {
+interface EmptyStateProps {
+  onCreateBlock: () => void;
+}
+
+function EmptyState({ onCreateBlock }: EmptyStateProps) {
   return (
-    <div className={styles.empty} data-testid="page-view-empty">
-      <p>This page has no content yet. Start typing to add a block.</p>
-    </div>
+    <button
+      type="button"
+      className={styles.empty}
+      data-testid="page-view-empty"
+      onClick={onCreateBlock}
+      aria-label="Create first block"
+    >
+      <p>Click here to start writing...</p>
+    </button>
   );
 }
 
@@ -247,6 +258,24 @@ export function PageView({ pageId }: PageViewProps) {
       setFocusedBlock(rootBlocks[0]!.blockId);
     }
   }, [rootBlocks, setFocusedBlock]);
+
+  // Create first block when clicking empty state
+  const handleCreateFirstBlock = useCallback(async () => {
+    try {
+      await blockService.createBlock(
+        pageId,
+        null, // parentId - root level block
+        '', // content - empty block
+        undefined // afterBlockId - first block
+      );
+      // Trigger refetch to show the new block
+      invalidateQueries(['page', 'withBlocks', pageId]);
+    } catch (err) {
+      // eslint-disable-next-line no-console -- Error logging for debugging
+      console.error('Failed to create first block:', err);
+    }
+  }, [blockService, pageId]);
+
   // Toggle backlinks panel
   const toggleBacklinks = useCallback(() => {
     setBacklinksExpanded((prev) => !prev);
@@ -493,7 +522,7 @@ export function PageView({ pageId }: PageViewProps) {
         />
 
         {rootBlocks.length === 0 ? (
-          <EmptyState />
+          <EmptyState onCreateBlock={handleCreateFirstBlock} />
         ) : (
           <DndContext
             sensors={sensors}

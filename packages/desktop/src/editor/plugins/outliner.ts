@@ -30,6 +30,8 @@ export interface OutlinerContext {
   blockId: BlockId;
   /** The page containing the block */
   pageId: PageId;
+  /** The parent block ID (null if root-level block) */
+  parentId: BlockId | null;
   /** The previous sibling block ID (null if first block) */
   previousBlockId: BlockId | null;
   /** The next sibling block ID (null if last block) */
@@ -115,10 +117,10 @@ const splitBlock: OutlinerCommand = async (
     // Update current block with content before cursor
     await blockService.updateContent(context.blockId, contentBefore);
 
-    // Create new block with content after cursor
+    // Create new block with content after cursor as a sibling at the same level
     const newBlock = await blockService.createBlock(
       context.pageId,
-      null, // Will inherit parent from context - TODO: get parent from current block
+      context.parentId, // Same parent as current block = sibling at same level
       contentAfter,
       context.blockId // Insert after current block
     );
