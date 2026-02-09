@@ -5,6 +5,8 @@
     { "path": "packages/test-utils" },
     { "path": "packages/migrations" },
     { "path": "packages/core" },
-    { "path": "packages/desktop" }
+    { "path": "packages/desktop" },
+    { "path": "packages/mobile" },
+    { "path": "packages/mobile-app" }
   ]
 }
