@@ -33,7 +33,13 @@ export { DoubleBindError, ErrorCode } from './errors';
 export type { CreatePageInput, CreateBlockInput, UpdateBlockInput } from './inputs';
 
 // GraphDB interface
-export type { GraphDB, GraphDBProvider, QueryResult, MutationResult } from './graph-db.js';
+export type {
+  GraphDB,
+  GraphDBConfig,
+  GraphDBFactory,
+  QueryResult,
+  MutationResult,
+} from './graph-db.js';
 
 // Search types
 export type { SearchResult, SearchOptions } from './search.js';
