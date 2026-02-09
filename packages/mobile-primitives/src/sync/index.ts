@@ -33,3 +33,6 @@ export {
 
 // Conflict store implementations
 export { InMemoryConflictStore } from './InMemoryConflictStore';
+
+// Sync export service
+export { SyncExportService, type SyncExportPackage, type ExportOptions } from './SyncExportService';
