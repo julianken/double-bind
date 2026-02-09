@@ -114,3 +114,7 @@ export type {
   SyncDataValidationError,
   SyncDataValidation,
 } from './sync.js';
+
+// Streaming types
+export type { StreamChunk, StreamOptions, StreamResult } from './streaming.js';
+export { StreamState } from './streaming.js';

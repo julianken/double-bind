@@ -38,3 +38,6 @@ export * from './layout';
 
 // Sync and conflict resolution utilities
 export * from './sync';
+
+// Streaming utilities
+export * from './streaming';
