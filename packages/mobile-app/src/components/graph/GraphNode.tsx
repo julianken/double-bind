@@ -70,8 +70,8 @@ export const GraphNode = memo(function GraphNode({
         stroke={strokeColor}
         strokeWidth={strokeWidth}
       />
-      {/* Larger invisible touch target */}
-      <Circle cx={node.x} cy={node.y} r={radius + 10} fill="transparent" onPress={handlePress} />
+      {/* Larger invisible touch target - minimum 44px diameter per WCAG guidelines */}
+      <Circle cx={node.x} cy={node.y} r={Math.max(22, radius + 10)} fill="transparent" onPress={handlePress} />
       {/* Label */}
       <Text
         x={node.x}
