@@ -22,6 +22,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "@double-bind/core": "workspace:*",
     "@double-bind/mobile": "workspace:*",
     "@double-bind/types": "workspace:*",
     "react-native-webview": "^13.6.0"
