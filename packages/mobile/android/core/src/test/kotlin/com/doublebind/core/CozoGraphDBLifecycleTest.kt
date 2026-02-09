@@ -37,9 +37,7 @@ class CozoGraphDBLifecycleTest {
 
             // After close, operations should fail
             assertThrows<DatabaseClosedException> {
-                runTest {
-                    db.query<Any>("?[id] := *test{ id }")
-                }
+                db.query<Any>("?[id] := *test{ id }")
             }
         }
 
@@ -50,9 +48,7 @@ class CozoGraphDBLifecycleTest {
             db.close()
 
             assertThrows<DatabaseClosedException> {
-                runTest {
-                    db.mutate(":create test { id: Int }")
-                }
+                db.mutate(":create test { id: Int }")
             }
         }
 
@@ -63,9 +59,7 @@ class CozoGraphDBLifecycleTest {
             db.close()
 
             assertThrows<DatabaseClosedException> {
-                runTest {
-                    db.importRelations(mapOf("test" to listOf(listOf(1))))
-                }
+                db.importRelations(mapOf("test" to listOf(listOf(1))))
             }
         }
 
@@ -76,9 +70,7 @@ class CozoGraphDBLifecycleTest {
             db.close()
 
             assertThrows<DatabaseClosedException> {
-                runTest {
-                    db.exportRelations(listOf("test"))
-                }
+                db.exportRelations(listOf("test"))
             }
         }
 
@@ -89,9 +81,7 @@ class CozoGraphDBLifecycleTest {
             db.close()
 
             assertThrows<DatabaseClosedException> {
-                runTest {
-                    db.backup(File(tempDir, "backup.db").absolutePath)
-                }
+                db.backup(File(tempDir, "backup.db").absolutePath)
             }
         }
 
@@ -102,9 +92,7 @@ class CozoGraphDBLifecycleTest {
             db.close()
 
             assertThrows<DatabaseClosedException> {
-                runTest {
-                    db.restore(File(tempDir, "backup.db").absolutePath)
-                }
+                db.restore(File(tempDir, "backup.db").absolutePath)
             }
         }
 

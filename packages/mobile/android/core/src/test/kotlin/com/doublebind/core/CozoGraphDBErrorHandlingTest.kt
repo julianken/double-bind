@@ -36,41 +36,33 @@ class CozoGraphDBErrorHandlingTest {
 
         @Test
         @DisplayName("invalid query syntax throws CozoException")
-        fun invalidQuerySyntax() {
+        fun invalidQuerySyntax() = runTest {
             assertThrows<CozoException> {
-                runTest {
-                    db.query<Any>("this is not valid datalog")
-                }
+                db.query<Any>("this is not valid datalog")
             }
         }
 
         @Test
         @DisplayName("incomplete query throws CozoException")
-        fun incompleteQuery() {
+        fun incompleteQuery() = runTest {
             assertThrows<CozoException> {
-                runTest {
-                    db.query<Any>("?[a] :=")
-                }
+                db.query<Any>("?[a] :=")
             }
         }
 
         @Test
         @DisplayName("missing closing bracket throws CozoException")
-        fun missingClosingBracket() {
+        fun missingClosingBracket() = runTest {
             assertThrows<CozoException> {
-                runTest {
-                    db.query<Any>("?[a <- [[1]]")
-                }
+                db.query<Any>("?[a <- [[1]]")
             }
         }
 
         @Test
         @DisplayName("typo in keyword throws CozoException")
-        fun typoInKeyword() {
+        fun typoInKeyword() = runTest {
             assertThrows<CozoException> {
-                runTest {
-                    db.query<Any>("?[a] <-- [[1]]") // <-- instead of <-
-                }
+                db.query<Any>("?[a] <-- [[1]]") // <-- instead of <-
             }
         }
 
@@ -92,41 +84,33 @@ class CozoGraphDBErrorHandlingTest {
 
         @Test
         @DisplayName("query non-existent relation throws CozoException")
-        fun queryNonExistentRelation() {
+        fun queryNonExistentRelation() = runTest {
             assertThrows<CozoException> {
-                runTest {
-                    db.query<Any>("?[id] := *nonexistent{ id }")
-                }
+                db.query<Any>("?[id] := *nonexistent{ id }")
             }
         }
 
         @Test
         @DisplayName("put to non-existent relation throws CozoException")
-        fun putToNonExistentRelation() {
+        fun putToNonExistentRelation() = runTest {
             assertThrows<CozoException> {
-                runTest {
-                    db.mutate("?[id] <- [[1]] :put nonexistent { id }")
-                }
+                db.mutate("?[id] <- [[1]] :put nonexistent { id }")
             }
         }
 
         @Test
         @DisplayName("rm from non-existent relation throws CozoException")
-        fun rmFromNonExistentRelation() {
+        fun rmFromNonExistentRelation() = runTest {
             assertThrows<CozoException> {
-                runTest {
-                    db.mutate("?[id] <- [[1]] :rm nonexistent { id }")
-                }
+                db.mutate("?[id] <- [[1]] :rm nonexistent { id }")
             }
         }
 
         @Test
         @DisplayName("export non-existent relation throws CozoException")
-        fun exportNonExistentRelation() {
+        fun exportNonExistentRelation() = runTest {
             assertThrows<CozoException> {
-                runTest {
-                    db.exportRelations(listOf("nonexistent"))
-                }
+                db.exportRelations(listOf("nonexistent"))
             }
         }
     }
@@ -141,9 +125,7 @@ class CozoGraphDBErrorHandlingTest {
             db.mutate(":create typed { id: Int }")
 
             assertThrows<CozoException> {
-                runTest {
-                    db.mutate("?[id] <- [[\"not an int\"]] :put typed { id }")
-                }
+                db.mutate("?[id] <- [[\"not an int\"]] :put typed { id }")
             }
         }
 
@@ -169,9 +151,7 @@ class CozoGraphDBErrorHandlingTest {
             db.mutate(":create strict { id: Int, value: String }")
 
             assertThrows<CozoException> {
-                runTest {
-                    db.mutate("?[id, value] <- [[1, null]] :put strict { id, value }")
-                }
+                db.mutate("?[id, value] <- [[1, null]] :put strict { id, value }")
             }
         }
 
@@ -199,9 +179,7 @@ class CozoGraphDBErrorHandlingTest {
             db.mutate("?[id] <- [[1]] :put items { id }")
 
             assertThrows<CozoException> {
-                runTest {
-                    db.mutate("?[id] <- [[1]] :ensure items { id }")
-                }
+                db.mutate("?[id] <- [[1]] :ensure items { id }")
             }
         }
 
@@ -211,9 +189,7 @@ class CozoGraphDBErrorHandlingTest {
             db.mutate(":create test { id: Int }")
 
             assertThrows<CozoException> {
-                runTest {
-                    db.mutate(":create test { id: Int }")
-                }
+                db.mutate(":create test { id: Int }")
             }
         }
 
@@ -223,9 +199,7 @@ class CozoGraphDBErrorHandlingTest {
             db.mutate(":create items { id: Int, name: String }")
 
             assertThrows<CozoException> {
-                runTest {
-                    db.mutate("?[id] <- [[1]] :put items { id, name }")
-                }
+                db.mutate("?[id] <- [[1]] :put items { id, name }")
             }
         }
     }
@@ -240,10 +214,8 @@ class CozoGraphDBErrorHandlingTest {
             db.mutate(":create items { id: Int }")
 
             assertThrows<CozoException> {
-                runTest {
-                    // Query references $missing but we don't provide it
-                    db.query<Any>("?[id] := *items{ id }, id == \$missing")
-                }
+                // Query references $missing but we don't provide it
+                db.query<Any>("?[id] := *items{ id }, id == \$missing")
             }
         }
 
@@ -290,41 +262,33 @@ class CozoGraphDBErrorHandlingTest {
 
         @Test
         @DisplayName("remove non-existent relation throws CozoException")
-        fun removeNonExistentRelation() {
+        fun removeNonExistentRelation() = runTest {
             assertThrows<CozoException> {
-                runTest {
-                    db.mutate("::remove nonexistent")
-                }
+                db.mutate("::remove nonexistent")
             }
         }
 
         @Test
         @DisplayName("columns on non-existent relation throws CozoException")
-        fun columnsOnNonExistent() {
+        fun columnsOnNonExistent() = runTest {
             assertThrows<CozoException> {
-                runTest {
-                    db.query<Any>("::columns nonexistent")
-                }
+                db.query<Any>("::columns nonexistent")
             }
         }
 
         @Test
         @DisplayName("invalid column type throws CozoException")
-        fun invalidColumnType() {
+        fun invalidColumnType() = runTest {
             assertThrows<CozoException> {
-                runTest {
-                    db.mutate(":create bad { id: InvalidType }")
-                }
+                db.mutate(":create bad { id: InvalidType }")
             }
         }
 
         @Test
         @DisplayName("empty relation name throws CozoException")
-        fun emptyRelationName() {
+        fun emptyRelationName() = runTest {
             assertThrows<CozoException> {
-                runTest {
-                    db.mutate(":create { id: Int }")
-                }
+                db.mutate(":create { id: Int }")
             }
         }
     }

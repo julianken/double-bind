@@ -180,9 +180,7 @@ class CozoGraphDBMutateTest {
             db.mutate("?[id] <- [[1]] :put items { id }")
 
             assertThrows<CozoException> {
-                runTest {
-                    db.mutate("?[id] <- [[1]] :ensure items { id }")
-                }
+                db.mutate("?[id] <- [[1]] :ensure items { id }")
             }
         }
 
@@ -278,9 +276,7 @@ class CozoGraphDBMutateTest {
             db.mutate("::remove temp")
 
             assertThrows<CozoException> {
-                runTest {
-                    db.query<Any>("?[id] := *temp{ id }")
-                }
+                db.query<Any>("?[id] := *temp{ id }")
             }
         }
 
