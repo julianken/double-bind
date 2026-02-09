@@ -11,19 +11,7 @@ import { SafeAreaView, StyleSheet, Text, View } from "react-native";
 
 // Test imports from monorepo packages
 // These verify that Metro is correctly resolving workspace packages
-import type { Page, Block, PageId, BlockId } from "@double-bind/types";
 import { PageRepository, BlockRepository } from "@double-bind/core";
-
-// Type check: ensure types are properly imported
-const testPageId: PageId = "test-page-id" as PageId;
-const testBlockId: BlockId = "test-block-id" as BlockId;
-
-// Log to verify imports work at runtime
-console.log("Monorepo imports verified:");
-console.log("- PageRepository:", typeof PageRepository);
-console.log("- BlockRepository:", typeof BlockRepository);
-console.log("- Test PageId:", testPageId);
-console.log("- Test BlockId:", testBlockId);
 
 function App(): React.JSX.Element {
   return (
