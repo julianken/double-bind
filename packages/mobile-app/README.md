@@ -2,59 +2,46 @@
 
 React Native mobile application for Double-Bind.
 
-## Prerequisites
+## Monorepo Configuration
 
-- Node.js >= 20.0.0
-- pnpm 9.15.0+
-- For iOS: Xcode 15+, CocoaPods
-- For Android: Android Studio, JDK 17
+This package is configured to work within the pnpm monorepo. Metro bundler is set up to resolve workspace packages correctly.
 
-## Setup
+### How It Works
+
+The `metro.config.js` configures:
+
+1. **watchFolders**: Watches the entire monorepo root for file changes
+2. **nodeModulesPaths**: Resolves dependencies from both local and root node_modules
+3. **extraNodeModules**: Maps `@double-bind/*` packages to their source directories
+
+### Workspace Dependencies
+
+- `@double-bind/types` - Shared TypeScript interfaces and domain types
+- `@double-bind/core` - Business logic (repositories, services)
+
+### Development
 
 ```bash
-# Install dependencies from monorepo root
+# Install dependencies (from monorepo root)
 pnpm install
 
-# Install iOS dependencies
-cd ios && pod install && cd ..
-```
-
-## Development
-
-```bash
 # Start Metro bundler
-pnpm start
-
-# Run on iOS
-pnpm ios
+pnpm --filter @double-bind/mobile-app start
 
 # Run on Android
-pnpm android
-```
+pnpm --filter @double-bind/mobile-app android
 
-## Building
-
-```bash
-# Build Android release APK
-pnpm build:android
-
-# Build iOS release archive
-pnpm build:ios
-```
-
-## Testing
-
-```bash
-# Run unit tests
-pnpm test
+# Run on iOS
+pnpm --filter @double-bind/mobile-app ios
 
 # Type check
-pnpm typecheck
-
-# Lint
-pnpm lint
+pnpm --filter @double-bind/mobile-app typecheck
 ```
 
-## Architecture
+### Troubleshooting
 
-This package contains the React Native application shell. Native modules for CozoDB integration are provided by `@double-bind/mobile`.
+If Metro cannot resolve workspace packages:
+
+1. Ensure dependencies are installed at the monorepo root
+2. Clear Metro cache: `npx react-native start --reset-cache`
+3. Verify `metro.config.js` paths are correct
