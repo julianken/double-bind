@@ -8,7 +8,7 @@
  * - Debounced save (300ms) triggers after last keystroke
  * - Immediate save fires on editor blur/deactivation
  * - Query invalidation after EVERY save (not just blur) to prevent stale cache
- * - Invalidates: blocks, dailyNote, page, backlinks, search, links
+ * - Invalidates: blocks, dailyNote, page, backlinks, search, links, graph
  * - Pending debounce is cancelled and flushed on blur
  */
 
@@ -115,6 +115,7 @@ export function createPersistencePlugin(options: PersistencePluginOptions): Plug
     invalidateQueries(['backlinks']);
     invalidateQueries(['search']);
     invalidateQueries(['links']);
+    invalidateQueries(['graph']); // MiniGraph neighborhood queries
   };
 
   /**

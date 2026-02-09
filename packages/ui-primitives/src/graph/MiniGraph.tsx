@@ -40,8 +40,6 @@ const COLORS = {
   textDark: '#e2e8f0', // Slate-200 for dark mode
   textLightSecondary: 'rgba(30, 41, 59, 0.75)', // Slate-800 at 75% opacity (WCAG AA compliant)
   textDarkSecondary: 'rgba(226, 232, 240, 0.75)', // Slate-200 at 75% opacity (WCAG AA compliant)
-  labelBgLight: 'rgba(255, 255, 255, 0.9)', // White with slight transparency
-  labelBgDark: 'rgba(15, 23, 42, 0.9)', // Slate-900 with slight transparency
   background: 'transparent',
 } as const;
 
@@ -84,45 +82,6 @@ function truncateLabel(text: string, maxLength: number): string {
 }
 
 /**
- * Draw a rounded rectangle background for a label.
- * @param ctx - Canvas rendering context
- * @param x - Center x position
- * @param y - Top y position
- * @param width - Width of the background
- * @param height - Height of the background
- * @param radius - Corner radius
- * @param fillStyle - Fill color
- */
-function drawLabelBackground(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-  radius: number,
-  fillStyle: string
-): void {
-  const left = x - width / 2;
-  const right = x + width / 2;
-  const top = y;
-  const bottom = y + height;
-  
-  ctx.fillStyle = fillStyle;
-  ctx.beginPath();
-  ctx.moveTo(left + radius, top);
-  ctx.lineTo(right - radius, top);
-  ctx.arcTo(right, top, right, top + radius, radius);
-  ctx.lineTo(right, bottom - radius);
-  ctx.arcTo(right, bottom, right - radius, bottom, radius);
-  ctx.lineTo(left + radius, bottom);
-  ctx.arcTo(left, bottom, left, bottom - radius, radius);
-  ctx.lineTo(left, top + radius);
-  ctx.arcTo(left, top, left + radius, top, radius);
-  ctx.closePath();
-  ctx.fill();
-}
-
-/**
  * Hook to get theme-aware colors for canvas rendering.
  * Listens for theme changes via data-theme attribute mutations.
  * Uses static colors that match GraphView for consistency.
@@ -151,7 +110,6 @@ function useThemeColors() {
   return {
     textColor: isDark ? COLORS.textDark : COLORS.textLight,
     textColorSecondary: isDark ? COLORS.textDarkSecondary : COLORS.textLightSecondary,
-    labelBg: isDark ? COLORS.labelBgDark : COLORS.labelBgLight,
     linkColor: COLORS.link,
     themeKey: isDark ? 'dark' : 'light',
   };
@@ -218,63 +176,12 @@ const DEFAULT_WIDTH = 200;
 const DEFAULT_HEIGHT = 150;
 
 const SIZES = {
-  centerNodeRadius: 8,
-  normalNodeRadius: 5,
+  nodeRadius: 5, // Same size for all nodes
   linkWidth: 1,
-  fontSizeCenter: 12, // Larger font for center node
-  fontSizeNormal: 9, // Smaller font for other nodes
-  labelPaddingX: 6, // Horizontal padding for center node label background
-  labelPaddingY: 3, // Vertical padding for center node label background
-  labelCornerRadius: 3, // Corner radius for center node label background
+  fontSize: 10, // Consistent font size
+  labelOffset: 8, // Distance from node center to label
   arrowSize: 4, // Arrow head size for mini graph (smaller than main graph)
 } as const;
-
-// ============================================================================
-// Helper Functions
-// ============================================================================
-
-/**
- * Calculates the relative position (0-1) where an arrow should end along a link.
- * Adjusts arrow position to stop at the edge of the target node, accounting for
- * variable node sizes.
- *
- * @param link - The link object containing source and target nodes
- * @param getNodeRadius - Function to get the radius of a node
- * @returns A value between 0 (at source) and 1 (at target center), representing
- *          where the arrow should end. Returns a value < 1 to stop at the target's edge.
- *
- * @example
- * // For a link where target has 8px radius and nodes are 100px apart:
- * // Arrow will stop at position 0.92 (100-8)/100
- * calculateArrowPosition(link, (node) => node.isCenter ? 8 : 5)
- */
-function calculateArrowPosition(
-  link: GraphLink,
-  getNodeRadius: (node: GraphNode) => number
-): number {
-  const targetNode = typeof link.target === 'object' ? link.target : null;
-  const sourceNode = typeof link.source === 'object' ? link.source : null;
-
-  // Fallback if nodes aren't resolved objects yet
-  if (!targetNode || !sourceNode) return 1;
-
-  const targetRadius = getNodeRadius(targetNode);
-
-  // Calculate distance between source and target
-  const dx = (targetNode.x ?? 0) - (sourceNode.x ?? 0);
-  const dy = (targetNode.y ?? 0) - (sourceNode.y ?? 0);
-  const distance = Math.sqrt(dx * dx + dy * dy);
-
-  // Avoid division by zero for overlapping nodes
-  if (distance < 0.001) return 1;
-
-  // Calculate position where arrow should stop (at edge of target node)
-  // Position = 1 - (radius / distance)
-  const relPos = 1 - (targetRadius / distance);
-
-  // Clamp to valid range [0, 1]
-  return Math.min(1, Math.max(0, relPos));
-}
 
 // ============================================================================
 // Styles
@@ -321,7 +228,7 @@ export const MiniGraph = memo(function MiniGraph({
 }: MiniGraphProps) {
   const graphRef = useRef<ForceGraphMethods<GraphNode, GraphLink> | undefined>(undefined);
   const hasPerformedInitialCenter = useRef(false);
-  const { textColor, textColorSecondary, labelBg, linkColor, themeKey } = useThemeColors();
+  const { textColor, textColorSecondary, linkColor, themeKey } = useThemeColors();
 
   // Transform nodes to include isCenter flag
   const graphData = useMemo(() => {
@@ -340,36 +247,25 @@ export const MiniGraph = memo(function MiniGraph({
     return { nodes: graphNodes, links: graphLinks };
   }, [nodes, edges, centerNodeId]);
 
-  // Calculate optimal zoom level to fit all nodes with padding
-  const calculateOptimalZoom = useCallback(
-    (bbox: { x: [number, number]; y: [number, number] } | null, viewportWidth: number, viewportHeight: number, padding: number): number => {
-      if (!bbox) return 1;
-      const graphWidth = bbox.x[1] - bbox.x[0];
-      const graphHeight = bbox.y[1] - bbox.y[0];
-      if (graphWidth === 0 && graphHeight === 0) return 1.5; // Single node
-      if (graphWidth === 0 || graphHeight === 0) return 1; // Linear
-      const zoomX = (viewportWidth - padding * 2) / graphWidth;
-      const zoomY = (viewportHeight - padding * 2) / graphHeight;
-      return Math.max(0.1, Math.min(3.0, Math.min(zoomX, zoomY)));
-    },
-    []
-  );
-
-  // Handle engine stop - center selected node and auto-zoom to fit
+  // Handle engine stop - center selected node and set zoom
   const handleEngineStop = useCallback(() => {
     if (!graphRef.current) return;
     const centerNode = graphData.nodes.find(n => n.id === centerNodeId);
-    const bbox = graphRef.current.getGraphBbox();
     const animationMs = hasPerformedInitialCenter.current ? 400 : 0;
 
     if (centerNode?.x !== undefined && centerNode?.y !== undefined) {
       graphRef.current.centerAt(centerNode.x, centerNode.y, animationMs);
     }
 
-    const optimalZoom = calculateOptimalZoom(bbox, width, height, 15);
-    graphRef.current.zoom(optimalZoom, animationMs);
+    // On initial load, set zoom to 1.5x after 500ms
+    if (!hasPerformedInitialCenter.current) {
+      setTimeout(() => {
+        graphRef.current?.zoom(1.5, 400);
+      }, 500);
+    }
+
     hasPerformedInitialCenter.current = true;
-  }, [centerNodeId, graphData.nodes, width, height, calculateOptimalZoom]);
+  }, [centerNodeId, graphData.nodes]);
 
   // Re-center when center node changes (after initial render)
   useEffect(() => {
@@ -378,6 +274,15 @@ export const MiniGraph = memo(function MiniGraph({
     if (!centerNode?.x || !centerNode?.y) return;
     graphRef.current.centerAt(centerNode.x, centerNode.y, 400);
   }, [centerNodeId, graphData.nodes]);
+
+  // Configure d3 forces to keep nodes clustered toward center
+  useEffect(() => {
+    if (!graphRef.current) return;
+    // Strengthen the center force to pull nodes toward viewport center
+    graphRef.current.d3Force('center')?.strength?.(1);
+    // Reduce charge repulsion to keep nodes closer together
+    graphRef.current.d3Force('charge')?.strength?.(-30);
+  }, []);
 
   // Handle node click
   const handleNodeClick = useCallback(
@@ -394,68 +299,27 @@ export const MiniGraph = memo(function MiniGraph({
     (node: GraphNode, ctx: CanvasRenderingContext2D, globalScale: number) => {
       const x = node.x ?? 0;
       const y = node.y ?? 0;
-      const radius = node.isCenter ? SIZES.centerNodeRadius : SIZES.normalNodeRadius;
       const color = node.isCenter ? COLORS.centerNode : COLORS.normalNode;
 
-      // Draw node circle
+      // Draw node circle (same size for all)
       ctx.beginPath();
-      ctx.arc(x, y, radius, 0, 2 * Math.PI);
+      ctx.arc(x, y, SIZES.nodeRadius, 0, 2 * Math.PI);
       ctx.fillStyle = color;
       ctx.fill();
 
-      // Draw labels for ALL nodes with visual hierarchy
-      if (node.isCenter) {
-        // Center node: larger, bold, with pill background
-        const label = truncateLabel(node.title, 20);
-        const fontSize = SIZES.fontSizeCenter / globalScale;
-        
-        ctx.font = `bold ${fontSize}px sans-serif`;
-        ctx.textAlign = 'center';
-        
-        // Measure text for background
-        const textMetrics = ctx.measureText(label);
-        const textWidth = textMetrics.width;
-        const textHeight = fontSize;
-        
-        // Position label below node
-        const labelY = y + radius + 4;
-        
-        // Draw rounded background
-        drawLabelBackground(
-          ctx,
-          x,
-          labelY,
-          textWidth + SIZES.labelPaddingX * 2,
-          textHeight + SIZES.labelPaddingY * 2,
-          SIZES.labelCornerRadius,
-          labelBg
-        );
-        
-        // Draw text
-        ctx.fillStyle = textColor;
-        ctx.textBaseline = 'top';
-        ctx.fillText(label, x, labelY + SIZES.labelPaddingY);
-      } else {
-        // Other nodes: smaller, normal weight, subdued color, no background
-        const label = truncateLabel(node.title, 15);
-        const fontSize = SIZES.fontSizeNormal / globalScale;
-        
-        ctx.font = `${fontSize}px sans-serif`;
-        ctx.textAlign = 'center';
-        ctx.fillStyle = textColorSecondary;
-        
-        // Smart vertical positioning: place label above if node is in bottom half
-        // This prevents labels from getting cut off at the bottom edge
-        const isInBottomHalf = y > (node.fy ?? 0);
-        const labelY = isInBottomHalf 
-          ? y - radius - 2 // Above node
-          : y + radius + 2; // Below node
-        
-        ctx.textBaseline = isInBottomHalf ? 'bottom' : 'top';
-        ctx.fillText(label, x, labelY);
-      }
+      // Draw label below node (consistent positioning for all)
+      const label = truncateLabel(node.title, 15);
+      const fontSize = SIZES.fontSize / globalScale;
+
+      ctx.font = node.isCenter ? `bold ${fontSize}px sans-serif` : `${fontSize}px sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.fillStyle = node.isCenter ? textColor : textColorSecondary;
+
+      const labelY = y + SIZES.labelOffset;
+      ctx.fillText(label, x, labelY);
     },
-    [textColor, textColorSecondary, labelBg]
+    [textColor, textColorSecondary]
   );
 
   // Node tooltip (title only for simplicity)
@@ -504,9 +368,8 @@ export const MiniGraph = memo(function MiniGraph({
         nodePointerAreaPaint={(node: GraphNode, color: string, ctx: CanvasRenderingContext2D) => {
           const x = node.x ?? 0;
           const y = node.y ?? 0;
-          const radius = node.isCenter ? SIZES.centerNodeRadius : SIZES.normalNodeRadius;
           ctx.beginPath();
-          ctx.arc(x, y, radius + 2, 0, 2 * Math.PI);
+          ctx.arc(x, y, SIZES.nodeRadius + 2, 0, 2 * Math.PI);
           ctx.fillStyle = color;
           ctx.fill();
         }}
@@ -514,11 +377,7 @@ export const MiniGraph = memo(function MiniGraph({
         linkColor={() => linkColor}
         linkWidth={SIZES.linkWidth}
         linkDirectionalArrowLength={SIZES.arrowSize}
-        linkDirectionalArrowRelPos={(link: GraphLink) =>
-          calculateArrowPosition(link, (node) =>
-            node.isCenter ? SIZES.centerNodeRadius : SIZES.normalNodeRadius
-          )
-        }
+        linkDirectionalArrowRelPos={1}
         linkDirectionalArrowColor={() => linkColor}
         linkCurvature={(link: GraphLink) => link.isBidirectional ? 0.15 : 0}
         // Centering and zoom
