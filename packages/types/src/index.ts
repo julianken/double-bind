@@ -127,3 +127,7 @@ export type {
   PageFetcher,
   InfiniteScrollOptions,
 } from './pagination.js';
+
+// Streaming types
+export type { StreamChunk, StreamOptions, StreamResult } from './streaming.js';
+export { StreamState } from './streaming.js';
