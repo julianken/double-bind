@@ -50,3 +50,6 @@ export * from './battery';
 
 // Memory management utilities
 export * from './memory';
+
+// iOS sharing utilities
+export * from './ios';
