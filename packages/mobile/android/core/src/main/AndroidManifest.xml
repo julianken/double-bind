@@ -1,4 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Library module - no application element needed -->
+    <!--
+        Double-Bind Core Library
+        This module provides the CozoDB GraphDB implementation for Android.
+
+        No permissions required - database is stored in app-private storage.
+    -->
 </manifest>
