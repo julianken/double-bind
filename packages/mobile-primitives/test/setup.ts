@@ -37,97 +37,141 @@ export function simulateDimensionChange(width: number, height: number) {
 }
 
 // Mock React Native
-vi.mock('react-native', () => ({
-  StyleSheet: {
-    create: <T extends Record<string, unknown>>(styles: T) => styles,
-    hairlineWidth: 1,
-  },
-  View: 'View',
-  Text: 'Text',
-  TextInput: 'TextInput',
-  ScrollView: 'ScrollView',
-  FlatList: 'FlatList',
-  TouchableOpacity: 'TouchableOpacity',
-  Pressable: 'Pressable',
-  ActivityIndicator: 'ActivityIndicator',
-  RefreshControl: 'RefreshControl',
-  KeyboardAvoidingView: 'KeyboardAvoidingView',
-  InputAccessoryView: 'InputAccessoryView',
-  Modal: 'Modal',
-  Keyboard: {
-    dismiss: vi.fn(),
-    addListener: vi.fn(() => ({ remove: vi.fn() })),
-  },
-  Platform: {
-    OS: 'ios',
-    select: (obj: Record<string, unknown>) => obj.ios ?? obj.default,
-  },
-  Dimensions: {
-    get: vi.fn(() => mockDimensions),
-    addEventListener: vi.fn((event: string, handler: (typeof dimensionListeners)[0]) => {
-      if (event === 'change') {
-        dimensionListeners.push(handler);
-      }
-      return {
-        remove: () => {
-          const index = dimensionListeners.indexOf(handler);
-          if (index > -1) dimensionListeners.splice(index, 1);
-        },
-      };
-    }),
-  },
-}));
+vi.mock('react-native', () => {
+  // Mock component factory
+  const createMockComponent = (name: string) => {
+    const Component = (props: { children?: React.ReactNode }) => {
+      // Mock component that passes through children
+      return props.children;
+    };
+    Component.displayName = name;
+    return Component;
+  };
+
+  return {
+    StyleSheet: {
+      create: <T extends Record<string, unknown>>(styles: T) => styles,
+      hairlineWidth: 1,
+    },
+    View: createMockComponent('View'),
+    Text: createMockComponent('Text'),
+    TextInput: createMockComponent('TextInput'),
+    ScrollView: createMockComponent('ScrollView'),
+    FlatList: createMockComponent('FlatList'),
+    TouchableOpacity: createMockComponent('TouchableOpacity'),
+    Pressable: createMockComponent('Pressable'),
+    ActivityIndicator: createMockComponent('ActivityIndicator'),
+    RefreshControl: createMockComponent('RefreshControl'),
+    KeyboardAvoidingView: createMockComponent('KeyboardAvoidingView'),
+    InputAccessoryView: createMockComponent('InputAccessoryView'),
+    Modal: createMockComponent('Modal'),
+    Keyboard: {
+      dismiss: vi.fn(),
+      addListener: vi.fn(() => ({ remove: vi.fn() })),
+    },
+    Platform: {
+      OS: 'ios',
+      select: (obj: Record<string, unknown>) => obj.ios ?? obj.default,
+    },
+    Dimensions: {
+      get: vi.fn(() => mockDimensions),
+      addEventListener: vi.fn(
+        (
+          event: string,
+          handler: (event: {
+            window: { width: number; height: number };
+            screen: { width: number; height: number };
+          }) => void
+        ) => {
+          if (event === 'change') {
+            dimensionListeners.push(handler);
+          }
+          return {
+            remove: () => {
+              const index = dimensionListeners.indexOf(handler);
+              if (index > -1) dimensionListeners.splice(index, 1);
+            },
+          };
+        }
+      ),
+    },
+  };
+});
 
 // Mock react-native-gesture-handler
-vi.mock('react-native-gesture-handler', () => ({
-  Gesture: {
-    Tap: vi.fn(() => ({
-      numberOfTaps: vi.fn().mockReturnThis(),
-      maxDuration: vi.fn().mockReturnThis(),
-      onEnd: vi.fn().mockReturnThis(),
-      requireExternalGestureToFail: vi.fn().mockReturnThis(),
-    })),
-    LongPress: vi.fn(() => ({
-      minDuration: vi.fn().mockReturnThis(),
-      maxDistance: vi.fn().mockReturnThis(),
-      onEnd: vi.fn().mockReturnThis(),
-    })),
-    Pan: vi.fn(() => ({
-      activeOffsetX: vi.fn().mockReturnThis(),
-      onUpdate: vi.fn().mockReturnThis(),
-      onEnd: vi.fn().mockReturnThis(),
-    })),
-    Exclusive: vi.fn((...gestures) => gestures),
-  },
-  GestureDetector: 'GestureDetector',
-  Pressable: 'Pressable',
-}));
+vi.mock('react-native-gesture-handler', () => {
+  const createMockComponent = (name: string) => {
+    const Component = (props: { children?: React.ReactNode }) => props.children;
+    Component.displayName = name;
+    return Component;
+  };
+
+  return {
+    Gesture: {
+      Tap: vi.fn(() => ({
+        numberOfTaps: vi.fn().mockReturnThis(),
+        maxDuration: vi.fn().mockReturnThis(),
+        onEnd: vi.fn().mockReturnThis(),
+        requireExternalGestureToFail: vi.fn().mockReturnThis(),
+      })),
+      LongPress: vi.fn(() => ({
+        minDuration: vi.fn().mockReturnThis(),
+        maxDistance: vi.fn().mockReturnThis(),
+        onEnd: vi.fn().mockReturnThis(),
+      })),
+      Pan: vi.fn(() => ({
+        activeOffsetX: vi.fn().mockReturnThis(),
+        onUpdate: vi.fn().mockReturnThis(),
+        onEnd: vi.fn().mockReturnThis(),
+      })),
+      Exclusive: vi.fn((...gestures) => gestures),
+    },
+    GestureDetector: createMockComponent('GestureDetector'),
+    Pressable: createMockComponent('Pressable'),
+  };
+});
 
 // Mock react-native-reanimated
-vi.mock('react-native-reanimated', () => ({
-  default: {
-    View: 'Animated.View',
-    Text: 'Animated.Text',
-    ScrollView: 'Animated.ScrollView',
-  },
-  useSharedValue: vi.fn((initialValue) => ({ value: initialValue })),
-  useAnimatedStyle: vi.fn((updater) => updater()),
-  withSpring: vi.fn((value) => value),
-  withTiming: vi.fn((value) => value),
-  runOnJS: vi.fn((fn) => fn),
-}));
+vi.mock('react-native-reanimated', () => {
+  const createMockComponent = (name: string) => {
+    const Component = (props: { children?: React.ReactNode }) => props.children;
+    Component.displayName = name;
+    return Component;
+  };
+
+  return {
+    default: {
+      View: createMockComponent('Animated.View'),
+      Text: createMockComponent('Animated.Text'),
+      ScrollView: createMockComponent('Animated.ScrollView'),
+    },
+    useSharedValue: vi.fn((initialValue) => ({ value: initialValue })),
+    useAnimatedStyle: vi.fn((updater) => updater()),
+    withSpring: vi.fn((value) => value),
+    withTiming: vi.fn((value) => value),
+    runOnJS: vi.fn((fn) => fn),
+  };
+});
 
 // Mock react-native-safe-area-context
-vi.mock('react-native-safe-area-context', () => ({
-  SafeAreaView: 'SafeAreaView',
-  SafeAreaProvider: 'SafeAreaProvider',
-  useSafeAreaInsets: vi.fn(() => ({
-    top: 44,
-    right: 0,
-    bottom: 34,
-    left: 0,
-  })),
-}));
+vi.mock('react-native-safe-area-context', () => {
+  const createMockComponent = (name: string) => {
+    const Component = (props: { children?: React.ReactNode }) => props.children;
+    Component.displayName = name;
+    return Component;
+  };
+
+  return {
+    SafeAreaView: createMockComponent('SafeAreaView'),
+    SafeAreaProvider: createMockComponent('SafeAreaProvider'),
+    useSafeAreaInsets: vi.fn(() => ({
+      top: 44,
+      right: 0,
+      bottom: 34,
+      left: 0,
+    })),
+  };
+});
 
 // Mock @double-bind/core parseContent function
 vi.mock('@double-bind/core', () => ({
