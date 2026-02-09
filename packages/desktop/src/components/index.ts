@@ -33,7 +33,12 @@ export { BlockEditor } from '../editor/BlockEditor.js';
 export { PageList, PageListItem } from './PageList.js';
 export type { PageListProps, PageListItemProps } from './PageList.js';
 
-export { PageTitle, type PageTitleProps } from './PageTitle.js';
+export { PageTitle, type PageTitleProps, type DuplicatePageInfo } from './PageTitle.js';
+
+export {
+  DuplicateTitleModal,
+  type DuplicateTitleModalProps,
+} from './DuplicateTitleModal.js';
 
 export { NewPageButton, type NewPageButtonProps } from './NewPageButton.js';
 

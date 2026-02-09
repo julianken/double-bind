@@ -118,8 +118,18 @@ export class PageRepository {
    *
    * @param input - Page creation input (title, optional dailyNoteDate)
    * @returns The ID of the newly created page
+   * @throws DoubleBindError with DUPLICATE_PAGE_NAME if a page with the same title exists (case-insensitive)
    */
   async create(input: CreatePageInput): Promise<PageId> {
+    // Check for duplicate title (case-insensitive)
+    const existing = await this.getByTitleCaseInsensitive(input.title);
+    if (existing) {
+      throw new DoubleBindError(
+        `A page with the title "${existing.title}" already exists`,
+        ErrorCode.DUPLICATE_PAGE_NAME
+      );
+    }
+
     const pageId = ulid();
     const now = Date.now();
     const dailyNoteDate = input.dailyNoteDate ?? null;
@@ -150,6 +160,7 @@ export class PageRepository {
    * @param pageId - The page to update
    * @param input - Partial page data to update
    * @throws DoubleBindError if page not found
+   * @throws DoubleBindError with DUPLICATE_PAGE_NAME if title conflicts with another page (case-insensitive)
    */
   async update(
     pageId: PageId,
@@ -165,6 +176,17 @@ export class PageRepository {
     const newTitle = input.title ?? existing.title;
     const newDailyNoteDate =
       input.dailyNoteDate !== undefined ? input.dailyNoteDate : existing.dailyNoteDate;
+
+    // Check for duplicate title if title is being changed
+    if (input.title !== undefined && input.title.toLowerCase() !== existing.title.toLowerCase()) {
+      const duplicate = await this.getByTitleCaseInsensitive(input.title);
+      if (duplicate && duplicate.pageId !== pageId) {
+        throw new DoubleBindError(
+          `A page with the title "${duplicate.title}" already exists`,
+          ErrorCode.DUPLICATE_PAGE_NAME
+        );
+      }
+    }
 
     const script = `
 ?[page_id, title, created_at, updated_at, is_deleted, daily_note_date] <- [
@@ -225,6 +247,30 @@ export class PageRepository {
 ?[page_id, title, created_at, updated_at, is_deleted, daily_note_date] :=
     *pages{ page_id, title, created_at, updated_at, is_deleted, daily_note_date },
     title == $title,
+    is_deleted == false
+`.trim();
+
+    const result = await this.db.query(script, { title });
+
+    if (result.rows.length === 0) {
+      return null;
+    }
+
+    const row = result.rows[0] as PageRow;
+    return this.rowToPage(row);
+  }
+
+  /**
+   * Get a page by title (case-insensitive match).
+   *
+   * @param title - The page title to look up (case-insensitive)
+   * @returns The page if found, null otherwise
+   */
+  async getByTitleCaseInsensitive(title: string): Promise<Page | null> {
+    const script = `
+?[page_id, title, created_at, updated_at, is_deleted, daily_note_date] :=
+    *pages{ page_id, title, created_at, updated_at, is_deleted, daily_note_date },
+    lowercase(title) == lowercase($title),
     is_deleted == false
 `.trim();
 

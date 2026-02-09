@@ -7,6 +7,7 @@
  * - Saves on blur and on Enter key press
  * - Debounces saves to avoid excessive updates
  * - Down arrow focuses the first block (via callback)
+ * - Shows DuplicateTitleModal when title conflicts with existing page
  *
  * @example
  * ```tsx
@@ -24,11 +25,21 @@
  */
 
 import { useState, useRef, useCallback, useEffect } from 'react';
+import { DoubleBindError, ErrorCode } from '@double-bind/types';
+import { DuplicateTitleModal } from './DuplicateTitleModal.js';
 import styles from './PageTitle.module.css';
 
 // ============================================================================
 // Types
 // ============================================================================
+
+/**
+ * Information about a duplicate page (for modal display).
+ */
+export interface DuplicatePageInfo {
+  pageId: string;
+  title: string;
+}
 
 export interface PageTitleProps {
   /**
@@ -48,8 +59,9 @@ export interface PageTitleProps {
   dailyNoteDate: string | null;
 
   /**
-   * Callback to save the new title
-   * Should handle service call and query invalidation
+   * Callback to save the new title.
+   * Should handle service call and query invalidation.
+   * May throw DoubleBindError with DUPLICATE_PAGE_NAME code if title already exists.
    */
   onSave: (newTitle: string) => Promise<void>;
 
@@ -57,6 +69,12 @@ export interface PageTitleProps {
    * Callback when Down arrow is pressed - should focus the first block
    */
   onFocusFirstBlock?: () => void;
+
+  /**
+   * Callback to navigate to a page (used when user chooses to go to existing page).
+   * If not provided, the modal's "Go to existing page" button is not functional.
+   */
+  onNavigateToPage?: (pageId: string) => void;
 
   /**
    * Debounce delay in milliseconds (default: 500)
@@ -98,6 +116,7 @@ export function PageTitle({
   dailyNoteDate,
   onSave,
   onFocusFirstBlock,
+  onNavigateToPage,
   debounceMs = 500,
 }: PageTitleProps) {
   const isDailyNote = dailyNoteDate !== null;
@@ -107,10 +126,14 @@ export function PageTitle({
   const [localTitle, setLocalTitle] = useState(title);
   const [isSaving, setIsSaving] = useState(false);
 
+  // State for duplicate title modal
+  const [duplicateInfo, setDuplicateInfo] = useState<DuplicatePageInfo | null>(null);
+
   // Refs for debouncing and tracking pending saves
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingTitleRef = useRef<string | null>(null);
   const lastSavedTitleRef = useRef(title);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // Sync local state when title prop changes (e.g., from external update)
   useEffect(() => {
@@ -127,6 +150,23 @@ export function PageTitle({
         clearTimeout(debounceTimerRef.current);
       }
     };
+  }, []);
+
+  /**
+   * Parse duplicate page info from error message.
+   * Error message format: 'A page with the title "PageTitle" already exists'
+   */
+  const parseDuplicateInfo = useCallback((error: DoubleBindError): DuplicatePageInfo | null => {
+    const match = /A page with the title "([^"]+)" already exists/.exec(error.message);
+    if (match && match[1]) {
+      // We don't have the page ID from the error, so we need to handle this differently
+      // For now, we'll use a placeholder and let the parent component look it up
+      return {
+        pageId: '', // Will be filled by parent via onSave error
+        title: match[1],
+      };
+    }
+    return null;
   }, []);
 
   /**
@@ -149,7 +189,17 @@ export function PageTitle({
       try {
         await onSave(newTitle);
         lastSavedTitleRef.current = newTitle;
-      } catch {
+      } catch (error) {
+        // Check if this is a duplicate page error
+        if (
+          error instanceof DoubleBindError &&
+          error.code === ErrorCode.DUPLICATE_PAGE_NAME
+        ) {
+          const info = parseDuplicateInfo(error);
+          if (info) {
+            setDuplicateInfo(info);
+          }
+        }
         // Revert on error - the onSave callback should handle error reporting
         setLocalTitle(lastSavedTitleRef.current);
       } finally {
@@ -157,7 +207,7 @@ export function PageTitle({
         pendingTitleRef.current = null;
       }
     },
-    [onSave]
+    [onSave, parseDuplicateInfo]
   );
 
   /**
@@ -241,6 +291,29 @@ export function PageTitle({
     [flushPendingSave, onFocusFirstBlock]
   );
 
+  /**
+   * Handle navigation to existing page from duplicate modal
+   */
+  const handleNavigateToExisting = useCallback(() => {
+    if (duplicateInfo && onNavigateToPage) {
+      // Close modal first
+      setDuplicateInfo(null);
+      // Navigate - the parent needs to look up the page ID by title
+      // For now, we pass the title as a signal (parent can use pageService.getByTitle)
+      onNavigateToPage(duplicateInfo.title);
+    }
+  }, [duplicateInfo, onNavigateToPage]);
+
+  /**
+   * Handle closing the duplicate modal (choose different name)
+   */
+  const handleCloseDuplicateModal = useCallback(() => {
+    setDuplicateInfo(null);
+    // Focus the input so user can edit the title
+    inputRef.current?.focus();
+    inputRef.current?.select();
+  }, []);
+
   // Daily notes are read-only
   if (isDailyNote) {
     return (
@@ -257,18 +330,28 @@ export function PageTitle({
 
   // Regular pages are editable
   return (
-    <input
-      type="text"
-      className={styles['title--editable']}
-      data-testid="page-title"
-      data-page-id={pageId}
-      data-saving={isSaving}
-      value={localTitle}
-      onChange={handleChange}
-      onBlur={handleBlur}
-      onKeyDown={handleKeyDown}
-      placeholder="Untitled"
-      aria-label="Page title"
-    />
+    <>
+      <input
+        ref={inputRef}
+        type="text"
+        className={styles['title--editable']}
+        data-testid="page-title"
+        data-page-id={pageId}
+        data-saving={isSaving}
+        value={localTitle}
+        onChange={handleChange}
+        onBlur={handleBlur}
+        onKeyDown={handleKeyDown}
+        placeholder="Untitled"
+        aria-label="Page title"
+      />
+      <DuplicateTitleModal
+        isOpen={duplicateInfo !== null}
+        existingPageId={duplicateInfo?.pageId ?? ''}
+        existingPageTitle={duplicateInfo?.title ?? ''}
+        onNavigate={handleNavigateToExisting}
+        onClose={handleCloseDuplicateModal}
+      />
+    </>
   );
 }
