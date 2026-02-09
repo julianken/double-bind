@@ -1,4 +1,5 @@
 import { defineConfig } from 'vitest/config';
+import path from 'path';
 
 export default defineConfig({
   test: {
@@ -12,6 +13,13 @@ export default defineConfig({
       forks: {
         singleFork: true,
       },
+    },
+    setupFiles: ['./test/setup.ts'],
+  },
+  resolve: {
+    alias: {
+      // Map workspace package to source for testing
+      '@double-bind/mobile': path.resolve(__dirname, '../mobile/src'),
     },
   },
 });
