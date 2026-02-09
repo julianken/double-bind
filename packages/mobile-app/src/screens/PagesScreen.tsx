@@ -46,10 +46,30 @@ export function PagesScreen({ onPagePress, onCreatePage }: PagesScreenProps): Re
   }, [services]);
 
   useEffect(() => {
-    if (isReady && services) {
-      loadPages();
+    if (!isReady || !services) return;
+
+    let mounted = true;
+
+    async function load() {
+      try {
+        setError(null);
+        const allPages = await services.pageService.getAllPages();
+        if (mounted) setPages(allPages);
+      } catch (err) {
+        if (mounted) setError(err instanceof Error ? err.message : 'Failed to load pages');
+      } finally {
+        if (mounted) {
+          setIsLoading(false);
+          setIsRefreshing(false);
+        }
+      }
     }
-  }, [isReady, services, loadPages]);
+
+    load();
+    return () => {
+      mounted = false;
+    };
+  }, [isReady, services]);
 
   const handleRefresh = useCallback(() => {
     setIsRefreshing(true);
@@ -103,7 +123,12 @@ export function PagesScreen({ onPagePress, onCreatePage }: PagesScreenProps): Re
     const isDailyNote = item.dailyNoteDate !== null;
 
     return (
-      <TouchableOpacity style={styles.pageItem} onPress={() => onPagePress?.(item.pageId)}>
+      <TouchableOpacity
+        style={styles.pageItem}
+        onPress={() => onPagePress?.(item.pageId)}
+        accessibilityRole="button"
+        accessibilityLabel={`Open page ${item.title || 'Untitled'}${isDailyNote ? ', daily note' : ''}`}
+      >
         <View style={styles.pageInfo}>
           <Text style={styles.pageTitle} numberOfLines={1}>
             {item.title || 'Untitled'}
@@ -156,6 +181,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    minHeight: 44,
   },
   pageInfo: {
     flex: 1,
