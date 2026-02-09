@@ -51,6 +51,8 @@ vi.mock('react-native', () => ({
   ActivityIndicator: 'ActivityIndicator',
   RefreshControl: 'RefreshControl',
   KeyboardAvoidingView: 'KeyboardAvoidingView',
+  Modal: 'Modal',
+  TextInput: 'TextInput',
   Platform: {
     OS: 'ios',
     select: (obj: Record<string, unknown>) => obj.ios ?? obj.default,

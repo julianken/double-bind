@@ -10,7 +10,7 @@
 import { useEffect, useState, useCallback, type ReactElement } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl } from 'react-native';
 import type { Page } from '@double-bind/types';
-import { useDatabase } from '../providers/DatabaseProvider';
+import { useDatabase } from '../hooks/useDatabase';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { EmptyState } from '../components/EmptyState';
@@ -51,6 +51,8 @@ export function PagesScreen({ onPagePress, onCreatePage }: PagesScreenProps): Re
     let mounted = true;
 
     async function load() {
+      if (!services) return;
+
       try {
         setError(null);
         const allPages = await services.pageService.getAllPages();
