@@ -13,6 +13,7 @@ import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactContextBaseJavaModule
 import com.facebook.react.bridge.ReactMethod
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -39,7 +40,10 @@ class CozoModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaMo
     /**
      * The underlying CozoGraphDB instance.
      * Null until initialize() is called.
+     *
+     * @Volatile ensures visibility across threads when accessed from coroutines.
      */
+    @Volatile
     private var db: CozoGraphDB? = null
 
     /**
@@ -53,6 +57,47 @@ class CozoModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaMo
      */
     override fun getName(): String = "CozoModule"
 
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Helper Methods
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Execute an async database operation with proper error handling and cancellation support.
+     *
+     * This helper reduces duplication across ReactMethod implementations by providing:
+     * - Consistent promise resolution/rejection
+     * - Proper coroutine cancellation handling
+     * - Centralized error code management
+     *
+     * @param promise The React Native promise to resolve/reject
+     * @param errorCode Error code to use when operation fails
+     * @param requiresDb Whether the operation requires an initialized database
+     * @param operation The suspend function to execute
+     */
+    private fun executeAsync(
+        promise: Promise,
+        errorCode: String,
+        requiresDb: Boolean = true,
+        operation: suspend (CozoGraphDB?) -> Any?
+    ) {
+        scope.launch {
+            try {
+                val database = db
+                if (requiresDb && database == null) {
+                    promise.reject("NOT_INITIALIZED", "Database not initialized. Call initialize() first.")
+                    return@launch
+                }
+                val result = operation(database)
+                promise.resolve(result)
+            } catch (e: CancellationException) {
+                // Re-throw cancellation to allow proper coroutine cancellation
+                throw e
+            } catch (e: Exception) {
+                promise.reject(errorCode, e.message, e)
+            }
+        }
+    }
+
     /**
      * Initialize the database with the given path.
      * Uses SQLite storage engine (recommended for mobile).
@@ -62,17 +107,12 @@ class CozoModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaMo
      */
     @ReactMethod
     fun initialize(path: String, promise: Promise) {
-        scope.launch {
-            try {
-                if (db != null) {
-                    promise.reject("ALREADY_INITIALIZED", "Database already initialized. Call close() first.")
-                    return@launch
-                }
-                db = CozoGraphDB("sqlite", path)
-                promise.resolve(null)
-            } catch (e: Exception) {
-                promise.reject("INIT_ERROR", e.message, e)
+        executeAsync(promise, "INIT_ERROR", requiresDb = false) { _ ->
+            if (db != null) {
+                throw IllegalStateException("Database already initialized. Call close() first.")
             }
+            db = CozoGraphDB("sqlite", path)
+            null
         }
     }
 
@@ -84,14 +124,10 @@ class CozoModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaMo
      */
     @ReactMethod
     fun close(promise: Promise) {
-        scope.launch {
-            try {
-                db?.close()
-                db = null
-                promise.resolve(null)
-            } catch (e: Exception) {
-                promise.reject("CLOSE_ERROR", e.message, e)
-            }
+        executeAsync(promise, "CLOSE_ERROR", requiresDb = false) { _ ->
+            db?.close()
+            db = null
+            null
         }
     }
 
@@ -104,17 +140,8 @@ class CozoModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaMo
      */
     @ReactMethod
     fun run(script: String, params: String, promise: Promise) {
-        scope.launch {
-            try {
-                val database = db ?: run {
-                    promise.reject("NOT_INITIALIZED", "Database not initialized. Call initialize() first.")
-                    return@launch
-                }
-                val result = database.run(script, params)
-                promise.resolve(result)
-            } catch (e: Exception) {
-                promise.reject("RUN_ERROR", e.message, e)
-            }
+        executeAsync(promise, "RUN_ERROR") { database ->
+            database!!.run(script, params)
         }
     }
 
@@ -126,17 +153,8 @@ class CozoModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaMo
      */
     @ReactMethod
     fun exportRelations(relations: String, promise: Promise) {
-        scope.launch {
-            try {
-                val database = db ?: run {
-                    promise.reject("NOT_INITIALIZED", "Database not initialized. Call initialize() first.")
-                    return@launch
-                }
-                val result = database.exportRelations(relations)
-                promise.resolve(result)
-            } catch (e: Exception) {
-                promise.reject("EXPORT_ERROR", e.message, e)
-            }
+        executeAsync(promise, "EXPORT_ERROR") { database ->
+            database!!.exportRelations(relations)
         }
     }
 
@@ -151,17 +169,9 @@ class CozoModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaMo
      */
     @ReactMethod
     fun importRelations(data: String, promise: Promise) {
-        scope.launch {
-            try {
-                val database = db ?: run {
-                    promise.reject("NOT_INITIALIZED", "Database not initialized. Call initialize() first.")
-                    return@launch
-                }
-                database.importRelations(data)
-                promise.resolve(null)
-            } catch (e: Exception) {
-                promise.reject("IMPORT_ERROR", e.message, e)
-            }
+        executeAsync(promise, "IMPORT_ERROR") { database ->
+            database!!.importRelations(data)
+            null
         }
     }
 
@@ -174,17 +184,9 @@ class CozoModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaMo
      */
     @ReactMethod
     fun backup(path: String, promise: Promise) {
-        scope.launch {
-            try {
-                val database = db ?: run {
-                    promise.reject("NOT_INITIALIZED", "Database not initialized. Call initialize() first.")
-                    return@launch
-                }
-                database.backup(path)
-                promise.resolve(null)
-            } catch (e: Exception) {
-                promise.reject("BACKUP_ERROR", e.message, e)
-            }
+        executeAsync(promise, "BACKUP_ERROR") { database ->
+            database!!.backup(path)
+            null
         }
     }
 
@@ -197,17 +199,9 @@ class CozoModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaMo
      */
     @ReactMethod
     fun restore(path: String, promise: Promise) {
-        scope.launch {
-            try {
-                val database = db ?: run {
-                    promise.reject("NOT_INITIALIZED", "Database not initialized. Call initialize() first.")
-                    return@launch
-                }
-                database.restore(path)
-                promise.resolve(null)
-            } catch (e: Exception) {
-                promise.reject("RESTORE_ERROR", e.message, e)
-            }
+        executeAsync(promise, "RESTORE_ERROR") { database ->
+            database!!.restore(path)
+            null
         }
     }
 
@@ -223,17 +217,9 @@ class CozoModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaMo
      */
     @ReactMethod
     fun importRelationsFromBackup(path: String, relations: String, promise: Promise) {
-        scope.launch {
-            try {
-                val database = db ?: run {
-                    promise.reject("NOT_INITIALIZED", "Database not initialized. Call initialize() first.")
-                    return@launch
-                }
-                database.importRelationsFromBackup(path, relations)
-                promise.resolve(null)
-            } catch (e: Exception) {
-                promise.reject("IMPORT_BACKUP_ERROR", e.message, e)
-            }
+        executeAsync(promise, "IMPORT_BACKUP_ERROR") { database ->
+            database!!.importRelationsFromBackup(path, relations)
+            null
         }
     }
 
@@ -251,17 +237,9 @@ class CozoModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaMo
      */
     @ReactMethod
     fun suspend(promise: Promise) {
-        scope.launch {
-            try {
-                val database = db ?: run {
-                    promise.reject("NOT_INITIALIZED", "Database not initialized. Call initialize() first.")
-                    return@launch
-                }
-                database.suspend()
-                promise.resolve(null)
-            } catch (e: Exception) {
-                promise.reject("SUSPEND_ERROR", e.message, e)
-            }
+        executeAsync(promise, "SUSPEND_ERROR") { database ->
+            database!!.suspend()
+            null
         }
     }
 
@@ -275,17 +253,9 @@ class CozoModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaMo
      */
     @ReactMethod
     fun resume(promise: Promise) {
-        scope.launch {
-            try {
-                val database = db ?: run {
-                    promise.reject("NOT_INITIALIZED", "Database not initialized. Call initialize() first.")
-                    return@launch
-                }
-                database.resume()
-                promise.resolve(null)
-            } catch (e: Exception) {
-                promise.reject("RESUME_ERROR", e.message, e)
-            }
+        executeAsync(promise, "RESUME_ERROR") { database ->
+            database!!.resume()
+            null
         }
     }
 
@@ -299,17 +269,9 @@ class CozoModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaMo
      */
     @ReactMethod
     fun onLowMemory(promise: Promise) {
-        scope.launch {
-            try {
-                val database = db ?: run {
-                    promise.reject("NOT_INITIALIZED", "Database not initialized. Call initialize() first.")
-                    return@launch
-                }
-                database.onLowMemory()
-                promise.resolve(null)
-            } catch (e: Exception) {
-                promise.reject("LOW_MEMORY_ERROR", e.message, e)
-            }
+        executeAsync(promise, "LOW_MEMORY_ERROR") { database ->
+            database!!.onLowMemory()
+            null
         }
     }
 
