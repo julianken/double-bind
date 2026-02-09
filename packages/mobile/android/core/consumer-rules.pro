@@ -1,8 +1,10 @@
-# Consumer rules for double-bind core library
-# These rules are included when this library is consumed by another module
+# Consumer ProGuard rules for Double-Bind Android core module
+# These rules are applied to consumers of this library
 
-# Keep CozoDB JNI native methods
--keep class org.cozodb.CozoDB { *; }
+# Keep CozoDB JNI classes
+-keep class org.cozodb.** { *; }
 
-# Keep public API
--keep class com.doublebind.core.** { *; }
+# Keep public API classes
+-keep class com.doublebind.core.CozoModule { *; }
+-keep class com.doublebind.core.CozoPackage { *; }
+-keep class com.doublebind.core.CozoGraphDB { *; }
