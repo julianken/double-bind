@@ -1,0 +1,34 @@
+# Podfile for DoubleBindCore development and testing
+#
+# This Podfile is used for local development and running tests.
+# When integrating DoubleBindCore into an iOS app, the app's Podfile
+# should include the CozoSwiftBridge dependency.
+
+platform :ios, '15.0'
+
+# Disable CocoaPods analytics
+ENV['COCOAPODS_DISABLE_STATS'] = 'true'
+
+target 'DoubleBindCore' do
+  use_frameworks!
+
+  # CozoDB native database engine
+  # Provides SQLite-backed Datalog database with graph algorithms
+  # API: CozoDB class with run(), exportRelations(), importRelations(), backup(), restore()
+  pod 'CozoSwiftBridge', '~> 0.7.1'
+end
+
+target 'DoubleBindCoreTests' do
+  use_frameworks!
+
+  pod 'CozoSwiftBridge', '~> 0.7.1'
+end
+
+post_install do |installer|
+  installer.pods_project.targets.each do |target|
+    target.build_configurations.each do |config|
+      # Ensure minimum iOS deployment target
+      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.0'
+    end
+  end
+end
