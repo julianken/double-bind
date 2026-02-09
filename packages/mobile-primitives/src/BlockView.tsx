@@ -10,7 +10,8 @@
  */
 
 import * as React from 'react';
-import { View, Text, StyleSheet, type ViewStyle, type TextStyle } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
+import type { ViewStyle, TextStyle } from 'react-native';
 import { Pressable, Gesture, GestureDetector } from 'react-native-gesture-handler';
 import type { Block, BlockId } from '@double-bind/types';
 import { RichText } from './RichText';
@@ -142,8 +143,8 @@ export function BlockView({
   const containerStyle: ViewStyle[] = [
     styles.container,
     { marginLeft },
-    isSelected && styles.containerSelected,
-    isFocused && styles.containerFocused,
+    ...(isSelected ? [styles.containerSelected] : []),
+    ...(isFocused ? [styles.containerFocused] : []),
   ];
 
   // Default implementations for optional callbacks
