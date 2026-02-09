@@ -13,7 +13,12 @@
 import { memo, useCallback, useMemo, useState } from 'react';
 import { View, StyleSheet, Text } from 'react-native';
 import { GestureDetector, Gesture } from 'react-native-gesture-handler';
-import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  runOnJS,
+} from 'react-native-reanimated';
 import Svg, { G } from 'react-native-svg';
 import type { PageId } from '@double-bind/types';
 import type { MobileGraphProps } from './types';
@@ -21,6 +26,7 @@ import { GRAPH_CONSTANTS, GRAPH_COLORS } from './types';
 import { GraphNode } from './GraphNode';
 import { GraphEdge } from './GraphEdge';
 import { useForceLayout, useNodeMap } from './useForceLayout';
+import { useOptimizedGraph } from './useOptimizedGraph';
 
 /**
  * MobileGraph component for interactive graph visualization.
@@ -50,8 +56,9 @@ export const MobileGraph = memo(function MobileGraph({
   maxNodes = GRAPH_CONSTANTS.DEFAULT_MAX_NODES,
   testID,
 }: MobileGraphProps) {
-  // Track selected node
+  // Track selected node and interaction state
   const [selectedNodeId, setSelectedNodeId] = useState<PageId | null>(null);
+  const [isInteracting, setIsInteracting] = useState(false);
 
   // Limit nodes for performance
   const limitedNodes = useMemo(() => {
@@ -78,7 +85,6 @@ export const MobileGraph = memo(function MobileGraph({
 
   // Compute force layout
   const layoutNodes = useForceLayout(limitedNodes, visibleEdges, width, height, centerNodeId);
-  const nodeMap = useNodeMap(layoutNodes);
 
   // Gesture state - shared values for animations
   const scale = useSharedValue(1);
@@ -88,11 +94,31 @@ export const MobileGraph = memo(function MobileGraph({
   const savedTranslateX = useSharedValue(0);
   const savedTranslateY = useSharedValue(0);
 
+  // Apply rendering optimizations (LOD, culling, clustering)
+  const optimized = useOptimizedGraph({
+    nodes: layoutNodes,
+    edges: visibleEdges,
+    centerNodeId,
+    width,
+    height,
+    scale: scale.value,
+    translateX: translateX.value,
+    translateY: translateY.value,
+    isInteracting,
+    enableMetrics: true,
+  });
+
+  // Update node map with optimized visible nodes
+  const optimizedNodeMap = useNodeMap(optimized.visibleNodes);
+
   // Pan gesture for navigation
   const panGesture = useMemo(
     () =>
       Gesture.Pan()
         .averageTouches(true)
+        .onStart(() => {
+          runOnJS(setIsInteracting)(true);
+        })
         .onUpdate((e) => {
           translateX.value = savedTranslateX.value + e.translationX;
           translateY.value = savedTranslateY.value + e.translationY;
@@ -100,6 +126,7 @@ export const MobileGraph = memo(function MobileGraph({
         .onEnd(() => {
           savedTranslateX.value = translateX.value;
           savedTranslateY.value = translateY.value;
+          runOnJS(setIsInteracting)(false);
         }),
     []
   );
@@ -108,6 +135,9 @@ export const MobileGraph = memo(function MobileGraph({
   const pinchGesture = useMemo(
     () =>
       Gesture.Pinch()
+        .onStart(() => {
+          runOnJS(setIsInteracting)(true);
+        })
         .onUpdate((e) => {
           const newScale = savedScale.value * e.scale;
           // Clamp scale to min/max
@@ -118,6 +148,7 @@ export const MobileGraph = memo(function MobileGraph({
         })
         .onEnd(() => {
           savedScale.value = scale.value;
+          runOnJS(setIsInteracting)(false);
         }),
     []
   );
@@ -189,11 +220,11 @@ export const MobileGraph = memo(function MobileGraph({
       <GestureDetector gesture={composedGesture}>
         <Animated.View style={[styles.graphContainer, animatedStyle]}>
           <Svg width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
-            {/* Render edges first (below nodes) */}
+            {/* Render edges first (below nodes) - use optimized visible edges */}
             <G>
-              {visibleEdges.map((edge) => {
-                const source = nodeMap.get(edge.source);
-                const target = nodeMap.get(edge.target);
+              {optimized.visibleEdges.map((edge) => {
+                const source = optimizedNodeMap.get(edge.source);
+                const target = optimizedNodeMap.get(edge.target);
                 if (!source || !target) return null;
 
                 return (
@@ -203,14 +234,15 @@ export const MobileGraph = memo(function MobileGraph({
                     target={target}
                     isBidirectional={edge.isBidirectional}
                     scale={currentScale}
+                    showArrow={optimized.showEdgeArrows}
                   />
                 );
               })}
             </G>
 
-            {/* Render nodes on top */}
+            {/* Render nodes on top - use optimized visible nodes */}
             <G>
-              {layoutNodes.map((node) => (
+              {optimized.visibleNodes.map((node) => (
                 <GraphNode
                   key={node.id}
                   node={node}
@@ -218,6 +250,9 @@ export const MobileGraph = memo(function MobileGraph({
                   isSelected={node.id === selectedNodeId}
                   onPress={handleNodePress}
                   scale={currentScale}
+                  showLabel={
+                    optimized.showLabels && (optimized.showAllLabels || node.id === centerNodeId)
+                  }
                 />
               ))}
             </G>

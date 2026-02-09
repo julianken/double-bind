@@ -85,7 +85,7 @@ function calculateCurvedPath(
  * Features:
  * - Straight line for unidirectional edges
  * - Curved line for bidirectional edges (to show both directions)
- * - Arrow head indicating direction
+ * - Arrow head indicating direction (optional based on LOD)
  * - Scale-aware stroke width
  */
 export const GraphEdge = memo(function GraphEdge({
@@ -93,6 +93,7 @@ export const GraphEdge = memo(function GraphEdge({
   target,
   isBidirectional,
   scale,
+  showArrow = true,
 }: GraphEdgeProps) {
   const strokeWidth = GRAPH_CONSTANTS.EDGE_WIDTH / scale;
   const arrowSize = GRAPH_CONSTANTS.ARROW_SIZE / scale;
@@ -114,8 +115,8 @@ export const GraphEdge = memo(function GraphEdge({
     return (
       <G>
         <Path d={curvedPath} stroke={GRAPH_COLORS.edge} strokeWidth={strokeWidth} fill="none" />
-        {/* Arrow at the end of the curve */}
-        <Path d={arrowPath} fill={GRAPH_COLORS.edge} />
+        {/* Arrow at the end of the curve (conditionally rendered based on LOD) */}
+        {showArrow && <Path d={arrowPath} fill={GRAPH_COLORS.edge} />}
       </G>
     );
   }
@@ -138,7 +139,8 @@ export const GraphEdge = memo(function GraphEdge({
         stroke={GRAPH_COLORS.edge}
         strokeWidth={strokeWidth}
       />
-      <Path d={arrowPath} fill={GRAPH_COLORS.edge} />
+      {/* Arrow (conditionally rendered based on LOD) */}
+      {showArrow && <Path d={arrowPath} fill={GRAPH_COLORS.edge} />}
     </G>
   );
 });
