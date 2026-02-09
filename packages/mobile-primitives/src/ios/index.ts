@@ -5,6 +5,7 @@
  * - Keyboard avoidance and input accessory toolbar
  * - Share extensions and share sheet integration
  * - Home screen widgets
+ * - Spotlight search and Siri integration
  */
 
 // =============================================================================
@@ -96,3 +97,50 @@ export {
 
 // Widget Actions
 export { WidgetActions, MockWidgetNavigator, type WidgetNavigator } from './WidgetActions';
+
+// =============================================================================
+// SPOTLIGHT & SIRI
+// =============================================================================
+
+// Types
+export type {
+  SpotlightDomainIdentifier,
+  SpotlightItemIdentifier,
+  SpotlightItem,
+  SpotlightActivityType,
+  SpotlightActivity,
+  SpotlightIntent,
+  SpotlightIndexResult,
+  SpotlightBatchOptions,
+  SpotlightSearchContinuation,
+} from './SpotlightTypes';
+
+// Indexer
+export {
+  SpotlightIndexer,
+  MockSpotlightBridge,
+  DEFAULT_DOMAIN_IDENTIFIER,
+  DEFAULT_CONTENT_TYPE,
+} from './SpotlightIndexer';
+export type { SpotlightBridge } from './SpotlightIndexer';
+
+// Search hook
+export {
+  useSpotlightSearch,
+  useHasSpotlight,
+  MockSpotlightSearchBridge,
+} from './useSpotlightSearch';
+export type {
+  SpotlightSearchHandler,
+  SpotlightSearchBridge,
+  UseSpotlightSearchOptions,
+  UseSpotlightSearchResult,
+} from './useSpotlightSearch';
+
+// Siri activity
+export {
+  SiriActivityService,
+  MockSiriActivityBridge,
+  IntentHandlerRegistry,
+} from './SiriActivity';
+export type { SiriActivityBridge, IntentHandler } from './SiriActivity';
