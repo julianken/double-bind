@@ -12,6 +12,7 @@
  * - Direct share targets
  * - Home screen widgets (Recent Notes, Quick Capture, Daily Note)
  * - Widget configuration and appearance settings
+ * - App shortcuts (static, dynamic, and pinned)
  */
 
 // =============================================================================
@@ -163,3 +164,69 @@ export {
   AndroidWidgetConfigManager,
   type AndroidWidgetConfigStore,
 } from './WidgetConfiguration';
+
+// =============================================================================
+// SHORTCUT TYPES
+// =============================================================================
+
+export {
+  ShortcutType,
+  ShortcutAction,
+  type Shortcut,
+  type ShortcutIntent,
+  type ShortcutResult,
+  type ShortcutLaunchEvent,
+} from './ShortcutTypes';
+
+// =============================================================================
+// STATIC SHORTCUTS
+// =============================================================================
+
+export {
+  STATIC_SHORTCUT_IDS,
+  NEW_NOTE_SHORTCUT,
+  DAILY_NOTE_SHORTCUT,
+  SEARCH_SHORTCUT,
+  STATIC_SHORTCUTS,
+  shortcutToIntent,
+  getStaticShortcut,
+  isStaticShortcut,
+} from './StaticShortcuts';
+
+// =============================================================================
+// DYNAMIC SHORTCUTS
+// =============================================================================
+
+export {
+  MAX_DYNAMIC_SHORTCUTS,
+  DynamicShortcutManager,
+  createDynamicShortcut,
+  type RecentPage,
+} from './DynamicShortcuts';
+
+// =============================================================================
+// PINNED SHORTCUTS
+// =============================================================================
+
+export {
+  requestPinShortcut,
+  requestPinStaticShortcut,
+  isPinShortcutSupported,
+  MockPinnedShortcutBridge,
+  type PinShortcutOptions,
+  type PinShortcutCallback,
+  type PinnedShortcutBridge,
+} from './PinnedShortcuts';
+
+// =============================================================================
+// SHORTCUT BRIDGE
+// =============================================================================
+
+export {
+  useShortcutBridge,
+  MockShortcutBridge,
+  type ShortcutBridge,
+  type ShortcutLaunchHandler,
+  type UseShortcutBridgeOptions,
+  type UseShortcutBridgeResult,
+} from './ShortcutBridge';
