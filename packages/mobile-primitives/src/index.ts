@@ -13,7 +13,6 @@ export { BlockView, type BlockViewProps } from './BlockView';
 export { EditableBlockView, type EditableBlockViewProps } from './EditableBlockView';
 export { BlockList, type BlockListProps, type BlockListItem } from './BlockList';
 export { BlockReference, type BlockReferenceProps } from './BlockReference';
-export { EditableBlockView, type EditableBlockViewProps } from './EditableBlockView';
 
 // Rich Text Components
 export { WikiLink, type WikiLinkProps } from './WikiLink';
@@ -28,6 +27,10 @@ export {
   type UndoableOperation,
   type OperationType,
 } from './hooks/useBlockOperations';
+
+// UI Components
+export { FloatingActionButton, type FloatingActionButtonProps } from './FloatingActionButton';
+export { NewPageModal, type NewPageModalProps } from './NewPageModal';
 
 // Layout components and utilities
 export * from './layout';
