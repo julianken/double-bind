@@ -16,52 +16,9 @@ import { createServices } from '@double-bind/core';
 import { BlockList, type BlockListItem } from '@double-bind/mobile-primitives';
 import { useDatabase } from '../hooks/useDatabase';
 import type { PagesStackScreenProps } from '../navigation/types';
+import { buildBlockTree } from '../utils/blockTree';
 
 type Props = PagesStackScreenProps<'Page'>;
-
-/**
- * Build a flat list of blocks with hierarchy information for FlatList rendering.
- * This function traverses the block tree and creates a flattened structure
- * with depth information for proper indentation.
- *
- * @param blocks - All blocks for the page
- * @param parentId - Current parent ID to filter children (null = root blocks)
- * @param depth - Current nesting depth
- * @param collapsedBlocks - Set of collapsed block IDs
- * @returns Flattened array of blocks with depth and hierarchy metadata
- */
-function buildBlockTree(
-  blocks: Block[],
-  parentId: BlockId | null,
-  depth: number,
-  collapsedBlocks: Set<BlockId>
-): BlockListItem[] {
-  // Get direct children of the current parent
-  const children = blocks
-    .filter((block) => block.parentId === parentId && !block.isDeleted)
-    .sort((a, b) => a.order.localeCompare(b.order));
-
-  const result: BlockListItem[] = [];
-
-  for (const block of children) {
-    // Check if this block has children
-    const hasChildren = blocks.some((b) => b.parentId === block.blockId && !b.isDeleted);
-
-    // Add this block to the result
-    result.push({
-      block,
-      depth,
-      hasChildren,
-    });
-
-    // Recursively add children if not collapsed
-    if (hasChildren && !collapsedBlocks.has(block.blockId)) {
-      result.push(...buildBlockTree(blocks, block.blockId, depth + 1, collapsedBlocks));
-    }
-  }
-
-  return result;
-}
 
 export function PageScreen({ route, navigation }: Props): React.ReactElement {
   const { pageId } = route.params;
