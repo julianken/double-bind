@@ -10,9 +10,11 @@
  */
 
 import * as React from 'react';
-import { View, Text, StyleSheet, type ViewStyle, type TextStyle } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
+import type { ViewStyle, TextStyle } from 'react-native';
 import { Pressable, Gesture, GestureDetector } from 'react-native-gesture-handler';
 import type { Block, BlockId } from '@double-bind/types';
+import { RichText } from './RichText';
 
 // Minimum touch target size per iOS HIG (44pt)
 const MIN_TOUCH_TARGET = 44;
@@ -62,6 +64,16 @@ export interface BlockViewProps {
   onToggleCollapse?: (blockId: BlockId) => void;
 
   /**
+   * Callback when a wiki link is pressed
+   */
+  onWikiLinkPress?: (pageTitle: string) => void;
+
+  /**
+   * Function to check if a page exists by title
+   */
+  checkPageExists?: (pageTitle: string) => boolean | Promise<boolean>;
+
+  /**
    * Optional test ID for testing
    */
   testID?: string;
@@ -95,6 +107,8 @@ export function BlockView({
   onPress,
   onLongPress,
   onToggleCollapse,
+  onWikiLinkPress,
+  checkPageExists,
   testID,
 }: BlockViewProps): React.ReactElement {
   const handlePress = React.useCallback(() => {
@@ -129,16 +143,29 @@ export function BlockView({
   const containerStyle: ViewStyle[] = [
     styles.container,
     { marginLeft },
-    isSelected && styles.containerSelected,
-    isFocused && styles.containerFocused,
+    ...(isSelected ? [styles.containerSelected] : []),
+    ...(isFocused ? [styles.containerFocused] : []),
   ];
+
+  // Default implementations for optional callbacks
+  const handleWikiLinkPress = onWikiLinkPress ?? (() => {});
+  const handleCheckPageExists = checkPageExists ?? (() => false);
 
   // Render content based on block type
   const renderContent = () => {
     switch (block.contentType) {
       case 'heading':
-        return <Text style={styles.headingText}>{block.content}</Text>;
+        return (
+          <RichText
+            content={block.content}
+            checkPageExists={handleCheckPageExists}
+            onWikiLinkPress={handleWikiLinkPress}
+            textStyle={styles.headingText}
+            testID={testID ? `${testID}-richtext` : undefined}
+          />
+        );
       case 'code':
+        // Code blocks don't parse wiki links
         return (
           <View style={styles.codeContainer}>
             <Text style={styles.codeText}>{block.content}</Text>
@@ -148,10 +175,17 @@ export function BlockView({
         return (
           <View style={styles.todoContainer}>
             <View style={styles.todoCheckbox} />
-            <Text style={styles.contentText}>{block.content}</Text>
+            <RichText
+              content={block.content}
+              checkPageExists={handleCheckPageExists}
+              onWikiLinkPress={handleWikiLinkPress}
+              textStyle={styles.contentText}
+              testID={testID ? `${testID}-richtext` : undefined}
+            />
           </View>
         );
       case 'query':
+        // Query blocks don't parse wiki links in the query itself
         return (
           <View style={styles.queryContainer}>
             <Text style={styles.queryLabel}>Query</Text>
@@ -159,7 +193,15 @@ export function BlockView({
           </View>
         );
       default:
-        return <Text style={styles.contentText}>{block.content}</Text>;
+        return (
+          <RichText
+            content={block.content}
+            checkPageExists={handleCheckPageExists}
+            onWikiLinkPress={handleWikiLinkPress}
+            textStyle={styles.contentText}
+            testID={testID ? `${testID}-richtext` : undefined}
+          />
+        );
     }
   };
 
