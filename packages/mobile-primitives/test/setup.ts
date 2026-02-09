@@ -52,6 +52,7 @@ vi.mock('react-native', () => ({
   ActivityIndicator: 'ActivityIndicator',
   RefreshControl: 'RefreshControl',
   KeyboardAvoidingView: 'KeyboardAvoidingView',
+  InputAccessoryView: 'InputAccessoryView',
   Modal: 'Modal',
   Keyboard: {
     dismiss: vi.fn(),
