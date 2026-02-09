@@ -22,9 +22,32 @@ export interface MutationResult {
 }
 
 /**
+ * Configuration for database initialization.
+ * Platform implementations use this to create appropriate connections.
+ */
+export interface GraphDBConfig {
+  /**
+   * Storage engine to use.
+   * - 'rocksdb': High-performance LSM-tree storage (desktop)
+   * - 'sqlite': Universal embedded storage (mobile, backup format)
+   * - 'mem': In-memory, non-persistent (testing)
+   */
+  engine: 'rocksdb' | 'sqlite' | 'mem';
+
+  /**
+   * Path to the database file or directory.
+   * Ignored for 'mem' engine.
+   */
+  path: string;
+}
+
+/**
  * Database interface for graph operations.
- * Abstracts CozoDB to allow mocking in tests and potential
- * future alternative implementations.
+ * Abstracts CozoDB to allow mocking in tests and cross-platform
+ * implementations (desktop, iOS, Android).
+ *
+ * All implementations must be thread-safe. Query results should
+ * be considered immutable after return.
  */
 export interface GraphDB {
   /**
@@ -49,6 +72,9 @@ export interface GraphDB {
    * Import data into multiple relations at once.
    * Used for bulk imports and restoring from backup.
    *
+   * Note: Triggers are NOT executed for imported relations.
+   * Use parameterized queries if triggers must fire.
+   *
    * @param data - Map of relation names to row arrays
    */
   importRelations(data: Record<string, unknown[][]>): Promise<void>;
@@ -64,6 +90,7 @@ export interface GraphDB {
 
   /**
    * Create a backup of the database at the specified path.
+   * The backup format is SQLite regardless of the source engine.
    *
    * @param path - File path for the backup
    */
@@ -109,37 +136,50 @@ export interface GraphDB {
    * - Desktop: Not used (can be omitted from implementation)
    */
   onLowMemory?(): Promise<void>;
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Backup and Resource Management
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Restore the database from a backup file.
+   * The current database must be empty (no relations with data).
+   *
+   * The backup format is portable across storage engines:
+   * a RocksDB backup can be restored to SQLite and vice versa.
+   *
+   * @param path - File path to the backup
+   */
+  restore(path: string): Promise<void>;
+
+  /**
+   * Import specific relations from a backup file.
+   * Relations must already exist in the current database.
+   *
+   * Note: Triggers are NOT executed for imported relations.
+   *
+   * @param path - File path to the backup
+   * @param relations - Names of relations to import
+   */
+  importRelationsFromBackup(path: string, relations: string[]): Promise<void>;
+
+  /**
+   * Close the database and release native resources.
+   *
+   * IMPORTANT: On mobile platforms (iOS, Android), this method MUST
+   * be called when the database is no longer needed. Failure to call
+   * close() will leak native memory and file handles.
+   *
+   * On desktop (Node.js), this is optional but recommended.
+   *
+   * After calling close(), the GraphDB instance is unusable and
+   * all subsequent method calls will throw.
+   */
+  close(): Promise<void>;
 }
 
 /**
- * Provider interface for platform-agnostic database access.
- *
- * This interface abstracts database initialization and lifecycle management,
- * allowing different platforms (desktop, mobile, CLI) to provide their own
- * implementations while sharing the same service layer.
- *
- * Implementations:
- * - Desktop: TauriGraphDBProvider (uses Tauri IPC)
- * - Mobile: ExpoSQLiteProvider (uses expo-sqlite)
- * - CLI/TUI: NodeGraphDBProvider (uses cozo-node)
- *
- * @example
- * ```typescript
- * // Platform provides its implementation
- * const provider: GraphDBProvider = new TauriGraphDBProvider();
- *
- * // Core uses it to create services
- * const services = await createServicesFromProvider(provider);
- * ```
+ * Factory function type for creating GraphDB instances.
+ * Each platform provides its own implementation.
  */
-export interface GraphDBProvider {
-  /**
-   * Get the GraphDB instance.
-   *
-   * This may initialize the database on first call (lazy initialization).
-   * Subsequent calls should return the same instance.
-   *
-   * @returns The GraphDB instance for database operations
-   */
-  getDatabase(): Promise<GraphDB>;
-}
+export type GraphDBFactory = (config: GraphDBConfig) => Promise<GraphDB>;
