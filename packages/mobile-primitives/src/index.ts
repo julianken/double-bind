@@ -17,5 +17,9 @@ export { BlockReference, type BlockReferenceProps } from './BlockReference';
 export { WikiLink, type WikiLinkProps } from './WikiLink';
 export { RichText, type RichTextProps } from './RichText';
 
+// UI Components
+export { FloatingActionButton, type FloatingActionButtonProps } from './FloatingActionButton';
+export { NewPageModal, type NewPageModalProps } from './NewPageModal';
+
 // Layout components and utilities
 export * from './layout';
