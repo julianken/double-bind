@@ -24,10 +24,11 @@ describe('Core Service Integration - Mobile Bridge', () => {
   let ctx: TestContext;
   let mobileEnv: ReturnType<typeof createMockMobileEnvironment>;
 
-  beforeEach(() => {
-    ctx = createTestContext();
+  beforeEach(async () => {
+    ctx = await createTestContext();
     mobileEnv = createMockMobileEnvironment();
-    // Don't seed data - let each test create its own to avoid conflicts
+    // Seed test data for tests that need it
+    await seedTestData(ctx.db);
   });
 
   afterEach(() => {

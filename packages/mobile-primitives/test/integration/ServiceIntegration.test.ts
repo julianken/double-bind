@@ -23,8 +23,8 @@ describe('Service Integration - Cross-Service Scenarios', () => {
   let ctx: TestContext;
   let mobileEnv: ReturnType<typeof createMockMobileEnvironment>;
 
-  beforeEach(() => {
-    ctx = createTestContext();
+  beforeEach(async () => {
+    ctx = await createTestContext();
     mobileEnv = createMockMobileEnvironment();
     // Don't seed data - let each test create its own to avoid conflicts
   });

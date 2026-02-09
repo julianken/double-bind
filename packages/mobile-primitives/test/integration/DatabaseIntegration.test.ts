@@ -24,11 +24,11 @@ describe('Database Integration - Mobile Adapters', () => {
   let ctx: TestContext;
   let mobileEnv: ReturnType<typeof createMockMobileEnvironment>;
 
-  beforeEach(() => {
-    ctx = createTestContext();
+  beforeEach(async () => {
+    ctx = await createTestContext();
     mobileEnv = createMockMobileEnvironment();
     // Seed test data for tests that need it
-    seedTestData(ctx.db);
+    await seedTestData(ctx.db);
   });
 
   afterEach(() => {
