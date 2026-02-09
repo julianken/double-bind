@@ -62,3 +62,17 @@ export type {
   ConflictResolutionHook,
   ConflictStore,
 } from './conflict.js';
+
+// Sync and import/export types
+export type {
+  SyncEntity,
+  SyncData,
+  ImportConflictStrategy,
+  ImportMode,
+  ImportOptions,
+  ImportStats,
+  ImportConflict,
+  ImportResult,
+  SyncDataValidationError,
+  SyncDataValidation,
+} from './sync.js';
