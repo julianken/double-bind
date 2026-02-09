@@ -47,3 +47,6 @@ export * from './streaming';
 
 // Battery optimization utilities
 export * from './battery';
+
+// Memory management utilities
+export * from './memory';
