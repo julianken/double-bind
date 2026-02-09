@@ -1,91 +1,95 @@
 # @double-bind/mobile-app
 
-React Native mobile application for Double-Bind note-taking.
+React Native application shell for Double-Bind, providing database lifecycle management and React context providers.
 
-## Overview
+## Features
 
-This package provides React Native screens and components for the mobile app (iOS and Android). It uses the shared business logic from `@double-bind/core` and the native database implementation from `@double-bind/mobile`.
+- **DatabaseProvider** - React context provider for database access with automatic lifecycle management
+- **useAppLifecycle** - Hook for managing app lifecycle events (background/foreground transitions)
+- **useDatabase** - Hook for accessing database context
+- **useDatabaseInstance** - Hook for direct database access (throws if not ready)
 
-## Screens
+## Installation
 
-- **HomeScreen** - Landing screen with daily notes and recent pages
-- **PagesScreen** - Full list of all pages
-- **SearchScreen** - Search pages by title
-- **GraphScreen** - Placeholder for graph visualization (statistics view)
-- **SettingsScreen** - App settings and information
-- **PageDetailScreen** - Single page view with content and backlinks
-
-## Components
-
-- **LoadingSpinner** - Centered loading indicator with optional message
-- **ErrorMessage** - Error display with retry option
-- **EmptyState** - Empty list state with optional action button
-
-## Providers
-
-- **DatabaseProvider** - Database and services context provider
-- **useDatabase** - Hook to access database state and services
-- **useServices** - Convenience hook for services access
+```bash
+pnpm add @double-bind/mobile-app
+```
 
 ## Usage
 
+### DatabaseProvider
+
+Wrap your app with `DatabaseProvider` to enable database access:
+
 ```tsx
-import { DatabaseProvider, HomeScreen, PagesScreen, useDatabase } from '@double-bind/mobile-app';
+import { DatabaseProvider } from '@double-bind/mobile-app';
+import * as FileSystem from 'expo-file-system';
 
 function App() {
+  const dbPath = `${FileSystem.documentDirectory}double-bind.db`;
+
   return (
-    <DatabaseProvider>
-      <NavigationContainer>
-        <Tab.Navigator>
-          <Tab.Screen name="Home" component={HomeScreen} />
-          <Tab.Screen name="Pages" component={PagesScreen} />
-        </Tab.Navigator>
-      </NavigationContainer>
+    <DatabaseProvider
+      databasePath={dbPath}
+      onReady={(db) => initializeServices(db)}
+      onError={(err) => showErrorToast(err.message)}
+      onBackground={() => analytics.track('app_backgrounded')}
+      onForeground={() => analytics.track('app_foregrounded')}
+    >
+      <MainNavigator />
     </DatabaseProvider>
   );
 }
 ```
 
-## Known Issues
+### useDatabase Hook
 
-### React 18/19 Type Conflict
+Access database state in child components:
 
-This package has a known TypeScript type conflict in the monorepo context:
+```tsx
+import { useDatabase } from '@double-bind/mobile-app';
 
-- The desktop package (`@double-bind/desktop`) uses React 19
-- React Native 0.73 requires React 18 types
-- pnpm hoists `@types/react@19` which causes JSX component type errors
+function MyComponent() {
+  const { db, isReady, isInitializing, error, isSuspended } = useDatabase();
 
-**Workaround:** The `typecheck` script is disabled by default. Use `typecheck:strict` to run full type checking (will show errors but code is correct).
+  if (isInitializing) return <LoadingSpinner />;
+  if (error) return <ErrorMessage error={error} />;
 
-**Resolution:** When React Native 0.74+ adds React 19 support, this conflict will be resolved. Alternatively, the monorepo could use separate node_modules (shamefully-hoist=false) but this adds complexity.
+  return <DataView db={db} />;
+}
+```
 
-The code itself is correct and will work at runtime. This is purely a development-time type checking issue.
+### useAppLifecycle Hook
 
-## Development
+For custom lifecycle handling without the full provider:
+
+```tsx
+import { useAppLifecycle } from '@double-bind/mobile-app';
+
+function MyApp() {
+  const db = /* your database instance */;
+
+  useAppLifecycle(db, {
+    onBackground: () => analytics.track('suspending'),
+    onForeground: () => analytics.track('resuming'),
+    onError: (err, op) => reportError(`${op} failed:`, err),
+    debounceMs: 100, // Debounce rapid transitions
+  });
+
+  return <MainScreen />;
+}
+```
+
+## Lifecycle Behavior
+
+- **Background transition**: Calls `db.suspend()` to flush pending writes
+- **Foreground transition**: Calls `db.resume()` to validate database state
+- **Rapid transitions**: Debounced to prevent state corruption
+- **Error handling**: Errors are reported via callbacks without crashing
+
+## Testing
 
 ```bash
-# Install dependencies
-pnpm install
-
-# Run typecheck (skipped by default due to React version conflict)
-pnpm typecheck
-
-# Run strict typecheck (will show type errors)
-pnpm typecheck:strict
-
-# Lint
-pnpm lint
-```
-
-## Architecture
-
-```
-mobile-app/
-  src/
-    providers/      # Database and service providers
-    screens/        # All screen components
-    components/     # Reusable UI components
-    hooks/          # Custom hooks (future)
-    index.ts        # Package exports
+pnpm test        # Run unit tests
+pnpm typecheck   # Type checking
 ```
