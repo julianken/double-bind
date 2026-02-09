@@ -167,6 +167,8 @@ export function useSyncManager(
   const backgroundTimerRef = useRef<NodeJS.Timeout | null>(null);
   const previousNetworkStateRef = useRef<boolean>(true);
   const previousAppStateRef = useRef<AppStateStatus>(AppState.currentState);
+  const lastSyncAtRef = useRef<Date | null>(null);
+  const isMountedRef = useRef(true);
 
   /**
    * Perform the actual sync operation using database backup/restore.
@@ -193,8 +195,8 @@ export function useSyncManager(
 
       // Check if enough time has passed since last sync
       if (
-        state.lastSyncAt &&
-        Date.now() - state.lastSyncAt.getTime() < minSyncInterval
+        lastSyncAtRef.current &&
+        Date.now() - lastSyncAtRef.current.getTime() < minSyncInterval
       ) {
         return;
       }
@@ -206,6 +208,7 @@ export function useSyncManager(
 
       syncInProgressRef.current = true;
 
+      if (!isMountedRef.current) return;
       setState((prev) => ({
         ...prev,
         status: 'syncing',
@@ -217,6 +220,7 @@ export function useSyncManager(
         await performSync();
 
         // Check if cancelled during sync
+        if (!isMountedRef.current) return;
         setState((prev) => {
           if (prev.cancelled) {
             callbacksRef.current.onSyncCancelled?.();
@@ -227,17 +231,20 @@ export function useSyncManager(
             };
           }
 
+          const now = new Date();
+          lastSyncAtRef.current = now;
           callbacksRef.current.onSyncComplete?.();
           return {
             ...prev,
             status: 'success',
-            lastSyncAt: new Date(),
+            lastSyncAt: now,
             error: null,
           };
         });
       } catch (err) {
         const error = err instanceof Error ? err : new Error(String(err));
 
+        if (!isMountedRef.current) return;
         setState((prev) => {
           // Don't update to error state if cancelled
           if (prev.cancelled) {
@@ -260,7 +267,7 @@ export function useSyncManager(
         syncInProgressRef.current = false;
       }
     },
-    [db, minSyncInterval, performSync, state.lastSyncAt]
+    [db, minSyncInterval, performSync]
   );
 
   /**
@@ -315,6 +322,7 @@ export function useSyncManager(
     const unsubscribe = NetInfo.addEventListener((netState: NetInfoState) => {
       const isConnected = netState.isConnected ?? false;
 
+      if (!isMountedRef.current) return;
       setState((prev) => ({
         ...prev,
         isNetworkAvailable: isConnected,
@@ -329,14 +337,19 @@ export function useSyncManager(
     });
 
     // Initialize network state
-    NetInfo.fetch().then((netState) => {
-      const isConnected = netState.isConnected ?? false;
-      setState((prev) => ({
-        ...prev,
-        isNetworkAvailable: isConnected,
-      }));
-      previousNetworkStateRef.current = isConnected;
-    });
+    NetInfo.fetch()
+      .then((netState) => {
+        const isConnected = netState.isConnected ?? false;
+        if (!isMountedRef.current) return;
+        setState((prev) => ({
+          ...prev,
+          isNetworkAvailable: isConnected,
+        }));
+        previousNetworkStateRef.current = isConnected;
+      })
+      .catch((err) => {
+        console.error('Failed to fetch network state:', err);
+      });
 
     return () => {
       unsubscribe();
@@ -355,6 +368,7 @@ export function useSyncManager(
     const handleAppStateChange = (nextState: AppStateStatus) => {
       const isForeground = nextState === 'active';
 
+      if (!isMountedRef.current) return;
       setState((prev) => ({
         ...prev,
         isAppForeground: isForeground,
@@ -372,6 +386,7 @@ export function useSyncManager(
 
     // Initialize app state
     const currentState = AppState.currentState;
+    if (!isMountedRef.current) return;
     setState((prev) => ({
       ...prev,
       isAppForeground: currentState === 'active',
@@ -388,7 +403,10 @@ export function useSyncManager(
   // ─────────────────────────────────────────────────────────────────────────────
 
   useEffect(() => {
+    isMountedRef.current = true;
+
     return () => {
+      isMountedRef.current = false;
       if (backgroundTimerRef.current) {
         clearInterval(backgroundTimerRef.current);
       }
