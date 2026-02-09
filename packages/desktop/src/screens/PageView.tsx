@@ -252,6 +252,21 @@ export function PageView({ pageId }: PageViewProps) {
     [pageService, pageId]
   );
 
+  // Navigate to a page by title (used when duplicate title modal needs to navigate)
+  const handleNavigateToPageByTitle = useCallback(
+    async (targetTitle: string) => {
+      try {
+        const targetPage = await pageService.getByTitle(targetTitle);
+        if (targetPage) {
+          navigateToPage(`page/${targetPage.pageId}`);
+        }
+      } catch {
+        // Silently ignore - user will see the modal close without navigation
+      }
+    },
+    [pageService, navigateToPage]
+  );
+
   // Focus the first block (called when Down arrow is pressed in the title)
   const handleFocusFirstBlock = useCallback(() => {
     if (rootBlocks.length > 0) {
@@ -519,6 +534,7 @@ export function PageView({ pageId }: PageViewProps) {
           dailyNoteDate={page.dailyNoteDate}
           onSave={handleSaveTitle}
           onFocusFirstBlock={handleFocusFirstBlock}
+          onNavigateToPage={handleNavigateToPageByTitle}
         />
 
         {rootBlocks.length === 0 ? (

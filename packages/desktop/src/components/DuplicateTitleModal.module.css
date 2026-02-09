@@ -1,0 +1,126 @@
+/**
+ * DuplicateTitleModal Component Styles
+ *
+ * Modal for handling duplicate page title conflicts.
+ * Uses same patterns as CommandPalette for consistency.
+ */
+
+/* ============================================================================
+ * Backdrop
+ * ============================================================================ */
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: var(--z-modal, 300);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+[data-theme="dark"] .backdrop {
+  background-color: rgba(0, 0, 0, 0.7);
+}
+
+/* ============================================================================
+ * Container
+ * ============================================================================ */
+
+.container {
+  width: 100%;
+  max-width: 400px;
+  background-color: var(--bg-primary);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-xl);
+  border: 1px solid var(--border-default);
+  padding: var(--space-6);
+  margin: var(--space-4);
+}
+
+/* ============================================================================
+ * Title
+ * ============================================================================ */
+
+.title {
+  font-size: var(--text-lg);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+  margin: 0 0 var(--space-3);
+}
+
+/* ============================================================================
+ * Description
+ * ============================================================================ */
+
+.description {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  margin: 0 0 var(--space-5);
+  line-height: var(--leading-relaxed);
+}
+
+.description strong {
+  color: var(--text-primary);
+  font-weight: var(--font-medium);
+}
+
+/* ============================================================================
+ * Actions
+ * ============================================================================ */
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* ============================================================================
+ * Buttons
+ * ============================================================================ */
+
+.primaryButton,
+.secondaryButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2-5) var(--space-4);
+  min-height: 44px; /* WCAG 2.1 AA minimum touch target */
+  font-size: var(--text-sm);
+  font-family: inherit;
+  font-weight: var(--font-medium);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.primaryButton {
+  background-color: var(--accent-primary);
+  color: var(--accent-foreground);
+  border: none;
+}
+
+.primaryButton:hover {
+  background-color: var(--accent-hover);
+}
+
+.primaryButton:focus-visible {
+  outline: var(--ring-width) solid var(--ring-color);
+  outline-offset: 2px;
+}
+
+.secondaryButton {
+  background-color: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-default);
+}
+
+.secondaryButton:hover {
+  background-color: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.secondaryButton:focus-visible {
+  outline: var(--ring-width) solid var(--ring-color);
+  outline-offset: 2px;
+}

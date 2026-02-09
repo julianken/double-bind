@@ -32,12 +32,13 @@ describe('Error Types', () => {
 
     it('should have all expected error codes', () => {
       const allCodes = Object.values(ErrorCode);
-      expect(allCodes).toHaveLength(11);
+      expect(allCodes).toHaveLength(12);
       expect(allCodes).toContain('DB_CONNECTION_FAILED');
       expect(allCodes).toContain('PAGE_NOT_FOUND');
       expect(allCodes).toContain('SAVED_QUERY_NOT_FOUND');
       expect(allCodes).toContain('IMPORT_PARSE_ERROR');
       expect(allCodes).toContain('BLOCKED_OPERATION');
+      expect(allCodes).toContain('DUPLICATE_PAGE_NAME');
     });
   });
 
@@ -111,6 +112,7 @@ describe('Error Types', () => {
         ErrorCode.SAVED_QUERY_NOT_FOUND,
         ErrorCode.INVALID_CONTENT,
         ErrorCode.CIRCULAR_REFERENCE,
+        ErrorCode.DUPLICATE_PAGE_NAME,
       ];
 
       domainCodes.forEach((code) => {
