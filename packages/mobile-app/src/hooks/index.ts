@@ -16,3 +16,9 @@ export {
   type UseWikiLinkAutocompleteResult,
   type AutocompleteSelection,
 } from './useWikiLinkAutocomplete';
+export {
+  useSyncManager,
+  type UseSyncManagerOptions,
+  type UseSyncManagerResult,
+  type SyncStatus,
+} from './useSyncManager';
