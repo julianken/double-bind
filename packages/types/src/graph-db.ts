@@ -110,3 +110,36 @@ export interface GraphDB {
    */
   onLowMemory?(): Promise<void>;
 }
+
+/**
+ * Provider interface for platform-agnostic database access.
+ *
+ * This interface abstracts database initialization and lifecycle management,
+ * allowing different platforms (desktop, mobile, CLI) to provide their own
+ * implementations while sharing the same service layer.
+ *
+ * Implementations:
+ * - Desktop: TauriGraphDBProvider (uses Tauri IPC)
+ * - Mobile: ExpoSQLiteProvider (uses expo-sqlite)
+ * - CLI/TUI: NodeGraphDBProvider (uses cozo-node)
+ *
+ * @example
+ * ```typescript
+ * // Platform provides its implementation
+ * const provider: GraphDBProvider = new TauriGraphDBProvider();
+ *
+ * // Core uses it to create services
+ * const services = await createServicesFromProvider(provider);
+ * ```
+ */
+export interface GraphDBProvider {
+  /**
+   * Get the GraphDB instance.
+   *
+   * This may initialize the database on first call (lazy initialization).
+   * Subsequent calls should return the same instance.
+   *
+   * @returns The GraphDB instance for database operations
+   */
+  getDatabase(): Promise<GraphDB>;
+}
