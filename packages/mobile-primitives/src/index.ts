@@ -56,3 +56,6 @@ export * from './ios';
 
 // Android platform utilities
 export * from './android';
+
+// Performance benchmarking utilities
+export * from './benchmarks';
