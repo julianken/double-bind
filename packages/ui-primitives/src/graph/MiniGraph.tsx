@@ -38,6 +38,10 @@ const COLORS = {
   link: '#94a3b8', // Slate-400 (matches GraphView EDGE_COLOR)
   textLight: '#1e293b', // Slate-800 for light mode
   textDark: '#e2e8f0', // Slate-200 for dark mode
+  textLightSecondary: 'rgba(30, 41, 59, 0.75)', // Slate-800 at 75% opacity (WCAG AA compliant)
+  textDarkSecondary: 'rgba(226, 232, 240, 0.75)', // Slate-200 at 75% opacity (WCAG AA compliant)
+  labelBgLight: 'rgba(255, 255, 255, 0.9)', // White with slight transparency
+  labelBgDark: 'rgba(15, 23, 42, 0.9)', // Slate-900 with slight transparency
   background: 'transparent',
 } as const;
 
@@ -51,6 +55,71 @@ const COLORS = {
 function isDarkMode(): boolean {
   if (typeof document === 'undefined') return false;
   return document.documentElement.getAttribute('data-theme') === 'dark';
+}
+
+// ============================================================================
+// Helper Functions
+// ============================================================================
+
+/**
+ * Truncate a label to a maximum length, preferring word boundaries.
+ * @param text - The text to truncate
+ * @param maxLength - Maximum length in characters
+ * @returns Truncated text with ellipsis if needed
+ */
+function truncateLabel(text: string, maxLength: number): string {
+  if (text.length <= maxLength) return text;
+  
+  // Try to truncate at word boundary
+  const truncated = text.substring(0, maxLength);
+  const lastSpace = truncated.lastIndexOf(' ');
+  
+  if (lastSpace > maxLength * 0.6) {
+    // If we found a space in the latter 40% of the string, use it
+    return truncated.substring(0, lastSpace) + '...';
+  }
+  
+  // Otherwise just hard truncate
+  return truncated + '...';
+}
+
+/**
+ * Draw a rounded rectangle background for a label.
+ * @param ctx - Canvas rendering context
+ * @param x - Center x position
+ * @param y - Top y position
+ * @param width - Width of the background
+ * @param height - Height of the background
+ * @param radius - Corner radius
+ * @param fillStyle - Fill color
+ */
+function drawLabelBackground(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  radius: number,
+  fillStyle: string
+): void {
+  const left = x - width / 2;
+  const right = x + width / 2;
+  const top = y;
+  const bottom = y + height;
+  
+  ctx.fillStyle = fillStyle;
+  ctx.beginPath();
+  ctx.moveTo(left + radius, top);
+  ctx.lineTo(right - radius, top);
+  ctx.arcTo(right, top, right, top + radius, radius);
+  ctx.lineTo(right, bottom - radius);
+  ctx.arcTo(right, bottom, right - radius, bottom, radius);
+  ctx.lineTo(left + radius, bottom);
+  ctx.arcTo(left, bottom, left, bottom - radius, radius);
+  ctx.lineTo(left, top + radius);
+  ctx.arcTo(left, top, left + radius, top, radius);
+  ctx.closePath();
+  ctx.fill();
 }
 
 /**
@@ -81,6 +150,8 @@ function useThemeColors() {
 
   return {
     textColor: isDark ? COLORS.textDark : COLORS.textLight,
+    textColorSecondary: isDark ? COLORS.textDarkSecondary : COLORS.textLightSecondary,
+    labelBg: isDark ? COLORS.labelBgDark : COLORS.labelBgLight,
     linkColor: COLORS.link,
     themeKey: isDark ? 'dark' : 'light',
   };
@@ -150,7 +221,11 @@ const SIZES = {
   centerNodeRadius: 8,
   normalNodeRadius: 5,
   linkWidth: 1,
-  fontSize: 10,
+  fontSizeCenter: 12, // Larger font for center node
+  fontSizeNormal: 9, // Smaller font for other nodes
+  labelPaddingX: 6, // Horizontal padding for center node label background
+  labelPaddingY: 3, // Vertical padding for center node label background
+  labelCornerRadius: 3, // Corner radius for center node label background
   arrowSize: 4, // Arrow head size for mini graph (smaller than main graph)
 } as const;
 
@@ -246,7 +321,7 @@ export const MiniGraph = memo(function MiniGraph({
 }: MiniGraphProps) {
   const graphRef = useRef<ForceGraphMethods<GraphNode, GraphLink> | undefined>(undefined);
   const hasPerformedInitialCenter = useRef(false);
-  const { textColor, linkColor, themeKey } = useThemeColors();
+  const { textColor, textColorSecondary, labelBg, linkColor, themeKey } = useThemeColors();
 
   // Transform nodes to include isCenter flag
   const graphData = useMemo(() => {
@@ -328,20 +403,59 @@ export const MiniGraph = memo(function MiniGraph({
       ctx.fillStyle = color;
       ctx.fill();
 
-      // Only draw label for center node to keep compact view clean
-      // Other node names show on hover via tooltip
+      // Draw labels for ALL nodes with visual hierarchy
       if (node.isCenter) {
-        const label = node.title.length > 12 ? node.title.substring(0, 12) + '...' : node.title;
-        const fontSize = SIZES.fontSize / globalScale;
-
+        // Center node: larger, bold, with pill background
+        const label = truncateLabel(node.title, 20);
+        const fontSize = SIZES.fontSizeCenter / globalScale;
+        
+        ctx.font = `bold ${fontSize}px sans-serif`;
+        ctx.textAlign = 'center';
+        
+        // Measure text for background
+        const textMetrics = ctx.measureText(label);
+        const textWidth = textMetrics.width;
+        const textHeight = fontSize;
+        
+        // Position label below node
+        const labelY = y + radius + 4;
+        
+        // Draw rounded background
+        drawLabelBackground(
+          ctx,
+          x,
+          labelY,
+          textWidth + SIZES.labelPaddingX * 2,
+          textHeight + SIZES.labelPaddingY * 2,
+          SIZES.labelCornerRadius,
+          labelBg
+        );
+        
+        // Draw text
+        ctx.fillStyle = textColor;
+        ctx.textBaseline = 'top';
+        ctx.fillText(label, x, labelY + SIZES.labelPaddingY);
+      } else {
+        // Other nodes: smaller, normal weight, subdued color, no background
+        const label = truncateLabel(node.title, 15);
+        const fontSize = SIZES.fontSizeNormal / globalScale;
+        
         ctx.font = `${fontSize}px sans-serif`;
         ctx.textAlign = 'center';
-        ctx.textBaseline = 'top';
-        ctx.fillStyle = textColor; // Theme-aware text color
-        ctx.fillText(label, x, y + radius + 2);
+        ctx.fillStyle = textColorSecondary;
+        
+        // Smart vertical positioning: place label above if node is in bottom half
+        // This prevents labels from getting cut off at the bottom edge
+        const isInBottomHalf = y > (node.fy ?? 0);
+        const labelY = isInBottomHalf 
+          ? y - radius - 2 // Above node
+          : y + radius + 2; // Below node
+        
+        ctx.textBaseline = isInBottomHalf ? 'bottom' : 'top';
+        ctx.fillText(label, x, labelY);
       }
     },
-    [textColor]
+    [textColor, textColorSecondary, labelBg]
   );
 
   // Node tooltip (title only for simplicity)
