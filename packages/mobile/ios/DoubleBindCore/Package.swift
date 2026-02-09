@@ -23,12 +23,12 @@ let package = Package(
         .target(
             name: "DoubleBindCore",
             dependencies: [],
-            path: "Sources"
+            path: "Sources/DoubleBindCore"
         ),
         .testTarget(
             name: "DoubleBindCoreTests",
             dependencies: ["DoubleBindCore"],
-            path: "Tests"
+            path: "Tests/DoubleBindCoreTests"
         ),
     ]
 )
