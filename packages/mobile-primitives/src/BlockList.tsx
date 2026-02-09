@@ -24,9 +24,6 @@ import {
 import type { Block, BlockId } from '@double-bind/types';
 import { BlockView } from './BlockView';
 
-// Minimum touch target and estimated item height
-const ESTIMATED_ITEM_HEIGHT = 44;
-
 export interface BlockListItem {
   /**
    * The block data
@@ -115,7 +112,7 @@ export interface BlockListProps {
  * Virtualized block list component for efficient rendering of many blocks.
  *
  * Uses FlatList for virtualization with optimizations:
- * - getItemLayout for known heights
+ * - Dynamic item measurement (items have variable height due to text wrapping)
  * - Memoized renderItem callback
  * - Proper key extraction
  *
@@ -165,16 +162,6 @@ export function BlockList({
     [selectedBlockId, focusedBlockId, onBlockPress, onBlockLongPress, onBlockToggleCollapse, testID]
   );
 
-  // Optimized layout calculation for fixed-height items
-  const getItemLayout = React.useCallback(
-    (_data: ArrayLike<BlockListItem> | null | undefined, index: number) => ({
-      length: ESTIMATED_ITEM_HEIGHT,
-      offset: ESTIMATED_ITEM_HEIGHT * index,
-      index,
-    }),
-    []
-  );
-
   // Empty state component
   const ListEmptyComponent = React.useMemo(() => {
     if (loading) {
@@ -219,7 +206,6 @@ export function BlockList({
       data={blocks}
       keyExtractor={keyExtractor}
       renderItem={renderItem}
-      getItemLayout={getItemLayout}
       ListEmptyComponent={ListEmptyComponent}
       ListHeaderComponent={ListHeaderComponent}
       ListFooterComponent={ListFooterComponent}
