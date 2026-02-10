@@ -291,7 +291,14 @@ async function globalSetup(_config: FullConfig): Promise<void> {
       }
     } catch (error) {
       console.error(`IPC error for ${cmd}:`, error);
-      res.status(500).json({ error: String(error) });
+      // Handle both JavaScript Errors and CozoDB error objects
+      let errorMessage: string;
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else {
+        errorMessage = extractCozoError(error);
+      }
+      res.status(500).json({ error: errorMessage });
     }
   });
 

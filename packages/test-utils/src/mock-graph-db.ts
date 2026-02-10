@@ -151,8 +151,8 @@ export class MockGraphDB implements GraphDB {
   /**
    * Execute a mutation operation.
    *
-   * Records the mutation in history. Does NOT actually modify seeded data.
-   * Use `seed()` to set up data, and `mutations` to verify mutation calls.
+   * Handles basic :put operations by extracting column names and values from
+   * the mutation script and storing them in the in-memory relations.
    *
    * @param script - Datalog mutation script
    * @param params - Optional named parameters
@@ -160,7 +160,121 @@ export class MockGraphDB implements GraphDB {
    */
   async mutate(script: string, params: Record<string, unknown> = {}): Promise<MutationResult> {
     this._mutations.push({ script, params });
+
+    // Split script by transaction blocks or find individual statements
+    // Each block or statement may have ?[...] <- [[...]] and :put
+    const statements = this.extractStatements(script);
+
+    for (const statement of statements) {
+      // Extract :put operation - format: :put relation_name { col1, col2, ... }
+      const putMatch = statement.match(/:put\s+(\w+)\s*\{\s*([^}]+)\s*\}/);
+      if (!putMatch) continue;
+
+      const relationName = putMatch[1]!;
+      const columns = putMatch[2]!
+        .split(',')
+        .map((c) => c.trim())
+        .filter((c) => c.length > 0);
+
+      // Extract the data row from ?[...] <- [[...]] pattern in this statement
+      const dataMatch = statement.match(/\?\s*\[[^\]]+\]\s*<-\s*\[\s*\[([\s\S]*?)\]\s*\]/);
+      if (!dataMatch) continue;
+
+      // Parse the values - format: $param1, $param2, ...
+      const valueExpressions = dataMatch[1]!
+        .split(',')
+        .map((v) => v.trim())
+        .filter((v) => v.length > 0);
+
+      // Resolve values from parameters
+      const row: unknown[] = [];
+      for (const expr of valueExpressions) {
+        if (expr.startsWith('$')) {
+          const paramName = expr.slice(1);
+          row.push(params[paramName] ?? null);
+        } else if (expr === 'false' || expr === 'true') {
+          row.push(expr === 'true');
+        } else if (expr === 'null') {
+          row.push(null);
+        } else if (!isNaN(Number(expr))) {
+          row.push(Number(expr));
+        } else {
+          // Try to parse as string (remove quotes if present)
+          const strMatch = expr.match(/^["'](.*)["']$/);
+          row.push(strMatch ? strMatch[1] : expr);
+        }
+      }
+
+      // Get or create the relation
+      const existingRows = this._relations.get(relationName) ?? [];
+
+      // For :put operations, we need to handle upsert logic
+      // Check if this is an update (first column matches existing row)
+      if (row.length > 0 && existingRows.length > 0) {
+        const primaryKey = row[0];
+        const existingIndex = existingRows.findIndex((r) => r[0] === primaryKey);
+        if (existingIndex !== -1) {
+          // Update existing row
+          existingRows[existingIndex] = row;
+          this._relations.set(relationName, existingRows);
+        } else {
+          // Insert new row
+          this._relations.set(relationName, [...existingRows, row]);
+        }
+      } else {
+        // Insert new row
+        this._relations.set(relationName, [...existingRows, row]);
+      }
+
+      // Store headers for this relation
+      if (!this._headers.has(relationName)) {
+        this._headers.set(relationName, columns);
+      }
+    }
+
     return { headers: [], rows: [] };
+  }
+
+  /**
+   * Extract individual statements from a mutation script.
+   * Handles transaction blocks { } and standalone statements.
+   */
+  private extractStatements(script: string): string[] {
+    const statements: string[] = [];
+    let depth = 0;
+    let currentStatement = '';
+
+    for (let i = 0; i < script.length; i++) {
+      const char = script[i]!;
+
+      if (char === '{') {
+        depth++;
+        if (depth === 1) {
+          // Start of a new transaction block
+          currentStatement = '';
+          continue;
+        }
+      } else if (char === '}') {
+        depth--;
+        if (depth === 0) {
+          // End of transaction block
+          if (currentStatement.trim()) {
+            statements.push(currentStatement.trim());
+          }
+          currentStatement = '';
+          continue;
+        }
+      }
+
+      currentStatement += char;
+    }
+
+    // Handle scripts without transaction blocks
+    if (statements.length === 0 && currentStatement.trim()) {
+      statements.push(currentStatement.trim());
+    }
+
+    return statements;
   }
 
   /**

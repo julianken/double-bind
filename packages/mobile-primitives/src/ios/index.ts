@@ -1,0 +1,146 @@
+/**
+ * iOS platform utilities.
+ *
+ * Provides iOS-specific functionality including:
+ * - Keyboard avoidance and input accessory toolbar
+ * - Share extensions and share sheet integration
+ * - Home screen widgets
+ * - Spotlight search and Siri integration
+ */
+
+// =============================================================================
+// KEYBOARD HANDLING
+// =============================================================================
+
+export { KeyboardAvoidingView } from './KeyboardAvoidingView';
+export { InputAccessoryView } from './InputAccessoryView';
+export { useKeyboard } from './useKeyboard';
+export type {
+  KeyboardState,
+  KeyboardEvent,
+  HardwareKeyboardState,
+  UseKeyboardOptions,
+  UseKeyboardResult,
+  AccessoryButton,
+  InputAccessoryViewProps,
+  KeyboardBehavior,
+  KeyboardAvoidingViewProps,
+} from './types';
+
+// =============================================================================
+// SHARE EXTENSIONS
+// =============================================================================
+
+export { ShareContentType } from './types';
+export type {
+  ShareOptions,
+  ShareResult,
+  SharedContent,
+  ParseOptions,
+  ValidationResult,
+} from './types';
+
+export {
+  parseSharedContent,
+  validateShareContent,
+  extractWikiLinks,
+  convertToMarkdown,
+} from './ShareExtension';
+
+// Share Sheet hook
+export { useShareSheet, setShareAPI, type UseShareSheetResult } from './useShareSheet';
+
+// Share Receiver component and hook
+export {
+  ShareReceiver,
+  useShareProcessor,
+  type ShareReceiverProps,
+  type NoteService,
+  type ProcessingState,
+  type ProcessingResult,
+} from './ShareReceiver';
+
+// =============================================================================
+// WIDGETS
+// =============================================================================
+
+// Types
+export {
+  WidgetKind,
+  WidgetSize,
+  type WidgetConfiguration,
+  type WidgetOptions,
+  type RecentNotesData,
+  type QuickCaptureData,
+  type DailyNoteData,
+  type WidgetData,
+  type WidgetUpdatePayload,
+  type WidgetTapAction,
+} from './WidgetTypes';
+
+// Data Provider
+export {
+  WidgetDataProvider,
+  InMemoryWidgetConfigStore,
+  type WidgetConfigStore,
+} from './WidgetDataProvider';
+
+// Widget Bridge Hook
+export {
+  useWidgetBridge,
+  MockWidgetBridge,
+  type WidgetBridge,
+  type WidgetTapHandler,
+  type UseWidgetBridgeOptions,
+  type UseWidgetBridgeResult,
+} from './useWidgetBridge';
+
+// Widget Actions
+export { WidgetActions, MockWidgetNavigator, type WidgetNavigator } from './WidgetActions';
+
+// =============================================================================
+// SPOTLIGHT & SIRI
+// =============================================================================
+
+// Types
+export type {
+  SpotlightDomainIdentifier,
+  SpotlightItemIdentifier,
+  SpotlightItem,
+  SpotlightActivityType,
+  SpotlightActivity,
+  SpotlightIntent,
+  SpotlightIndexResult,
+  SpotlightBatchOptions,
+  SpotlightSearchContinuation,
+} from './SpotlightTypes';
+
+// Indexer
+export {
+  SpotlightIndexer,
+  MockSpotlightBridge,
+  DEFAULT_DOMAIN_IDENTIFIER,
+  DEFAULT_CONTENT_TYPE,
+} from './SpotlightIndexer';
+export type { SpotlightBridge } from './SpotlightIndexer';
+
+// Search hook
+export {
+  useSpotlightSearch,
+  useHasSpotlight,
+  MockSpotlightSearchBridge,
+} from './useSpotlightSearch';
+export type {
+  SpotlightSearchHandler,
+  SpotlightSearchBridge,
+  UseSpotlightSearchOptions,
+  UseSpotlightSearchResult,
+} from './useSpotlightSearch';
+
+// Siri activity
+export {
+  SiriActivityService,
+  MockSiriActivityBridge,
+  IntentHandlerRegistry,
+} from './SiriActivity';
+export type { SiriActivityBridge, IntentHandler } from './SiriActivity';

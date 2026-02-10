@@ -62,7 +62,7 @@ export async function executeMutation(
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(`Mutation failed: ${error.error}`);
+    throw new Error(`Mutation failed: ${JSON.stringify(error, null, 2)}`);
   }
 
   return response.json();
