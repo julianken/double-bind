@@ -5,12 +5,15 @@
  * - Full list of all pages sorted by last updated
  * - Pull to refresh
  * - Navigation to individual pages
+ * - FAB for creating new pages
  */
 
-import { useEffect, useState, useCallback, type ReactElement } from 'react';
+import { useEffect, useState, useCallback, useRef, type ReactElement } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl } from 'react-native';
 import type { Page } from '@double-bind/types';
-import { useDatabase } from '../providers/DatabaseProvider';
+import { FloatingActionButton, NewPageModal } from '@double-bind/mobile-primitives';
+import { useDatabase } from '../hooks/useDatabase';
+import { useCreatePage } from '../hooks/useCreatePage';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { EmptyState } from '../components/EmptyState';
@@ -18,63 +21,92 @@ import { EmptyState } from '../components/EmptyState';
 export interface PagesScreenProps {
   /** Navigation handler for page selection */
   onPagePress?: (pageId: string) => void;
-  /** Handler to create a new page */
-  onCreatePage?: () => void;
 }
 
-export function PagesScreen({ onPagePress, onCreatePage }: PagesScreenProps): ReactElement {
+export function PagesScreen({ onPagePress }: PagesScreenProps): ReactElement {
   const { services, isLoading: dbLoading, error: dbError, isReady } = useDatabase();
+  const { createPage, isCreating } = useCreatePage();
+
+  const [showNewPageModal, setShowNewPageModal] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
 
   const [pages, setPages] = useState<Page[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
+  // Track mounted state to prevent state updates after unmount
+  const mountedRef = useRef(true);
+
+  // Single source of truth for page loading logic
   const loadPages = useCallback(async () => {
     if (!services) return;
 
     try {
       setError(null);
       const allPages = await services.pageService.getAllPages();
-      setPages(allPages);
+      if (mountedRef.current) {
+        setPages(allPages);
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load pages');
+      if (mountedRef.current) {
+        setError(err instanceof Error ? err.message : 'Failed to load pages');
+      }
     } finally {
-      setIsLoading(false);
-      setIsRefreshing(false);
+      if (mountedRef.current) {
+        setIsLoading(false);
+        setIsRefreshing(false);
+      }
     }
   }, [services]);
 
+  // Initial load and cleanup
   useEffect(() => {
-    if (!isReady || !services) return;
+    mountedRef.current = true;
 
-    let mounted = true;
-
-    async function load() {
-      try {
-        setError(null);
-        const allPages = await services.pageService.getAllPages();
-        if (mounted) setPages(allPages);
-      } catch (err) {
-        if (mounted) setError(err instanceof Error ? err.message : 'Failed to load pages');
-      } finally {
-        if (mounted) {
-          setIsLoading(false);
-          setIsRefreshing(false);
-        }
-      }
+    if (isReady && services) {
+      loadPages();
     }
 
-    load();
     return () => {
-      mounted = false;
+      mountedRef.current = false;
     };
-  }, [isReady, services]);
+  }, [isReady, services, loadPages]);
 
   const handleRefresh = useCallback(() => {
     setIsRefreshing(true);
     loadPages();
   }, [loadPages]);
+
+  const handleCreatePage = useCallback(
+    async (title: string) => {
+      const result = await createPage(title);
+
+      if (result.error) {
+        setCreateError(result.error.message);
+        return; // Keep modal open
+      }
+
+      if (result.page) {
+        setCreateError(null);
+        setShowNewPageModal(false);
+        // Navigate to the new page
+        onPagePress?.(result.page.pageId);
+        // Refresh the list
+        await loadPages();
+      }
+    },
+    [createPage, onPagePress, loadPages]
+  );
+
+  const handleCloseModal = useCallback(() => {
+    setShowNewPageModal(false);
+    setCreateError(null);
+  }, []);
+
+  const handleOpenModal = useCallback(() => {
+    setShowNewPageModal(true);
+  }, []);
 
   // Show database loading state
   if (dbLoading) {
@@ -104,7 +136,14 @@ export function PagesScreen({ onPagePress, onCreatePage }: PagesScreenProps): Re
           title="No pages yet"
           description="Create your first page to start taking notes"
           actionLabel="Create Page"
-          onAction={onCreatePage}
+          onAction={handleOpenModal}
+        />
+        <NewPageModal
+          visible={showNewPageModal}
+          onClose={handleCloseModal}
+          onSubmit={handleCreatePage}
+          isLoading={isCreating}
+          error={createError}
         />
       </View>
     );
@@ -154,6 +193,21 @@ export function PagesScreen({ onPagePress, onCreatePage }: PagesScreenProps): Re
         contentContainerStyle={styles.listContent}
         ListHeaderComponent={<Text style={styles.headerText}>{pages.length} pages</Text>}
       />
+
+      <FloatingActionButton
+        icon="+"
+        onPress={handleOpenModal}
+        accessibilityLabel="Create new page"
+        testID="pages-screen-fab"
+      />
+
+      <NewPageModal
+        visible={showNewPageModal}
+        onClose={handleCloseModal}
+        onSubmit={handleCreatePage}
+        isLoading={isCreating}
+        error={createError}
+      />
     </View>
   );
 }
@@ -164,7 +218,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F5F5F5',
   },
   listContent: {
-    paddingBottom: 16,
+    paddingBottom: 80, // Space for FAB
   },
   headerText: {
     fontSize: 14,

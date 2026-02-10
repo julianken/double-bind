@@ -43,3 +43,116 @@ export type {
 
 // Search types
 export type { SearchResult, SearchOptions } from './search.js';
+
+// Conflict resolution types
+export type {
+  HybridLogicalClock,
+  HLCString,
+  VersionVector,
+  ConflictType,
+  ConflictResolutionStrategy,
+  ConflictState,
+  ConflictMetadata,
+  Versioned,
+  VersionedBlock,
+  VersionedPage,
+  ConflictDetectionOptions,
+  ConflictDetectionResult,
+  ResolveConflictInput,
+  ConflictResolutionHook,
+  ConflictStore,
+} from './conflict.js';
+
+// Sync protocol types
+export type {
+  ProtocolVersion,
+  MessageId,
+  NodeId,
+  SyncType,
+  SyncEnvelope,
+  SyncPayload,
+  FullSyncPayload,
+  DatabaseSnapshot,
+  SyncStats,
+  IncrementalSyncPayload,
+  SyncChange,
+  EntitySnapshot,
+  BlockSnapshot,
+  PageSnapshot,
+  ConflictCandidate,
+  AckPayload,
+  HelloMessage,
+  HelloAckMessage,
+  CapabilitiesMessage,
+  SyncRequestMessage,
+  SyncErrorCode,
+  SyncError,
+  SyncCheckpoint,
+  SyncSession,
+  EncryptionConfig,
+  TransportSecurity,
+  AuthToken,
+  Permission,
+  DevicePermissions,
+  BatchConfig,
+  CompressionConfig,
+  PaginationConfig,
+  EntityDelta,
+  RetryConfig,
+  ProcessedMessage,
+  SyncProtocolClient,
+  SyncProtocolServer,
+  // Import/export types
+  SyncEntity,
+  SyncData,
+  ImportConflictStrategy,
+  ImportMode,
+  ImportOptions,
+  ImportStats,
+  ImportConflict,
+  ImportResult,
+  SyncDataValidationError,
+  SyncDataValidation,
+} from './sync.js';
+
+// Pagination types
+export type {
+  PaginationCursor,
+  PageSize,
+  PaginationOptions,
+  PaginatedResult,
+  PaginatedQueryState,
+  PaginatedQueryActions,
+  PaginatedQuery,
+  PageFetcher,
+  InfiniteScrollOptions,
+} from './pagination.js';
+
+// Streaming types
+export type { StreamChunk, StreamOptions, StreamResult } from './streaming.js';
+export { StreamState } from './streaming.js';
+
+// Battery optimization types
+export type {
+  BatteryState,
+  ScheduleConstraints,
+  ScheduleConfig,
+  ScheduleResult,
+  BatteryOptimizationStats,
+} from './battery.js';
+export { ActivityPriority } from './battery.js';
+
+// Memory management types
+export type {
+  MemoryState,
+  CacheConfig,
+  CacheEntry,
+  CacheStats,
+  MemoryThreshold,
+  MemoryMonitorOptions,
+  EvictionResult,
+  MemoryLeakDetectionConfig,
+  MemoryLeakDetectionResult,
+  CacheEvictionPolicy,
+} from './memory.js';
+export { MemoryWarning } from './memory.js';

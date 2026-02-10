@@ -5,16 +5,52 @@
  * - Today's daily note (quick access)
  * - Recent pages
  * - Quick actions
+ * - FAB for creating new pages
  */
 
-import * as React from 'react';
+import { useState, useCallback, type ReactElement } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { FloatingActionButton, NewPageModal } from '@double-bind/mobile-primitives';
 import type { HomeStackScreenProps } from '../navigation/types';
+import { useCreatePage } from '../hooks/useCreatePage';
 
 type Props = HomeStackScreenProps<'Home'>;
 
-export function HomeScreen({ navigation }: Props): React.ReactElement {
+export function HomeScreen({ navigation }: Props): ReactElement {
+  const { createPage, isCreating } = useCreatePage();
+
+  const [showNewPageModal, setShowNewPageModal] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+
   const today = new Date().toISOString().split('T')[0];
+
+  const handleCreatePage = useCallback(
+    async (title: string) => {
+      const result = await createPage(title);
+
+      if (result.error) {
+        setCreateError(result.error.message);
+        return; // Keep modal open
+      }
+
+      if (result.page) {
+        setCreateError(null);
+        setShowNewPageModal(false);
+        // Navigate to the new page using the root modal
+        navigation.navigate('PageDetail', { pageId: result.page.pageId });
+      }
+    },
+    [createPage, navigation]
+  );
+
+  const handleCloseModal = useCallback(() => {
+    setShowNewPageModal(false);
+    setCreateError(null);
+  }, []);
+
+  const handleOpenModal = useCallback(() => {
+    setShowNewPageModal(true);
+  }, []);
 
   return (
     <View style={styles.container}>
@@ -36,6 +72,21 @@ export function HomeScreen({ navigation }: Props): React.ReactElement {
           <Text style={styles.placeholder}>No recent pages yet</Text>
         </View>
       </View>
+
+      <FloatingActionButton
+        icon="+"
+        onPress={handleOpenModal}
+        accessibilityLabel="Create new page"
+        testID="home-screen-fab"
+      />
+
+      <NewPageModal
+        visible={showNewPageModal}
+        onClose={handleCloseModal}
+        onSubmit={handleCreatePage}
+        isLoading={isCreating}
+        error={createError}
+      />
     </View>
   );
 }
@@ -48,6 +99,7 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     padding: 16,
+    paddingBottom: 80, // Space for FAB
   },
   title: {
     fontSize: 28,

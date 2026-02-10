@@ -21,6 +21,7 @@ import { createContext, useEffect, useState, useCallback, type ReactNode } from 
 import { Platform, AppState, type AppStateStatus } from 'react-native';
 import type { GraphDB } from '@double-bind/types';
 import { MobileGraphDB } from '@double-bind/mobile';
+import { createServices, type Services } from '@double-bind/core';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -42,6 +43,8 @@ export type MobilePlatform = 'ios' | 'android';
 export interface DatabaseContextValue {
   /** The database instance, null until initialized */
   db: GraphDB | null;
+  /** Application services (pageService, blockService, etc.), null until db is ready */
+  services: Services | null;
   /** Current initialization status */
   status: DatabaseStatus;
   /** Error message if initialization failed */
@@ -50,6 +53,9 @@ export interface DatabaseContextValue {
   platform: MobilePlatform;
   /** Retry initialization after an error */
   retry: () => void;
+  /** Convenience flags */
+  isLoading: boolean;
+  isReady: boolean;
 }
 
 /**
@@ -130,6 +136,7 @@ export function DatabaseProvider({
   onError,
 }: DatabaseProviderProps) {
   const [db, setDb] = useState<GraphDB | null>(null);
+  const [services, setServices] = useState<Services | null>(null);
   const [status, setStatus] = useState<DatabaseStatus>('idle');
   const [error, setError] = useState<string | null>(null);
   const [initAttempt, setInitAttempt] = useState(0);
@@ -158,7 +165,11 @@ export function DatabaseProvider({
           return;
         }
 
+        // Create services from the database instance
+        const servicesInstance = createServices(dbInstance);
+
         setDb(dbInstance);
+        setServices(servicesInstance);
         setStatus('ready');
         onReady?.(dbInstance);
       } catch (err) {
@@ -180,6 +191,7 @@ export function DatabaseProvider({
       }
       // Reset state to prevent stale closed database references
       setDb(null);
+      setServices(null);
       setStatus('idle');
     };
   }, [effectivePath, initAttempt, onReady, onError]);
@@ -220,6 +232,7 @@ export function DatabaseProvider({
       if (db) {
         void (db as MobileGraphDB).close();
         setDb(null);
+        setServices(null);
       }
       setInitAttempt((prev) => prev + 1);
     }
@@ -231,10 +244,13 @@ export function DatabaseProvider({
 
   const contextValue: DatabaseContextValue = {
     db,
+    services,
     status,
     error,
     platform,
     retry,
+    isLoading: status === 'initializing',
+    isReady: status === 'ready' && db !== null && services !== null,
   };
 
   return <DatabaseContext.Provider value={contextValue}>{children}</DatabaseContext.Provider>;
