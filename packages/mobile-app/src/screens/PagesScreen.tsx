@@ -8,7 +8,7 @@
  * - FAB for creating new pages
  */
 
-import { useEffect, useState, useCallback, type ReactElement } from 'react';
+import { useEffect, useState, useCallback, useRef, type ReactElement } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl } from 'react-native';
 import type { Page } from '@double-bind/types';
 import { FloatingActionButton, NewPageModal } from '@double-bind/mobile-primitives';
@@ -35,48 +35,43 @@ export function PagesScreen({ onPagePress }: PagesScreenProps): ReactElement {
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
+  // Track mounted state to prevent state updates after unmount
+  const mountedRef = useRef(true);
+
+  // Single source of truth for page loading logic
   const loadPages = useCallback(async () => {
     if (!services) return;
 
     try {
       setError(null);
       const allPages = await services.pageService.getAllPages();
-      setPages(allPages);
+      if (mountedRef.current) {
+        setPages(allPages);
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load pages');
+      if (mountedRef.current) {
+        setError(err instanceof Error ? err.message : 'Failed to load pages');
+      }
     } finally {
-      setIsLoading(false);
-      setIsRefreshing(false);
+      if (mountedRef.current) {
+        setIsLoading(false);
+        setIsRefreshing(false);
+      }
     }
   }, [services]);
 
+  // Initial load and cleanup
   useEffect(() => {
-    if (!isReady || !services) return;
+    mountedRef.current = true;
 
-    let mounted = true;
-
-    async function load() {
-      if (!services) return;
-
-      try {
-        setError(null);
-        const allPages = await services.pageService.getAllPages();
-        if (mounted) setPages(allPages);
-      } catch (err) {
-        if (mounted) setError(err instanceof Error ? err.message : 'Failed to load pages');
-      } finally {
-        if (mounted) {
-          setIsLoading(false);
-          setIsRefreshing(false);
-        }
-      }
+    if (isReady && services) {
+      loadPages();
     }
 
-    load();
     return () => {
-      mounted = false;
+      mountedRef.current = false;
     };
-  }, [isReady, services]);
+  }, [isReady, services, loadPages]);
 
   const handleRefresh = useCallback(() => {
     setIsRefreshing(true);
