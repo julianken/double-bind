@@ -18,8 +18,9 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      // Map workspace package to source for testing
+      // Map workspace packages to source for testing
       '@double-bind/mobile': path.resolve(__dirname, '../mobile/src'),
+      '@double-bind/mobile-primitives': path.resolve(__dirname, '../mobile-primitives/src'),
     },
   },
 });
