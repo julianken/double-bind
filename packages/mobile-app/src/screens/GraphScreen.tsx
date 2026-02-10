@@ -116,8 +116,9 @@ export function GraphScreen({ navigation }: Props): React.ReactElement {
     setSelectedNode(null);
   }, []);
 
-  // Loading state
-  if (loading) {
+  // Loading state - only show spinner on initial load, not when changing center
+  // This keeps the graph visible during transitions
+  if (loading && nodes.length === 0) {
     return (
       <View style={styles.container}>
         <LoadingSpinner />
@@ -165,7 +166,7 @@ export function GraphScreen({ navigation }: Props): React.ReactElement {
             style={[styles.segmentButton, viewMode === 'full' && styles.segmentButtonActive]}
             onPress={() => {
               setViewMode('full');
-              setCenterPageId(null);
+              // Don't reset centerPageId - preserve current center when switching modes
             }}
             accessibilityRole="button"
             accessibilityLabel="Show full graph"
