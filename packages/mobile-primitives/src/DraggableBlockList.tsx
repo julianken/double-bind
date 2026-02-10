@@ -55,6 +55,19 @@ function triggerHaptic(): void {
   }
 }
 
+/**
+ * Props for custom block rendering in DraggableBlockList
+ */
+export interface RenderBlockItemInfo {
+  item: BlockListItem;
+  index: number;
+  isSelected: boolean;
+  isFocused: boolean;
+  onPress?: (blockId: BlockId) => void;
+  onToggleCollapse?: (blockId: BlockId) => void;
+  testID?: string;
+}
+
 export interface DraggableBlockListProps {
   /**
    * Array of blocks to render with their metadata
@@ -129,6 +142,13 @@ export interface DraggableBlockListProps {
   footerComponent?: React.ReactNode;
 
   /**
+   * Custom render function for block items.
+   * When provided, this replaces the default BlockView rendering.
+   * Useful for rendering EditableBlockView in edit mode.
+   */
+  renderBlockItem?: (info: RenderBlockItemInfo) => React.ReactElement;
+
+  /**
    * Optional test ID for testing
    */
   testID?: string;
@@ -151,6 +171,7 @@ interface DraggableItemProps {
   onDragEnd: () => void;
   onBlockLayout: (index: number, event: LayoutChangeEvent) => void;
   isDragging: boolean;
+  renderBlockItem?: (info: RenderBlockItemInfo) => React.ReactElement;
   testID?: string;
 }
 
@@ -174,6 +195,7 @@ const DraggableItem = React.memo(function DraggableItem({
   onDragEnd,
   onBlockLayout,
   isDragging,
+  renderBlockItem,
   testID,
 }: DraggableItemProps): React.ReactElement {
   // Create gestures once per item, memoized by dependencies
@@ -240,22 +262,43 @@ const DraggableItem = React.memo(function DraggableItem({
       }
     : {};
 
+  // Render the block content (custom or default)
+  const isSelected = item.block.blockId === selectedBlockId;
+  const isFocused = item.block.blockId === focusedBlockId;
+  const blockTestID = testID ? `${testID}-block-${index}` : undefined;
+
+  const blockContent = renderBlockItem ? (
+    renderBlockItem({
+      item,
+      index,
+      isSelected,
+      isFocused,
+      onPress: onBlockPress,
+      onToggleCollapse: onBlockToggleCollapse,
+      testID: blockTestID,
+    })
+  ) : (
+    <BlockView
+      block={item.block}
+      depth={item.depth}
+      hasChildren={item.hasChildren}
+      isSelected={isSelected}
+      isFocused={isFocused}
+      onPress={onBlockPress}
+      onToggleCollapse={onBlockToggleCollapse}
+      testID={blockTestID}
+    />
+  );
+
   return (
     <View onLayout={(event) => onBlockLayout(index, event)}>
-      {showDropZoneBefore && <View style={styles.dropZone} testID={`${testID}-dropzone-${index}`} />}
+      {showDropZoneBefore && (
+        <View style={styles.dropZone} testID={`${testID}-dropzone-${index}`} />
+      )}
 
       <GestureDetector gesture={composedGesture}>
         <Animated.View style={[styles.blockContainer, animatedStyle]}>
-          <BlockView
-            block={item.block}
-            depth={item.depth}
-            hasChildren={item.hasChildren}
-            isSelected={item.block.blockId === selectedBlockId}
-            isFocused={item.block.blockId === focusedBlockId}
-            onPress={onBlockPress}
-            onToggleCollapse={onBlockToggleCollapse}
-            testID={testID ? `${testID}-block-${index}` : undefined}
-          />
+          {blockContent}
 
           {/* Indent indicator */}
           {isDragged && indentDelta !== 0 && (
@@ -271,7 +314,9 @@ const DraggableItem = React.memo(function DraggableItem({
         </Animated.View>
       </GestureDetector>
 
-      {showDropZoneAfter && <View style={styles.dropZone} testID={`${testID}-dropzone-${index + 1}`} />}
+      {showDropZoneAfter && (
+        <View style={styles.dropZone} testID={`${testID}-dropzone-${index + 1}`} />
+      )}
     </View>
   );
 });
@@ -314,6 +359,7 @@ export function DraggableBlockList({
   emptyComponent,
   headerComponent,
   footerComponent,
+  renderBlockItem,
   testID,
 }: DraggableBlockListProps): React.ReactElement {
   const [dragState, setDragState] = React.useState<DragState>({
@@ -331,17 +377,14 @@ export function DraggableBlockList({
   const flatListRef = React.useRef<FlatList>(null);
 
   // Track block layouts for drop zone calculation
-  const onBlockLayout = React.useCallback(
-    (index: number, event: LayoutChangeEvent) => {
-      const { y, height } = event.nativeEvent.layout;
-      setDragState((prev) => {
-        const newLayouts = new Map(prev.blockLayouts);
-        newLayouts.set(index, { y, height });
-        return { ...prev, blockLayouts: newLayouts };
-      });
-    },
-    []
-  );
+  const onBlockLayout = React.useCallback((index: number, event: LayoutChangeEvent) => {
+    const { y, height } = event.nativeEvent.layout;
+    setDragState((prev) => {
+      const newLayouts = new Map(prev.blockLayouts);
+      newLayouts.set(index, { y, height });
+      return { ...prev, blockLayouts: newLayouts };
+    });
+  }, []);
 
   // Calculate drop zone based on current drag position
   const calculateDropZone = React.useCallback(
@@ -514,12 +557,7 @@ export function DraggableBlockList({
       indentDelta: 0,
       blockLayouts: dragState.blockLayouts, // Keep layouts
     });
-  }, [
-    dragState,
-    blocks,
-    dragAnimatedValue,
-    onBlockReorder,
-  ]);
+  }, [dragState, blocks, dragAnimatedValue, onBlockReorder]);
 
   // Memoized key extractor
   const keyExtractor = React.useCallback((item: BlockListItem) => item.block.blockId, []);
@@ -550,6 +588,7 @@ export function DraggableBlockList({
           onDragEnd={handleDragEnd}
           onBlockLayout={onBlockLayout}
           isDragging={dragState.isDragging}
+          renderBlockItem={renderBlockItem}
           testID={testID}
         />
       );
@@ -569,6 +608,7 @@ export function DraggableBlockList({
       handleDragMove,
       handleDragEnd,
       onBlockLayout,
+      renderBlockItem,
       testID,
     ]
   );

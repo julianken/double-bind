@@ -14,21 +14,17 @@
  */
 
 import * as React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ActivityIndicator,
-  TouchableOpacity,
-} from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
 import type { Block, BlockId, PageId } from '@double-bind/types';
 import { createServices, type BlockService as CoreBlockService } from '@double-bind/core';
 import {
   BlockList,
   DraggableBlockList,
+  EditableBlockView,
   FloatingActionButton,
   useBlockOperations,
   type BlockService,
+  type RenderBlockItemInfo,
 } from '@double-bind/mobile-primitives';
 import { useDatabase } from '../hooks/useDatabase';
 import type { PagesStackScreenProps } from '../navigation/types';
@@ -91,28 +87,21 @@ export function PageScreen({ route, navigation }: Props): React.ReactElement {
     return createBlockServiceAdapter(services.blockService, pageId as PageId);
   }, [services, pageId]);
 
-  const {
-    createBlock,
-    deleteBlock,
-    updateBlockContent,
-    undo,
-    redo,
-    canUndo,
-    canRedo,
-  } = useBlockOperations(
-    blockServiceAdapter ?? {
-      createBlock: async () => {
-        throw new Error('Database not ready');
-      },
-      deleteBlock: async () => {
-        throw new Error('Database not ready');
-      },
-      updateContent: async () => {
-        throw new Error('Database not ready');
-      },
-      getById: async () => null,
-    }
-  );
+  const { createBlock, deleteBlock, updateBlockContent, undo, redo, canUndo, canRedo } =
+    useBlockOperations(
+      blockServiceAdapter ?? {
+        createBlock: async () => {
+          throw new Error('Database not ready');
+        },
+        deleteBlock: async () => {
+          throw new Error('Database not ready');
+        },
+        updateContent: async () => {
+          throw new Error('Database not ready');
+        },
+        getById: async () => null,
+      }
+    );
 
   // Load page data
   const loadPage = React.useCallback(async () => {
@@ -208,12 +197,107 @@ export function PageScreen({ route, navigation }: Props): React.ReactElement {
     });
   }, []);
 
-  // Note: The following handlers support EditableBlockView integration
-  // They are currently unused as DraggableBlockList uses BlockView internally.
-  // Future enhancement: Add renderItem prop to DraggableBlockList for custom EditableBlockView rendering
-  void updateBlockContent; // Referenced for future inline editing
-  void deleteBlock; // Referenced for future swipe-to-delete
-  void createBlock; // Referenced for future Enter key block creation
+  // Handle content save from EditableBlockView
+  const handleContentSave = React.useCallback(
+    async (blockId: BlockId, content: string) => {
+      try {
+        await updateBlockContent(blockId, content);
+        // Reload to get the updated content
+        await loadPage();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to save content');
+      }
+    },
+    [updateBlockContent, loadPage]
+  );
+
+  // Handle Enter key press in EditableBlockView - create new sibling block
+  const handleEnterPress = React.useCallback(
+    async (blockId: BlockId) => {
+      try {
+        const currentBlock = blocks.find((b) => b.blockId === blockId);
+        if (!currentBlock) return;
+
+        const newBlock = await createBlock({
+          pageId: pageId as PageId,
+          parentId: currentBlock.parentId,
+          content: '',
+          afterBlockId: blockId,
+        });
+        await loadPage();
+        setEditingBlockId(newBlock.blockId);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to create block');
+      }
+    },
+    [blocks, createBlock, pageId, loadPage]
+  );
+
+  // Handle backspace on empty block - delete it
+  const handleBackspaceEmpty = React.useCallback(
+    async (blockId: BlockId) => {
+      try {
+        // Find the block before this one to focus after deletion
+        const blockList = buildBlockTree(blocks, null, 0, collapsedBlocks);
+        const currentIndex = blockList.findIndex((item) => item.block.blockId === blockId);
+        const previousBlock = currentIndex > 0 ? blockList[currentIndex - 1] : null;
+
+        await deleteBlock(blockId);
+        await loadPage();
+
+        // Focus previous block if available
+        if (previousBlock) {
+          setEditingBlockId(previousBlock.block.blockId);
+        } else {
+          setEditingBlockId(null);
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to delete block');
+      }
+    },
+    [blocks, collapsedBlocks, deleteBlock, loadPage]
+  );
+
+  // Handle swipe to delete
+  const handleSwipeDelete = React.useCallback(
+    async (blockId: BlockId) => {
+      try {
+        await deleteBlock(blockId);
+        await loadPage();
+        if (editingBlockId === blockId) {
+          setEditingBlockId(null);
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to delete block');
+      }
+    },
+    [deleteBlock, loadPage, editingBlockId]
+  );
+
+  // Render function for editable blocks in edit mode
+  const renderEditableBlock = React.useCallback(
+    (info: RenderBlockItemInfo): React.ReactElement => {
+      return (
+        <EditableBlockView
+          block={info.item.block}
+          depth={info.item.depth}
+          hasChildren={info.item.hasChildren}
+          isEditing={editingBlockId === info.item.block.blockId}
+          isSelected={info.isSelected}
+          onStartEditing={(blockId) => setEditingBlockId(blockId)}
+          onEndEditing={() => setEditingBlockId(null)}
+          onSave={handleContentSave}
+          onEnterPress={handleEnterPress}
+          onBackspaceEmpty={handleBackspaceEmpty}
+          onSwipeDelete={handleSwipeDelete}
+          onToggleCollapse={info.onToggleCollapse}
+          autoFocus={true}
+          testID={info.testID}
+        />
+      );
+    },
+    [editingBlockId, handleContentSave, handleEnterPress, handleBackspaceEmpty, handleSwipeDelete]
+  );
 
   // Handle block reorder
   const handleBlockReorder = React.useCallback(
@@ -316,9 +400,7 @@ export function PageScreen({ route, navigation }: Props): React.ReactElement {
               accessibilityState={{ disabled: !canUndo }}
               testID="undo-button"
             >
-              <Text
-                style={[styles.undoRedoText, !canUndo && styles.undoRedoTextDisabled]}
-              >
+              <Text style={[styles.undoRedoText, !canUndo && styles.undoRedoTextDisabled]}>
                 Undo
               </Text>
             </TouchableOpacity>
@@ -331,9 +413,7 @@ export function PageScreen({ route, navigation }: Props): React.ReactElement {
               accessibilityState={{ disabled: !canRedo }}
               testID="redo-button"
             >
-              <Text
-                style={[styles.undoRedoText, !canRedo && styles.undoRedoTextDisabled]}
-              >
+              <Text style={[styles.undoRedoText, !canRedo && styles.undoRedoTextDisabled]}>
                 Redo
               </Text>
             </TouchableOpacity>
@@ -382,6 +462,7 @@ export function PageScreen({ route, navigation }: Props): React.ReactElement {
           onRefresh={handleRefresh}
           refreshing={refreshing}
           headerComponent={headerComponent}
+          renderBlockItem={renderEditableBlock}
           testID="page-screen-block-list"
         />
       ) : (
