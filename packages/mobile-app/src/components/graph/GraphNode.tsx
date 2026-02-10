@@ -14,34 +14,24 @@ import Animated, {
   useSharedValue,
   useAnimatedProps,
   withTiming,
-  withSpring,
   Easing,
 } from 'react-native-reanimated';
 import type { GraphNodeProps } from './types';
 import { GRAPH_CONSTANTS, GRAPH_COLORS } from './types';
 import type { LabelLayoutConfig } from './useLabelLayout';
+import type { AnimationPhase } from './useAnimatedLayout';
 import { truncateLabel } from './labelPositioning';
 
 /** Double-tap detection timeout in ms */
 const DOUBLE_TAP_DELAY = 300;
 
 /**
- * Animated SVG components for smooth transitions.
+ * Animated SVG Text component for smooth label transitions.
  */
-const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 const AnimatedSvgText = Animated.createAnimatedComponent(Text);
 
 /** Duration for label fade animations in milliseconds */
 const LABEL_FADE_DURATION = 300;
-
-/**
- * Spring configuration for center node position animation.
- * Provides smooth, natural-feeling motion when navigating between nodes.
- */
-const SPRING_CONFIG = {
-  damping: 15,
-  stiffness: 100,
-};
 
 /**
  * GraphNode component renders a single node in the graph.
@@ -63,7 +53,8 @@ export const GraphNode = memo(function GraphNode({
   scale,
   showLabel = true,
   labelLayout,
-}: GraphNodeProps & { labelLayout?: LabelLayoutConfig }) {
+  animationPhase = 'idle',
+}: GraphNodeProps & { labelLayout?: LabelLayoutConfig; animationPhase?: AnimationPhase }) {
   // Track last tap time for double-tap detection
   const lastTapTime = useRef<number>(0);
   const tapTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -100,28 +91,8 @@ export const GraphNode = memo(function GraphNode({
     };
   }, []);
 
-  // Animated position values for center node spring animation
-  const animatedX = useSharedValue(node.x);
-  const animatedY = useSharedValue(node.y);
-
-  // Update animated position when node position changes
-  // For center node: animate with spring for smooth navigation transition
-  // For other nodes: update immediately (no animation overhead)
-  useEffect(() => {
-    if (isCenter) {
-      animatedX.value = withSpring(node.x, SPRING_CONFIG);
-      animatedY.value = withSpring(node.y, SPRING_CONFIG);
-    } else {
-      animatedX.value = node.x;
-      animatedY.value = node.y;
-    }
-  }, [node.x, node.y, isCenter, animatedX, animatedY]);
-
-  // Animated props for center node position
-  const animatedCircleProps = useAnimatedProps(() => ({
-    cx: animatedX.value,
-    cy: animatedY.value,
-  }));
+  // Node positions come from useAnimatedLayout which handles all interpolation
+  // No need for per-node spring animation - just use node.x/y directly
 
   // Calculate sizes based on node type and scale
   const radius = isCenter ? GRAPH_CONSTANTS.CENTER_NODE_RADIUS : GRAPH_CONSTANTS.NODE_RADIUS;
@@ -147,79 +118,57 @@ export const GraphNode = memo(function GraphNode({
   const fontWeight = isCenter ? 'bold' : 'normal';
 
   // Animated opacity for smooth label fade transitions
-  const labelOpacityValue = useSharedValue(labelVisible ? 1 : 0);
+  // Label visibility depends on both LOD visibility AND animation phase
+  // During fading-out/moving: labels should be hidden
+  // During idle/fading-in: labels should follow LOD visibility
+  const shouldShowLabel =
+    labelVisible && (animationPhase === 'idle' || animationPhase === 'fading-in');
+  const labelOpacityValue = useSharedValue(shouldShowLabel ? 1 : 0);
 
-  // Update opacity when visibility changes
+  // Update opacity when visibility or animation phase changes
   useEffect(() => {
-    labelOpacityValue.value = withTiming(labelVisible ? 1 : 0, {
-      duration: LABEL_FADE_DURATION,
+    const targetOpacity = shouldShowLabel ? 1 : 0;
+    // Use faster timing during animation phases for snappier transitions
+    const duration = animationPhase === 'idle' ? LABEL_FADE_DURATION : 150;
+    labelOpacityValue.value = withTiming(targetOpacity, {
+      duration,
       easing: Easing.inOut(Easing.ease),
     });
-  }, [labelVisible, labelOpacityValue]);
+  }, [shouldShowLabel, animationPhase, labelOpacityValue]);
 
-  // Animated props for label - combines opacity and position for center node
-  // For center node: animate both position and opacity
-  // For non-center nodes: only animate opacity
-  const labelLayoutX = labelLayout?.x;
-  const labelLayoutY = labelLayout?.y;
-  const labelAnimatedProps = useAnimatedProps(() => {
-    if (isCenter) {
-      // Center node: animate label position along with node
-      const x = labelLayoutX ?? animatedX.value;
-      const y = labelLayoutY ?? animatedY.value + GRAPH_CONSTANTS.LABEL_OFFSET;
-      return {
-        x,
-        y,
-        opacity: labelOpacityValue.value,
-      };
+  // Animated label position values - all nodes need animated positions for smooth transitions
+  const animatedLabelX = useSharedValue(labelX);
+  const animatedLabelY = useSharedValue(labelY);
+
+  // Update label position when it changes
+  useEffect(() => {
+    // During animation phases (when labels are hidden), snap to new position immediately
+    // During idle, use timing for smooth movement if position changes
+    if (animationPhase === 'moving' || animationPhase === 'fading-out') {
+      // Snap immediately - labels are invisible during these phases
+      animatedLabelX.value = labelX;
+      animatedLabelY.value = labelY;
+    } else {
+      // Smooth animation for visible labels
+      animatedLabelX.value = withTiming(labelX, {
+        duration: 200,
+        easing: Easing.out(Easing.cubic),
+      });
+      animatedLabelY.value = withTiming(labelY, {
+        duration: 200,
+        easing: Easing.out(Easing.cubic),
+      });
     }
-    // Non-center: static position, animated opacity only
-    return {
-      opacity: labelOpacityValue.value,
-    };
-  });
+  }, [labelX, labelY, animationPhase, animatedLabelX, animatedLabelY]);
 
-  // Animated props for touch target (follows node position for center)
-  const animatedTouchProps = useAnimatedProps(() => ({
-    cx: animatedX.value,
-    cy: animatedY.value,
+  // Animated props for label - includes position and opacity for all nodes
+  const labelAnimatedProps = useAnimatedProps(() => ({
+    x: animatedLabelX.value,
+    y: animatedLabelY.value,
+    opacity: labelOpacityValue.value,
   }));
 
-  // For center node: use animated components with spring position
-  if (isCenter) {
-    return (
-      <G onPress={handlePress}>
-        {/* Node circle with animated spring position */}
-        <AnimatedCircle
-          animatedProps={animatedCircleProps}
-          r={radius}
-          fill={fillColor}
-          stroke={strokeColor}
-          strokeWidth={strokeWidth}
-        />
-        {/* Larger invisible touch target - minimum 44px diameter per WCAG guidelines */}
-        <AnimatedCircle
-          animatedProps={animatedTouchProps}
-          r={Math.max(22, radius + 10)}
-          fill="transparent"
-          onPress={handlePress}
-        />
-        {/* Label with animated position and opacity */}
-        <AnimatedSvgText
-          fontSize={fontSize}
-          fill={labelColor}
-          fontWeight={fontWeight}
-          textAnchor={labelAnchor}
-          alignmentBaseline="hanging"
-          animatedProps={labelAnimatedProps}
-        >
-          {labelText}
-        </AnimatedSvgText>
-      </G>
-    );
-  }
-
-  // For non-center nodes: use static SVG elements (no position animation overhead)
+  // All nodes use static positioning - useAnimatedLayout handles interpolation
   return (
     <G onPress={handlePress}>
       {/* Node circle */}
@@ -239,10 +188,8 @@ export const GraphNode = memo(function GraphNode({
         fill="transparent"
         onPress={handlePress}
       />
-      {/* Label with animated opacity for smooth fade transitions */}
+      {/* Label with animated position and opacity for smooth transitions */}
       <AnimatedSvgText
-        x={labelX}
-        y={labelY}
         fontSize={fontSize}
         fill={labelColor}
         fontWeight={fontWeight}

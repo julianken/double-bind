@@ -92,10 +92,12 @@ export function useGraphData(options: UseGraphDataOptions): UseGraphDataResult {
         if (mode === 'full') {
           // Full graph: query all pages and links
           const pagesResult = await db.query(
-            `?[pageId, title] := *page{pageId, title, isDeleted}, isDeleted = false`
+            `?[page_id, title] := *pages{page_id, title, is_deleted}, is_deleted == false`
           );
 
-          const linksResult = await db.query(`?[sourceId, targetId] := *link{sourceId, targetId}`);
+          const linksResult = await db.query(
+            `?[source_id, target_id] := *links{source_id, target_id}`
+          );
 
           if (!isMounted) return;
 
@@ -105,9 +107,9 @@ export function useGraphData(options: UseGraphDataOptions): UseGraphDataResult {
               return Array.isArray(row) && row.length >= 2 && typeof row[0] === 'string';
             })
             .map((row) => {
-              const [pageId, title] = row;
+              const [page_id, title] = row;
               return {
-                id: pageId,
+                id: page_id,
                 title: title || 'Untitled',
               };
             });
@@ -151,39 +153,70 @@ export function useGraphData(options: UseGraphDataOptions): UseGraphDataResult {
             setEdges(graphEdges);
           }
         } else {
-          // Local graph: query neighborhood within depth hops
-          // This uses recursive Datalog to find connected pages
-          const neighborQuery = `
-            ?[pageId, title] :=
-              *page{pageId, title, isDeleted},
-              isDeleted = false,
-              reachable[pageId, $maxDepth]
+          // Local graph: query direct neighbors of center page
+          // Get the center page first
+          const centerQuery = `
+?[page_id, title] :=
+  *pages{page_id, title, is_deleted},
+  page_id == $centerPageId,
+  is_deleted == false
+`;
+          const centerResult = await db.query(centerQuery, { centerPageId });
 
-            reachable[pageId, 0] :=
-              pageId = $centerPageId
+          // Get pages linked FROM center (outgoing)
+          const outgoingQuery = `
+?[page_id, title] :=
+  *links{source_id, target_id: page_id},
+  source_id == $centerPageId,
+  *pages{page_id, title, is_deleted},
+  is_deleted == false
+`;
+          const outgoingResult = await db.query(outgoingQuery, { centerPageId });
 
-            reachable[pageId, depth] :=
-              reachable[fromId, prevDepth],
-              prevDepth < $maxDepth,
-              depth = prevDepth + 1,
-              (*link{sourceId: fromId, targetId: pageId} ; *link{sourceId: pageId, targetId: fromId})
-          `;
+          // Get pages linked TO center (incoming)
+          const incomingQuery = `
+?[page_id, title] :=
+  *links{source_id: page_id, target_id},
+  target_id == $centerPageId,
+  *pages{page_id, title, is_deleted},
+  is_deleted == false
+`;
+          const incomingResult = await db.query(incomingQuery, { centerPageId });
 
-          const pagesResult = await db.query(neighborQuery, { centerPageId, maxDepth: depth });
+          // Combine all pages (center + outgoing + incoming), deduplicated
+          const allPageRows = [
+            ...centerResult.rows,
+            ...outgoingResult.rows,
+            ...incomingResult.rows,
+          ];
+          const seenIds = new Set<string>();
+          const pagesResult = {
+            rows: allPageRows.filter((row) => {
+              if (!Array.isArray(row) || typeof row[0] !== 'string') return false;
+              if (seenIds.has(row[0])) return false;
+              seenIds.add(row[0]);
+              return true;
+            }),
+          };
 
           // Query links between visible pages
-          const pageIds = pagesResult.rows
-            .filter((row): row is [string, string] => Array.isArray(row) && typeof row[0] === 'string')
+          const visiblePageIds = pagesResult.rows
+            .filter(
+              (row): row is [string, string] => Array.isArray(row) && typeof row[0] === 'string'
+            )
             .map((row) => row[0]);
 
-          const linksQuery = `
-            ?[sourceId, targetId] :=
-              *link{sourceId, targetId},
-              sourceId in $pageIds,
-              targetId in $pageIds
-          `;
-
-          const linksResult = await db.query(linksQuery, { pageIds });
+          // Only query links if we have pages
+          let linksResult = { rows: [] as unknown[][] };
+          if (visiblePageIds.length > 0) {
+            const linksQuery = `
+?[source_id, target_id] :=
+  *links{source_id, target_id},
+  source_id in $visiblePageIds,
+  target_id in $visiblePageIds
+`;
+            linksResult = await db.query(linksQuery, { visiblePageIds });
+          }
 
           if (!isMounted) return;
 
@@ -193,9 +226,9 @@ export function useGraphData(options: UseGraphDataOptions): UseGraphDataResult {
               return Array.isArray(row) && row.length >= 2 && typeof row[0] === 'string';
             })
             .map((row) => {
-              const [pageId, title] = row;
+              const [page_id, title] = row;
               return {
-                id: pageId,
+                id: page_id,
                 title: title || 'Untitled',
               };
             });
@@ -254,7 +287,11 @@ export function useGraphData(options: UseGraphDataOptions): UseGraphDataResult {
     return () => {
       isMounted = false;
     };
-  }, [db, status, mode, centerPageId, depth, refreshKey]);
+    // Note: centerPageId only matters for 'local' mode, so we only include it
+    // in dependencies when mode is 'local'. This prevents unnecessary refetches
+    // in 'full' mode when the center node changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [db, status, mode, ...(mode === 'local' ? [centerPageId] : []), depth, refreshKey]);
 
   return {
     nodes,

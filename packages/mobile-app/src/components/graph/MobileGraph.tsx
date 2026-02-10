@@ -26,6 +26,7 @@ import { GRAPH_CONSTANTS, GRAPH_COLORS } from './types';
 import { GraphNode } from './GraphNode';
 import { GraphEdge } from './GraphEdge';
 import { useForceLayout, useNodeMap } from './useForceLayout';
+import { useAnimatedLayout } from './useAnimatedLayout';
 import { useOptimizedGraph } from './useOptimizedGraph';
 import { useLabelLayout } from './useLabelLayout';
 
@@ -92,6 +93,13 @@ export const MobileGraph = memo(function MobileGraph({
   // Compute force layout
   const layoutNodes = useForceLayout(limitedNodes, visibleEdges, width, height, centerNodeId);
 
+  // Animate layout transitions when center node changes
+  // Returns nodes with interpolated positions and animation phase for label coordination
+  const { nodes: animatedNodes, phase: animationPhase } = useAnimatedLayout(
+    layoutNodes,
+    centerNodeId
+  );
+
   // Gesture state - shared values for animations
   const scale = useSharedValue(1);
   const savedScale = useSharedValue(1);
@@ -102,7 +110,7 @@ export const MobileGraph = memo(function MobileGraph({
 
   // Apply rendering optimizations (LOD, culling, clustering)
   const optimized = useOptimizedGraph({
-    nodes: layoutNodes,
+    nodes: animatedNodes,
     edges: visibleEdges,
     centerNodeId,
     width,
@@ -217,13 +225,19 @@ export const MobileGraph = memo(function MobileGraph({
     ],
   }));
 
-  // Handle node single tap - change center node
+  // Handle node single tap - change center node, or show detail if already center
   const handleNodeSelect = useCallback(
     (nodeId: PageId) => {
       setSelectedNodeId(nodeId);
-      onCenterChange?.(nodeId);
+      if (nodeId === centerNodeId) {
+        // Already the center - show detail panel instead
+        onNodePress?.(nodeId);
+      } else {
+        // Change to new center
+        onCenterChange?.(nodeId);
+      }
     },
-    [onCenterChange]
+    [centerNodeId, onCenterChange, onNodePress]
   );
 
   // Handle node double tap - trigger navigation callback
@@ -296,6 +310,7 @@ export const MobileGraph = memo(function MobileGraph({
                     optimized.showLabels && (optimized.showAllLabels || node.id === centerNodeId)
                   }
                   labelLayout={labelLayouts.get(node.id)}
+                  animationPhase={animationPhase}
                 />
               ))}
             </G>
