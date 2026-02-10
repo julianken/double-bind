@@ -8,6 +8,16 @@
 import type { PageId } from '@double-bind/types';
 
 // ============================================================================
+// Level-of-Detail Types
+// ============================================================================
+
+/**
+ * Level-of-detail modes for graph rendering.
+ * Controls how many visual elements are shown based on performance needs.
+ */
+export type LODMode = 'ultra-minimal' | 'minimal' | 'normal' | 'detailed';
+
+// ============================================================================
 // Node Types
 // ============================================================================
 
@@ -69,8 +79,10 @@ export interface GraphNodeProps {
   isCenter: boolean;
   /** Whether this node is currently selected */
   isSelected: boolean;
-  /** Callback when node is tapped */
+  /** Callback when node is single-tapped (selection) */
   onPress?: (nodeId: PageId) => void;
+  /** Callback when node is double-tapped (navigation) */
+  onDoubleTap?: (nodeId: PageId) => void;
   /** Current scale for text sizing */
   scale: number;
   /** Whether to show label (LOD optimization) */
@@ -107,7 +119,9 @@ export interface MobileGraphProps {
   width: number;
   /** Height of the graph container */
   height: number;
-  /** Callback when a node is tapped */
+  /** Callback when center node changes (single tap) */
+  onCenterChange?: (nodeId: PageId) => void;
+  /** Callback when a node is double-tapped (navigation) */
   onNodePress?: (nodeId: PageId) => void;
   /** Maximum number of nodes to display (for performance) */
   maxNodes?: number;
@@ -132,7 +146,7 @@ export const GRAPH_CONSTANTS = {
   /** Arrow size for directed edges */
   ARROW_SIZE: 6,
   /** Font size for labels */
-  LABEL_FONT_SIZE: 12,
+  LABEL_FONT_SIZE: 14,
   /** Distance from node to label */
   LABEL_OFFSET: 14,
   /** Maximum label length in characters */

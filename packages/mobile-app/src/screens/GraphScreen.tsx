@@ -11,12 +11,10 @@
 
 import { useCallback, useState } from 'react';
 import { View, StyleSheet, useWindowDimensions, TouchableOpacity, Text } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { PageId } from '@double-bind/types';
 import type { GraphStackScreenProps } from '../navigation/types';
-import {
-  MobileGraph,
-  GraphDetailPanel,
-} from '../components/graph';
+import { MobileGraph, GraphDetailPanel } from '../components/graph';
 import { LoadingSpinner, ErrorMessage, EmptyState } from '../components';
 import { useGraphData } from '../hooks';
 
@@ -31,8 +29,15 @@ type Props = GraphStackScreenProps<'Graph'>;
  * - Navigate from detail panel to page view
  * - Pinch-to-zoom and pan for exploration
  */
+// Layout constants
+const HEADER_HEIGHT = 44;
+const CONTROLS_HEIGHT = 56; // paddingVertical(12*2) + button height(~32)
+const TAB_BAR_HEIGHT = 49;
+const GRAPH_PADDING = 16;
+
 export function GraphScreen({ navigation }: Props): React.ReactElement {
   const { width, height } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
 
   // Graph view mode and center page
   const [viewMode, setViewMode] = useState<'full' | 'local'>('full');
@@ -51,41 +56,40 @@ export function GraphScreen({ navigation }: Props): React.ReactElement {
     depth: 1,
   });
 
-  // Calculate graph dimensions (full screen minus header, controls, and tab bar)
-  const graphWidth = width - 32; // 16px padding on each side
-  const graphHeight = height - 280; // Account for header, controls, tab bar, and detail panel
+  // Calculate graph dimensions using safe area insets for pixel-perfect layout
+  // The gap between controls and graph should equal the gap between graph and tab bar
+  const VERTICAL_GAP = 24; // Symmetric gap above and below graph
+  const graphWidth = width - GRAPH_PADDING * 2;
+
+  // Available height for the graph container (between controls and tab bar)
+  const availableHeight =
+    height -
+    insets.top - // Status bar safe area
+    HEADER_HEIGHT - // Navigation header
+    CONTROLS_HEIGHT - // Segmented control section
+    insets.bottom - // Home indicator safe area
+    TAB_BAR_HEIGHT; // Tab bar
+
+  // Graph height with symmetric padding removed - centering will distribute the gap
+  const graphHeight = availableHeight - VERTICAL_GAP * 2;
 
   // Set initial center node when nodes are loaded
   const effectiveCenterNodeId = centerPageId || (nodes.length > 0 ? nodes[0].id : null);
 
-  // Toggle between full and local view
-  const handleToggleView = useCallback(() => {
-    if (viewMode === 'full' && effectiveCenterNodeId) {
-      // Switch to local view centered on first node
-      setCenterPageId(effectiveCenterNodeId);
-      setViewMode('local');
-    } else {
-      // Switch back to full view
-      setViewMode('full');
-      setCenterPageId(null);
-    }
-  }, [viewMode, effectiveCenterNodeId]);
+  // Handle center change - single tap makes node the new center
+  const handleCenterChange = useCallback((nodeId: PageId) => {
+    setCenterPageId(nodeId);
+  }, []);
 
-  // Handle node press - show detail panel
+  // Handle node double-tap - show detail panel for navigation
   const handleNodePress = useCallback(
     (nodeId: PageId) => {
       const node = nodes.find((n) => n.id === nodeId);
       if (node) {
         setSelectedNode({ pageId: nodeId, pageTitle: node.title });
-
-        // If in full view mode, also switch to local view centered on this node
-        if (viewMode === 'full') {
-          setCenterPageId(nodeId);
-          setViewMode('local');
-        }
       }
     },
-    [nodes, viewMode]
+    [nodes]
   );
 
   // Handle "Open Page" from detail panel
@@ -94,11 +98,13 @@ export function GraphScreen({ navigation }: Props): React.ReactElement {
       // Close detail panel
       setSelectedNode(null);
       // Navigate to page view (through PagesTab stack)
+      // Using initial: false preserves the tab's existing stack so back button works
       navigation.navigate('MainTabs', {
         screen: 'PagesTab',
         params: {
           screen: 'Page',
           params: { pageId },
+          initial: false,
         },
       });
     },
@@ -152,21 +158,42 @@ export function GraphScreen({ navigation }: Props): React.ReactElement {
 
   return (
     <View style={styles.container}>
-      {/* View mode toggle */}
+      {/* View mode toggle - segmented control */}
       <View style={styles.controls}>
-        <TouchableOpacity
-          style={[styles.toggleButton, viewMode === 'full' && styles.toggleButtonActive]}
-          onPress={handleToggleView}
-          accessibilityRole="button"
-          accessibilityLabel={
-            viewMode === 'full' ? 'Switch to local graph view' : 'Switch to full graph view'
-          }
-          testID="graph-view-toggle"
-        >
-          <Text style={[styles.toggleText, viewMode === 'full' && styles.toggleTextActive]}>
-            {viewMode === 'full' ? 'Full Graph' : 'Local View'}
-          </Text>
-        </TouchableOpacity>
+        <View style={styles.segmentedControl}>
+          <TouchableOpacity
+            style={[styles.segmentButton, viewMode === 'full' && styles.segmentButtonActive]}
+            onPress={() => {
+              setViewMode('full');
+              setCenterPageId(null);
+            }}
+            accessibilityRole="button"
+            accessibilityLabel="Show full graph"
+            accessibilityState={{ selected: viewMode === 'full' }}
+            testID="graph-view-full"
+          >
+            <Text style={[styles.segmentText, viewMode === 'full' && styles.segmentTextActive]}>
+              All Pages
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.segmentButton, viewMode === 'local' && styles.segmentButtonActive]}
+            onPress={() => {
+              if (effectiveCenterNodeId) {
+                setCenterPageId(effectiveCenterNodeId);
+                setViewMode('local');
+              }
+            }}
+            accessibilityRole="button"
+            accessibilityLabel="Show local neighborhood"
+            accessibilityState={{ selected: viewMode === 'local' }}
+            testID="graph-view-local"
+          >
+            <Text style={[styles.segmentText, viewMode === 'local' && styles.segmentTextActive]}>
+              Focus View
+            </Text>
+          </TouchableOpacity>
+        </View>
         {viewMode === 'local' && centerPageId && (
           <Text style={styles.viewModeHint} numberOfLines={1}>
             Showing connections for: {nodes.find((n) => n.id === centerPageId)?.title || 'Unknown'}
@@ -183,6 +210,7 @@ export function GraphScreen({ navigation }: Props): React.ReactElement {
             edges={edges}
             width={graphWidth}
             height={graphHeight}
+            onCenterChange={handleCenterChange}
             onNodePress={handleNodePress}
             testID="knowledge-graph"
           />
@@ -217,24 +245,35 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#E5E5EA',
   },
-  toggleButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+  segmentedControl: {
+    flexDirection: 'row',
     backgroundColor: '#F2F2F7',
     borderRadius: 8,
+    padding: 2,
     alignSelf: 'flex-start',
-    minHeight: 44, // WCAG touch target
   },
-  toggleButtonActive: {
-    backgroundColor: '#3b82f6',
+  segmentButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 6,
+    minHeight: 40,
+    justifyContent: 'center',
   },
-  toggleText: {
-    fontSize: 15,
+  segmentButtonActive: {
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  segmentText: {
+    fontSize: 14,
     fontWeight: '600',
-    color: '#3C3C43',
+    color: '#8E8E93',
   },
-  toggleTextActive: {
-    color: '#FFFFFF',
+  segmentTextActive: {
+    color: '#000000',
   },
   viewModeHint: {
     fontSize: 13,
@@ -243,7 +282,7 @@ const styles = StyleSheet.create({
   },
   graphWrapper: {
     flex: 1,
-    padding: 16,
+    paddingHorizontal: GRAPH_PADDING,
     alignItems: 'center',
     justifyContent: 'center',
   },
