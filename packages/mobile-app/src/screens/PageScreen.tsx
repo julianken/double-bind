@@ -11,6 +11,7 @@
  * - Drag-and-drop block reordering (edit mode)
  * - Undo/redo support (edit mode)
  * - FAB for creating new blocks (edit mode)
+ * - Wiki link autocomplete with [[ trigger (edit mode)
  */
 
 import * as React from 'react';
@@ -27,6 +28,10 @@ import {
   type RenderBlockItemInfo,
 } from '@double-bind/mobile-primitives';
 import { useDatabase } from '../hooks/useDatabase';
+import { useWikiLinkAutocomplete } from '../hooks/useWikiLinkAutocomplete';
+import { useKeyboard } from '../editor/useKeyboard';
+import { WikiLinkSuggestions } from '../editor/WikiLinkSuggestions';
+import type { AutocompleteSuggestion } from '../editor/types';
 import type { PagesStackScreenProps } from '../navigation/types';
 import { buildBlockTree } from '../utils/blockTree';
 
@@ -75,6 +80,22 @@ export function PageScreen({ route, navigation }: Props): React.ReactElement {
   // Edit mode state
   const [isEditMode, setIsEditMode] = React.useState(false);
   const [editingBlockId, setEditingBlockId] = React.useState<BlockId | null>(null);
+
+  // Wiki link autocomplete state
+  const keyboard = useKeyboard();
+  const {
+    isActive: isAutocompleteActive,
+    query: autocompleteQuery,
+    suggestions,
+    // isLoading is available but WikiLinkSuggestions handles empty state
+    handleTrigger,
+    handleSelect: handleAutocompleteSelect,
+    handleDismiss: handleAutocompleteDismiss,
+  } = useWikiLinkAutocomplete();
+  const [selectedSuggestionIndex, setSelectedSuggestionIndex] = React.useState(0);
+
+  // Track content for autocomplete trigger detection
+  const contentByBlockRef = React.useRef<Map<BlockId, string>>(new Map());
 
   // Create services and block operations hook
   const services = React.useMemo(() => {
@@ -274,6 +295,75 @@ export function PageScreen({ route, navigation }: Props): React.ReactElement {
     [deleteBlock, loadPage, editingBlockId]
   );
 
+  // Handle content change for autocomplete trigger detection
+  const handleContentChange = React.useCallback(
+    (blockId: BlockId, content: string) => {
+      const previousContent = contentByBlockRef.current.get(blockId) || '';
+      contentByBlockRef.current.set(blockId, content);
+
+      // Detect [[ trigger pattern
+      // Look for [[ that was just typed (not already in the previous content at same position)
+      const bracketIndex = content.lastIndexOf('[[');
+      if (bracketIndex !== -1) {
+        // Get the query after [[
+        const afterBrackets = content.substring(bracketIndex + 2);
+
+        // Check if there's a closing ]] - if so, the link is already complete
+        if (afterBrackets.includes(']]')) {
+          // Link is complete, dismiss autocomplete if active
+          if (isAutocompleteActive) {
+            handleAutocompleteDismiss();
+          }
+          return;
+        }
+
+        // Check if this is a new trigger or continued typing
+        const prevBracketIndex = previousContent.lastIndexOf('[[');
+        const isNewTrigger =
+          bracketIndex !== prevBracketIndex ||
+          (bracketIndex === prevBracketIndex &&
+            content.length > previousContent.length &&
+            content.substring(bracketIndex).startsWith('[['));
+
+        if (isNewTrigger || isAutocompleteActive) {
+          // Trigger autocomplete with the query after [[
+          handleTrigger('page', afterBrackets);
+          setSelectedSuggestionIndex(0);
+        }
+      } else if (isAutocompleteActive) {
+        // [[ was removed, dismiss autocomplete
+        handleAutocompleteDismiss();
+      }
+    },
+    [isAutocompleteActive, handleTrigger, handleAutocompleteDismiss]
+  );
+
+  // Handle autocomplete suggestion selection
+  const handleSuggestionSelect = React.useCallback(
+    async (suggestion: AutocompleteSuggestion, index: number) => {
+      setSelectedSuggestionIndex(index);
+
+      const result = await handleAutocompleteSelect(suggestion);
+      if (!result.text || !editingBlockId) return;
+
+      // Get the current content for the editing block
+      const currentContent = contentByBlockRef.current.get(editingBlockId) || '';
+
+      // Find the [[ position and replace [[query with the wiki link
+      const bracketIndex = currentContent.lastIndexOf('[[');
+      if (bracketIndex !== -1) {
+        // Replace [[query with the wiki link
+        const beforeBrackets = currentContent.substring(0, bracketIndex);
+        const newContent = beforeBrackets + result.text;
+
+        // Update content and save
+        contentByBlockRef.current.set(editingBlockId, newContent);
+        await handleContentSave(editingBlockId, newContent);
+      }
+    },
+    [handleAutocompleteSelect, editingBlockId, handleContentSave]
+  );
+
   // Render function for editable blocks in edit mode
   const renderEditableBlock = React.useCallback(
     (info: RenderBlockItemInfo): React.ReactElement => {
@@ -285,7 +375,14 @@ export function PageScreen({ route, navigation }: Props): React.ReactElement {
           isEditing={editingBlockId === info.item.block.blockId}
           isSelected={info.isSelected}
           onStartEditing={(blockId) => setEditingBlockId(blockId)}
-          onEndEditing={() => setEditingBlockId(null)}
+          onEndEditing={() => {
+            setEditingBlockId(null);
+            // Dismiss autocomplete when editing ends
+            if (isAutocompleteActive) {
+              handleAutocompleteDismiss();
+            }
+          }}
+          onContentChange={handleContentChange}
           onSave={handleContentSave}
           onEnterPress={handleEnterPress}
           onBackspaceEmpty={handleBackspaceEmpty}
@@ -296,7 +393,16 @@ export function PageScreen({ route, navigation }: Props): React.ReactElement {
         />
       );
     },
-    [editingBlockId, handleContentSave, handleEnterPress, handleBackspaceEmpty, handleSwipeDelete]
+    [
+      editingBlockId,
+      isAutocompleteActive,
+      handleAutocompleteDismiss,
+      handleContentChange,
+      handleContentSave,
+      handleEnterPress,
+      handleBackspaceEmpty,
+      handleSwipeDelete,
+    ]
   );
 
   // Handle block reorder
@@ -485,6 +591,20 @@ export function PageScreen({ route, navigation }: Props): React.ReactElement {
           onPress={handleFabPress}
           accessibilityLabel="Create new block"
           testID="create-block-fab"
+        />
+      )}
+
+      {/* Wiki link autocomplete popup - positioned above keyboard */}
+      {isEditMode && (
+        <WikiLinkSuggestions
+          isVisible={isAutocompleteActive}
+          type="page"
+          query={autocompleteQuery}
+          suggestions={suggestions}
+          selectedIndex={selectedSuggestionIndex}
+          bottomOffset={keyboard.height}
+          onSelect={handleSuggestionSelect}
+          onClose={handleAutocompleteDismiss}
         />
       )}
     </View>
