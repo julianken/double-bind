@@ -258,6 +258,9 @@ importers:
       '@double-bind/mobile':
         specifier: workspace:*
         version: link:../mobile
+      '@double-bind/mobile-primitives':
+        specifier: workspace:*
+        version: link:../mobile-primitives
       '@double-bind/types':
         specifier: workspace:*
         version: link:../types
