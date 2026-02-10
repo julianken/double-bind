@@ -172,6 +172,7 @@ export function PageScreen({ route, navigation }: Props): React.ReactElement {
           style={styles.headerButton}
           accessibilityRole="button"
           accessibilityLabel={isEditMode ? 'Done editing' : 'Edit page'}
+          accessibilityState={{ selected: isEditMode }}
           testID="edit-mode-toggle"
         >
           <Text style={styles.headerButtonText}>{isEditMode ? 'Done' : 'Edit'}</Text>
@@ -341,24 +342,28 @@ export function PageScreen({ route, navigation }: Props): React.ReactElement {
   // Handle autocomplete suggestion selection
   const handleSuggestionSelect = React.useCallback(
     async (suggestion: AutocompleteSuggestion, index: number) => {
-      setSelectedSuggestionIndex(index);
+      try {
+        setSelectedSuggestionIndex(index);
 
-      const result = await handleAutocompleteSelect(suggestion);
-      if (!result.text || !editingBlockId) return;
+        const result = await handleAutocompleteSelect(suggestion);
+        if (!result.text || !editingBlockId) return;
 
-      // Get the current content for the editing block
-      const currentContent = contentByBlockRef.current.get(editingBlockId) || '';
+        // Get the current content for the editing block
+        const currentContent = contentByBlockRef.current.get(editingBlockId) || '';
 
-      // Find the [[ position and replace [[query with the wiki link
-      const bracketIndex = currentContent.lastIndexOf('[[');
-      if (bracketIndex !== -1) {
-        // Replace [[query with the wiki link
-        const beforeBrackets = currentContent.substring(0, bracketIndex);
-        const newContent = beforeBrackets + result.text;
+        // Find the [[ position and replace [[query with the wiki link
+        const bracketIndex = currentContent.lastIndexOf('[[');
+        if (bracketIndex !== -1) {
+          // Replace [[query with the wiki link
+          const beforeBrackets = currentContent.substring(0, bracketIndex);
+          const newContent = beforeBrackets + result.text;
 
-        // Update content and save
-        contentByBlockRef.current.set(editingBlockId, newContent);
-        await handleContentSave(editingBlockId, newContent);
+          // Update content and save
+          contentByBlockRef.current.set(editingBlockId, newContent);
+          await handleContentSave(editingBlockId, newContent);
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to insert wiki link');
       }
     },
     [handleAutocompleteSelect, editingBlockId, handleContentSave]
