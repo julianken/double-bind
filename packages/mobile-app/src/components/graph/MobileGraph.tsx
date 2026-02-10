@@ -10,7 +10,7 @@
  * Performance optimized with node limiting and transform-based zoom/pan.
  */
 
-import { memo, useCallback, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, StyleSheet, Text } from 'react-native';
 import { GestureDetector, Gesture } from 'react-native-gesture-handler';
 import Animated, {
@@ -27,6 +27,7 @@ import { GraphNode } from './GraphNode';
 import { GraphEdge } from './GraphEdge';
 import { useForceLayout, useNodeMap } from './useForceLayout';
 import { useOptimizedGraph } from './useOptimizedGraph';
+import { useLabelLayout } from './useLabelLayout';
 
 /**
  * MobileGraph component for interactive graph visualization.
@@ -52,6 +53,7 @@ export const MobileGraph = memo(function MobileGraph({
   edges,
   width,
   height,
+  onCenterChange,
   onNodePress,
   maxNodes = GRAPH_CONSTANTS.DEFAULT_MAX_NODES,
   testID,
@@ -59,6 +61,10 @@ export const MobileGraph = memo(function MobileGraph({
   // Track selected node and interaction state
   const [selectedNodeId, setSelectedNodeId] = useState<PageId | null>(null);
   const [isInteracting, setIsInteracting] = useState(false);
+
+  // Zoom hint state - shown once per session in ultra-minimal mode
+  const hasShownZoomHint = useRef(false);
+  const [showZoomHint, setShowZoomHint] = useState(false);
 
   // Limit nodes for performance
   const limitedNodes = useMemo(() => {
@@ -110,6 +116,33 @@ export const MobileGraph = memo(function MobileGraph({
 
   // Update node map with optimized visible nodes
   const optimizedNodeMap = useNodeMap(optimized.visibleNodes);
+
+  // Calculate adaptive label positioning
+  const labelLayouts = useLabelLayout({
+    visibleNodes: optimized.visibleNodes,
+    edges: visibleEdges,
+    centerNodeId,
+    selectedNodeId,
+    lodMode: optimized.lodMode,
+    scale: scale.value || 1,
+  });
+
+  // Show zoom hint when entering ultra-minimal mode (once per session)
+  useEffect(() => {
+    if (optimized.lodMode === 'ultra-minimal' && !hasShownZoomHint.current) {
+      hasShownZoomHint.current = true;
+      setShowZoomHint(true);
+      const timer = setTimeout(() => setShowZoomHint(false), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [optimized.lodMode]);
+
+  // Hide zoom hint on any interaction
+  useEffect(() => {
+    if (isInteracting && showZoomHint) {
+      setShowZoomHint(false);
+    }
+  }, [isInteracting, showZoomHint]);
 
   // Pan gesture for navigation
   const panGesture = useMemo(
@@ -184,10 +217,18 @@ export const MobileGraph = memo(function MobileGraph({
     ],
   }));
 
-  // Handle node press
-  const handleNodePress = useCallback(
+  // Handle node single tap - change center node
+  const handleNodeSelect = useCallback(
     (nodeId: PageId) => {
       setSelectedNodeId(nodeId);
+      onCenterChange?.(nodeId);
+    },
+    [onCenterChange]
+  );
+
+  // Handle node double tap - trigger navigation callback
+  const handleNodeDoubleTap = useCallback(
+    (nodeId: PageId) => {
       onNodePress?.(nodeId);
     },
     [onNodePress]
@@ -248,17 +289,26 @@ export const MobileGraph = memo(function MobileGraph({
                   node={node}
                   isCenter={node.id === centerNodeId}
                   isSelected={node.id === selectedNodeId}
-                  onPress={handleNodePress}
+                  onPress={handleNodeSelect}
+                  onDoubleTap={handleNodeDoubleTap}
                   scale={currentScale}
                   showLabel={
                     optimized.showLabels && (optimized.showAllLabels || node.id === centerNodeId)
                   }
+                  labelLayout={labelLayouts.get(node.id)}
                 />
               ))}
             </G>
           </Svg>
         </Animated.View>
       </GestureDetector>
+
+      {/* Zoom hint overlay - shown once when in ultra-minimal mode */}
+      {showZoomHint && (
+        <View style={styles.zoomHint} pointerEvents="none">
+          <Text style={styles.zoomHintText}>Pinch to zoom in for labels</Text>
+        </View>
+      )}
     </View>
   );
 });
@@ -280,5 +330,20 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 14,
     color: GRAPH_COLORS.normalNode,
+  },
+  zoomHint: {
+    position: 'absolute',
+    bottom: 20,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
+  zoomHintText: {
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    color: '#fff',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    fontSize: 14,
   },
 });

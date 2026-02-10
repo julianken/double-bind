@@ -87,11 +87,18 @@ vi.mock('react-native-gesture-handler', () => ({
 vi.mock('react-native-reanimated', () => ({
   default: {
     View: 'Animated.View',
+    createAnimatedComponent: vi.fn((component) => component),
   },
   useSharedValue: vi.fn((initial) => ({ value: initial })),
   useAnimatedStyle: vi.fn((fn) => fn()),
+  useAnimatedProps: vi.fn((fn) => fn()),
   withSpring: vi.fn((value) => value),
+  withTiming: vi.fn((value) => value),
   runOnJS: vi.fn((fn) => fn),
+  Easing: {
+    inOut: vi.fn(() => 'easeInOut'),
+    ease: 'ease',
+  },
 }));
 
 // Mock react-native-svg

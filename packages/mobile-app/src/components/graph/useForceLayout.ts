@@ -15,19 +15,25 @@ import type { MobileGraphNode, MobileGraphEdge, LayoutNode } from './types';
 // Force simulation parameters
 const SIMULATION_PARAMS = {
   /** Number of iterations for initial layout */
-  ITERATIONS: 100,
-  /** Strength of repulsion between nodes */
-  CHARGE_STRENGTH: -300,
+  ITERATIONS: 150,
+  /** Strength of repulsion between nodes (more negative = more spread) */
+  CHARGE_STRENGTH: -1200,
   /** Optimal distance for linked nodes */
-  LINK_DISTANCE: 80,
+  LINK_DISTANCE: 120,
   /** Strength of link attraction */
-  LINK_STRENGTH: 0.3,
+  LINK_STRENGTH: 0.15,
   /** Strength of centering force */
-  CENTER_STRENGTH: 0.1,
+  CENTER_STRENGTH: 0.03,
   /** Velocity decay per iteration */
-  VELOCITY_DECAY: 0.6,
+  VELOCITY_DECAY: 0.5,
   /** Minimum distance to prevent division by zero */
   MIN_DISTANCE: 1,
+  /** Minimum spacing between node centers to prevent overlap (includes labels) */
+  MIN_NODE_SPACING: 80,
+  /** Number of iterations for post-simulation collision resolution */
+  COLLISION_RESOLUTION_ITERATIONS: 10,
+  /** Strength of collision resolution force (0-1, higher = stronger) */
+  COLLISION_STRENGTH: 0.3,
 } as const;
 
 /**
@@ -41,8 +47,8 @@ function initializeNodes(
   centerNodeId: string
 ): LayoutNode[] {
   const centerX = width / 2;
-  const centerY = height / 2;
-  const radius = Math.min(width, height) * 0.3;
+  const centerY = height / 2 + 20; // Offset down slightly to account for header
+  const radius = Math.min(width, height) * 0.2; // Start closer to center
 
   return nodes.map((node, index) => {
     // If position is provided, use it
@@ -108,6 +114,38 @@ function applyChargeForce(nodes: LayoutNode[]): void {
 }
 
 /**
+ * Apply collision force to prevent node overlap.
+ * Uses circle-based collision detection with soft repulsion.
+ */
+function applyCollisionForce(nodes: LayoutNode[]): void {
+  const n = nodes.length;
+  const minSpacing = SIMULATION_PARAMS.MIN_NODE_SPACING;
+
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      const nodeA = nodes[i];
+      const nodeB = nodes[j];
+
+      const dx = nodeB.x - nodeA.x;
+      const dy = nodeB.y - nodeA.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      if (distance < minSpacing && distance > SIMULATION_PARAMS.MIN_DISTANCE) {
+        const overlap = minSpacing - distance;
+        const nx = dx / distance;
+        const ny = dy / distance;
+        const force = overlap * 0.5;
+
+        nodeA.vx -= nx * force;
+        nodeA.vy -= ny * force;
+        nodeB.vx += nx * force;
+        nodeB.vy += ny * force;
+      }
+    }
+  }
+}
+
+/**
  * Apply link force to attract connected nodes.
  */
 function applyLinkForce(
@@ -152,15 +190,39 @@ function applyCenterForce(nodes: LayoutNode[], centerX: number, centerY: number)
 }
 
 /**
- * Update node positions based on velocities.
+ * Update node positions based on velocities, constraining to bounds.
  */
-function updatePositions(nodes: LayoutNode[]): void {
+function updatePositions(nodes: LayoutNode[], width: number, height: number): void {
+  const horizontalPadding = 50; // Keep nodes away from left/right edges
+  const topPadding = 60; // More space from top (labels extend above nodes)
+  const bottomPadding = 50; // Space from bottom
+  const minX = horizontalPadding;
+  const maxX = width - horizontalPadding;
+  const minY = topPadding;
+  const maxY = height - bottomPadding;
+
   for (const node of nodes) {
     // Apply velocity with decay
     node.x += node.vx;
     node.y += node.vy;
     node.vx *= SIMULATION_PARAMS.VELOCITY_DECAY;
     node.vy *= SIMULATION_PARAMS.VELOCITY_DECAY;
+
+    // Constrain to bounds
+    if (node.x < minX) {
+      node.x = minX;
+      node.vx = 0;
+    } else if (node.x > maxX) {
+      node.x = maxX;
+      node.vx = 0;
+    }
+    if (node.y < minY) {
+      node.y = minY;
+      node.vy = 0;
+    } else if (node.y > maxY) {
+      node.y = maxY;
+      node.vy = 0;
+    }
   }
 }
 
@@ -179,9 +241,22 @@ function runSimulation(
 
   for (let i = 0; i < SIMULATION_PARAMS.ITERATIONS; i++) {
     applyChargeForce(nodes);
+    applyCollisionForce(nodes);
     applyLinkForce(nodes, edges, nodeMap);
     applyCenterForce(nodes, centerX, centerY);
-    updatePositions(nodes);
+    updatePositions(nodes, width, height);
+  }
+
+  // Post-simulation collision resolution
+  for (let i = 0; i < SIMULATION_PARAMS.COLLISION_RESOLUTION_ITERATIONS; i++) {
+    applyCollisionForce(nodes);
+    for (const node of nodes) {
+      node.x += node.vx * SIMULATION_PARAMS.COLLISION_STRENGTH;
+      node.y += node.vy * SIMULATION_PARAMS.COLLISION_STRENGTH;
+      node.vx *= 0.8; // Stronger damping for fine-tuning
+      node.vy *= 0.8;
+    }
+    updatePositions(nodes, width, height);
   }
 }
 

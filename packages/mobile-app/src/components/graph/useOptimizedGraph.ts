@@ -124,6 +124,10 @@ function getLODMode(scale: number): LODMode {
 
 /**
  * Calculate viewport bounds with padding for culling.
+ *
+ * The graph coordinate system has (0,0) at top-left.
+ * translateX/Y represent pan offset from origin.
+ * At scale=1, translate=(0,0), viewport shows coordinates 0 to width/height.
  */
 function calculateViewportBounds(
   width: number,
@@ -133,16 +137,26 @@ function calculateViewportBounds(
   scale: number
 ): ViewportBounds {
   const padding = PERF_CONSTANTS.VIEWPORT_PADDING;
-  const paddedWidth = width * (1 + padding);
-  const paddedHeight = height * (1 + padding);
 
-  // Transform viewport bounds to graph coordinates
-  const minX = (-translateX - paddedWidth / 2) / scale;
-  const maxX = (-translateX + paddedWidth / 2) / scale;
-  const minY = (-translateY - paddedHeight / 2) / scale;
-  const maxY = (-translateY + paddedHeight / 2) / scale;
+  // Calculate the visible area dimensions in graph coordinates
+  const viewWidth = width / scale;
+  const viewHeight = height / scale;
 
-  return { minX, maxX, minY, maxY };
+  // Pan offset converts to graph coordinate offset
+  // Negative translate = panned right/down, so visible area starts further right/down
+  const offsetX = -translateX / scale;
+  const offsetY = -translateY / scale;
+
+  // Add padding to prevent popping at edges
+  const paddingX = viewWidth * padding;
+  const paddingY = viewHeight * padding;
+
+  return {
+    minX: offsetX - paddingX,
+    maxX: offsetX + viewWidth + paddingX,
+    minY: offsetY - paddingY,
+    maxY: offsetY + viewHeight + paddingY,
+  };
 }
 
 /**
