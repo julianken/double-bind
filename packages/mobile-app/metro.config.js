@@ -14,6 +14,31 @@ const monorepoRoot = path.resolve(__dirname, "../..");
  * 3. Handle hoisted dependencies in pnpm workspace
  */
 
+// Package mappings to dist directories (compiled JS)
+// These packages must be built with `pnpm build` before running Metro
+const workspacePackages = {
+  "@double-bind/core": path.resolve(monorepoRoot, "packages/core/dist"),
+  "@double-bind/migrations": path.resolve(monorepoRoot, "packages/migrations/dist/src"),
+  "@double-bind/mobile": path.resolve(monorepoRoot, "packages/mobile/dist"),
+  "@double-bind/mobile-primitives": path.resolve(monorepoRoot, "packages/mobile-primitives/dist"),
+  "@double-bind/types": path.resolve(monorepoRoot, "packages/types/dist"),
+};
+
+// Shims for Node.js modules that don't exist in React Native
+const shimPackages = {
+  // ULID uses crypto.randomBytes which doesn't exist in React Native
+  // Our shim uses Math.random() instead
+  "ulid": path.resolve(__dirname, "shims/ulid.js"),
+};
+
+// Force React and React Native to resolve to mobile-app's node_modules
+// This prevents duplicate React instances in monorepo packages which causes
+// "Objects are not valid as a React child" errors
+const coreModules = {
+  "react": path.resolve(__dirname, "node_modules/react"),
+  "react-native": path.resolve(__dirname, "node_modules/react-native"),
+};
+
 const config = {
   // Watch the entire monorepo for changes
   watchFolders: [monorepoRoot],
@@ -25,12 +50,42 @@ const config = {
       path.resolve(monorepoRoot, "node_modules"),
     ],
 
-    // Map workspace packages to their source directories
-    // This allows importing directly from TypeScript source
     extraNodeModules: {
-      "@double-bind/core": path.resolve(monorepoRoot, "packages/core"),
-      "@double-bind/types": path.resolve(monorepoRoot, "packages/types"),
-      "@double-bind/mobile": path.resolve(monorepoRoot, "packages/mobile"),
+      ...workspacePackages,
+      ...coreModules,
+    },
+
+    // Custom resolver to force @double-bind packages to use dist directories
+    // and redirect Node.js modules to React Native shims
+    resolveRequest: (context, moduleName, platform) => {
+      // Check if this is a shimmed package (e.g., ulid -> shims/ulid.js)
+      if (shimPackages[moduleName]) {
+        return {
+          filePath: shimPackages[moduleName],
+          type: "sourceFile",
+        };
+      }
+
+      // Check if this is a @double-bind package import
+      for (const [pkgName, distPath] of Object.entries(workspacePackages)) {
+        if (moduleName === pkgName) {
+          // Resolve to the dist/index.js
+          return {
+            filePath: path.resolve(distPath, "index.js"),
+            type: "sourceFile",
+          };
+        }
+        // Handle subpath imports like @double-bind/core/something
+        if (moduleName.startsWith(pkgName + "/")) {
+          const subpath = moduleName.slice(pkgName.length + 1);
+          return {
+            filePath: path.resolve(distPath, subpath + ".js"),
+            type: "sourceFile",
+          };
+        }
+      }
+      // Fall back to default resolution
+      return context.resolveRequest(context, moduleName, platform);
     },
 
     // Block list for directories that should not be watched
@@ -40,8 +95,8 @@ const config = {
       // Ignore test directories in workspace packages
       /packages\/.*\/test\/.*/,
       /packages\/.*\/__tests__\/.*/,
-      // Ignore dist directories (use source directly)
-      /packages\/.*\/dist\/.*/,
+      // Ignore source directories in workspace packages (use dist instead)
+      /packages\/(core|types|mobile|mobile-primitives|migrations)\/src\/.*/,
     ],
   },
 

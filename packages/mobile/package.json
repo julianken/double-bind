@@ -23,7 +23,8 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@double-bind/types": "workspace:*"
+    "@double-bind/types": "workspace:*",
+    "ulid": "^3.0.2"
   },
   "devDependencies": {
     "react-native": "^0.73.0",

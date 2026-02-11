@@ -6,7 +6,7 @@
 
 // React hooks
 export { usePaginatedQuery } from './usePaginatedQuery';
-export { useInfiniteScroll, useScrollMonitor } from './useInfiniteScroll';
+export { useScrollMonitor } from './useInfiniteScroll';
 
 // Query helpers
 export {

@@ -83,9 +83,10 @@ export function PagesScreen({ onPagePress, onCreatePage }: PagesScreenProps): Re
     return <LoadingSpinner message="Initializing database..." />;
   }
 
-  // Show database error state
+  // Show database error state - ensure dbError is a string
   if (dbError) {
-    return <ErrorMessage message={dbError} />;
+    const errorMsg = typeof dbError === 'string' ? dbError : String(dbError);
+    return <ErrorMessage message={errorMsg} />;
   }
 
   // Show content loading state
