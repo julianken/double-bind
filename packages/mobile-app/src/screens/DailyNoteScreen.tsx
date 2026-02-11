@@ -80,6 +80,19 @@ export function DailyNoteScreen({ route, navigation }: Props): React.ReactElemen
     });
   }, [currentDate, navigation]);
 
+  // Navigate to PageScreen when daily note is loaded
+  React.useEffect(() => {
+    if (dailyNote && !isLoading && !error) {
+      // Navigate to PageScreen with the daily note's pageId
+      // Replace current screen so back button returns to Home, not this loading screen
+      navigation.getParent()?.navigate('PagesTab', {
+        screen: 'Page',
+        params: { pageId: dailyNote.pageId },
+        initial: false,
+      });
+    }
+  }, [dailyNote, isLoading, error, navigation]);
+
   const handlePreviousDay = () => {
     setCurrentDate(getPreviousDay(currentDate));
   };
