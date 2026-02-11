@@ -25,12 +25,17 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { KeyboardExtendedBaseView } from 'react-native-external-keyboard';
+import type { OnKeyPress } from 'react-native-external-keyboard';
 import type { Block, BlockId, PageId } from '@double-bind/types';
 import { createServices } from '@double-bind/core';
 import { FloatingActionButton } from '@double-bind/mobile-primitives';
 import { useDatabase } from '../hooks/useDatabase';
 import type { PagesStackScreenProps } from '../navigation/types';
 import { buildBlockTree } from '../utils/blockTree';
+
+// iOS Escape key code (UIKeyboardHIDUsage.keyboardEscape)
+const ESCAPE_KEY_CODE = 41;
 
 type Props = PagesStackScreenProps<'Page'>;
 
@@ -146,6 +151,95 @@ export function PageScreen({ route, navigation }: Props): React.ReactElement {
       setError(err instanceof Error ? err.message : 'Failed to save');
     }
   }, [editingBlockId, editingContent, loadPage]);
+
+  // Handle Enter key - save current block and create new block below (Roam-like behavior)
+  const handleEnterPress = React.useCallback(
+    async (contentBeforeEnter: string) => {
+      if (!editingBlockId || !servicesRef.current) return;
+
+      try {
+        // Save current block with content (without the newline)
+        await servicesRef.current.blockService.updateContent(editingBlockId, contentBeforeEnter);
+
+        // Find the current block to get its parentId (for creating sibling)
+        const currentBlock = blocks.find((b) => b.blockId === editingBlockId);
+        const parentId = currentBlock?.parentId ?? null;
+
+        // Create new block after current one
+        const newBlock = await servicesRef.current.blockService.createBlock(
+          pageId as PageId,
+          parentId, // Same parent = sibling
+          '', // empty content
+          editingBlockId // afterBlockId - place after current block
+        );
+
+        await loadPage();
+        // Start editing the new block
+        setEditingBlockId(newBlock.blockId);
+        setEditingContent('');
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to create block');
+      }
+    },
+    [editingBlockId, blocks, pageId, loadPage]
+  );
+
+  // Handle text change - detect Enter key press
+  const handleTextChange = React.useCallback(
+    (text: string) => {
+      // Check if Enter was pressed (newline added)
+      if (text.includes('\n')) {
+        // Get content before the newline
+        const contentBeforeEnter = text.split('\n')[0];
+        setEditingContent(contentBeforeEnter);
+        void handleEnterPress(contentBeforeEnter);
+      } else {
+        setEditingContent(text);
+      }
+    },
+    [handleEnterPress]
+  );
+
+  // Handle Escape key - delete empty block or save and deselect
+  const handleEscapePress = React.useCallback(async () => {
+    if (!editingBlockId || !servicesRef.current) return;
+
+    const trimmedContent = editingContent.trim();
+
+    if (trimmedContent === '') {
+      // Empty block - delete it
+      try {
+        await servicesRef.current.blockService.deleteBlock(editingBlockId);
+        await loadPage();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to delete block');
+      }
+    } else {
+      // Block has content - save it
+      try {
+        await servicesRef.current.blockService.updateContent(editingBlockId, editingContent);
+        await loadPage();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to save');
+      }
+    }
+
+    // Exit editing mode
+    setEditingBlockId(null);
+    setEditingContent('');
+  }, [editingBlockId, editingContent, loadPage]);
+
+  // Handle hardware keyboard key press events (via react-native-external-keyboard)
+  const handleHardwareKeyPress = React.useCallback(
+    (e: OnKeyPress) => {
+      const keyCode = e.nativeEvent.keyCode;
+      // Check for Escape key (iOS keyCode 41)
+      if (keyCode === ESCAPE_KEY_CODE) {
+        void handleEscapePress();
+      }
+    },
+    [handleEscapePress]
+  );
 
   // Handle toggle collapse
   const handleToggleCollapse = React.useCallback((blockId: BlockId) => {
@@ -288,17 +382,42 @@ export function PageScreen({ route, navigation }: Props): React.ReactElement {
         {/* Content */}
         <View style={styles.contentContainer}>
           {isEditing ? (
-            <TextInput
-              style={styles.textInput}
-              value={editingContent}
-              onChangeText={setEditingContent}
-              onBlur={handleSaveEdit}
-              autoFocus
-              multiline
-              placeholder="Type here..."
-              placeholderTextColor="#8E8E93"
-              testID={`block-input-${block.blockId}`}
-            />
+            <KeyboardExtendedBaseView
+              style={styles.editingRow}
+              focusable
+              onKeyDownPress={handleHardwareKeyPress}
+            >
+              <TextInput
+                style={styles.textInput}
+                value={editingContent}
+                onChangeText={handleTextChange}
+                autoFocus
+                multiline
+                blurOnSubmit={false}
+                placeholder="Type here..."
+                placeholderTextColor="#8E8E93"
+                testID={`block-input-${block.blockId}`}
+              />
+              <TouchableOpacity
+                onPress={() => void handleEscapePress()}
+                style={styles.cancelButton}
+                accessibilityLabel="Cancel editing"
+                testID={`cancel-block-${block.blockId}`}
+              >
+                <Text style={styles.cancelButtonText}>✕</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => {
+                  void handleSaveEdit();
+                  setEditingBlockId(null);
+                }}
+                style={styles.saveButton}
+                accessibilityLabel="Save block"
+                testID={`save-block-${block.blockId}`}
+              >
+                <Text style={styles.saveButtonText}>✓</Text>
+              </TouchableOpacity>
+            </KeyboardExtendedBaseView>
           ) : (
             <Text style={styles.blockText}>
               {String(block.content) || (isEditMode ? 'Tap to edit...' : '')}
@@ -460,11 +579,43 @@ const styles = StyleSheet.create({
     color: '#000000',
   },
   textInput: {
+    flex: 1,
     fontSize: 17,
     lineHeight: 22,
     color: '#000000',
     padding: 0,
     margin: 0,
     minHeight: 22,
+  },
+  editingRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+  },
+  saveButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#34C759',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  saveButtonText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  cancelButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#FF3B30',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cancelButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

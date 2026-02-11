@@ -28,7 +28,8 @@ export function GraphStack(): React.ReactElement {
         component={GraphScreen}
         options={{
           title: 'Graph',
-          headerLargeTitle: true,
+          // Disable large title - it conflicts with the fixed controls section below
+          headerLargeTitle: false,
         }}
       />
       <Stack.Screen
