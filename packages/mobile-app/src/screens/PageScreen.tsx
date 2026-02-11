@@ -25,11 +25,13 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { KeyboardExtendedBaseView } from 'react-native-external-keyboard';
-import type { OnKeyPress } from 'react-native-external-keyboard';
+// TODO: Re-enable once react-native-external-keyboard native module is fixed
+// import { KeyboardExtendedBaseView } from 'react-native-external-keyboard';
+// import type { OnKeyPress } from 'react-native-external-keyboard';
 import type { Block, BlockId, PageId } from '@double-bind/types';
 import { createServices } from '@double-bind/core';
 import { FloatingActionButton } from '@double-bind/mobile-primitives';
+import { StackActions, CommonActions } from '@react-navigation/native';
 import { useDatabase } from '../hooks/useDatabase';
 import type { PagesStackScreenProps } from '../navigation/types';
 import { buildBlockTree } from '../utils/blockTree';
@@ -59,6 +61,32 @@ export function PageScreen({ route, navigation }: Props): React.ReactElement {
 
   // Services ref for block operations
   const servicesRef = React.useRef<ReturnType<typeof createServices> | null>(null);
+
+  // Check if a page exists by title
+  const checkPageExists = React.useCallback(async (pageTitle: string): Promise<boolean> => {
+    if (!servicesRef.current) return false;
+    try {
+      const page = await servicesRef.current.pageService.getByTitle(pageTitle);
+      return page !== null;
+    } catch {
+      return false;
+    }
+  }, []);
+
+  // Handle wiki link press - navigate to page (create if needed)
+  const handleWikiLinkPress = React.useCallback(
+    async (pageTitle: string) => {
+      if (!servicesRef.current) return;
+      try {
+        const page = await servicesRef.current.pageService.getOrCreateByTitle(pageTitle);
+        // Push onto the current Pages stack (we're already in PagesTab)
+        navigation.push('Page', { pageId: page.pageId });
+      } catch (err) {
+        console.error('Failed to navigate to wiki link:', err);
+      }
+    },
+    [navigation]
+  );
 
   // Load page data
   const loadPage = React.useCallback(async () => {
@@ -93,9 +121,35 @@ export function PageScreen({ route, navigation }: Props): React.ReactElement {
     }
   }, [dbStatus, db, loadPage]);
 
-  // Update header with edit/done button
+  // Update header with back button and edit/done button
   React.useEffect(() => {
     navigation.setOptions({
+      headerLeft: () => (
+        <TouchableOpacity
+          onPress={() => {
+            const state = navigation.getState();
+            if (state.routes.length > 1) {
+              // Normal case: pop back to previous screen (correct animation)
+              navigation.goBack();
+            } else {
+              // Orphaned Page screen (came from Home via wiki link) - reset stack
+              // CommonActions.reset doesn't trigger push/pop animations
+              navigation.dispatch(
+                CommonActions.reset({
+                  index: 0,
+                  routes: [{ name: 'PageList' }],
+                })
+              );
+            }
+          }}
+          style={styles.headerBackButton}
+          accessibilityRole="button"
+          accessibilityLabel="Back to pages"
+          testID="back-button"
+        >
+          <Text style={styles.headerBackText}>← Pages</Text>
+        </TouchableOpacity>
+      ),
       headerRight: () => (
         <TouchableOpacity
           onPress={() => {
@@ -229,17 +283,17 @@ export function PageScreen({ route, navigation }: Props): React.ReactElement {
     setEditingContent('');
   }, [editingBlockId, editingContent, loadPage]);
 
-  // Handle hardware keyboard key press events (via react-native-external-keyboard)
-  const handleHardwareKeyPress = React.useCallback(
-    (e: OnKeyPress) => {
-      const keyCode = e.nativeEvent.keyCode;
-      // Check for Escape key (iOS keyCode 41)
-      if (keyCode === ESCAPE_KEY_CODE) {
-        void handleEscapePress();
-      }
-    },
-    [handleEscapePress]
-  );
+  // TODO: Re-enable hardware keyboard handling once native module is fixed
+  // const handleHardwareKeyPress = React.useCallback(
+  //   (e: OnKeyPress) => {
+  //     const keyCode = e.nativeEvent.keyCode;
+  //     // Check for Escape key (iOS keyCode 41)
+  //     if (keyCode === ESCAPE_KEY_CODE) {
+  //       void handleEscapePress();
+  //     }
+  //   },
+  //   [handleEscapePress]
+  // );
 
   // Handle toggle collapse
   const handleToggleCollapse = React.useCallback((blockId: BlockId) => {
@@ -382,11 +436,7 @@ export function PageScreen({ route, navigation }: Props): React.ReactElement {
         {/* Content */}
         <View style={styles.contentContainer}>
           {isEditing ? (
-            <KeyboardExtendedBaseView
-              style={styles.editingRow}
-              focusable
-              onKeyDownPress={handleHardwareKeyPress}
-            >
+            <View style={styles.editingRow}>
               <TextInput
                 style={styles.textInput}
                 value={editingContent}
@@ -417,7 +467,7 @@ export function PageScreen({ route, navigation }: Props): React.ReactElement {
               >
                 <Text style={styles.saveButtonText}>✓</Text>
               </TouchableOpacity>
-            </KeyboardExtendedBaseView>
+            </View>
           ) : (
             <Text style={styles.blockText}>
               {String(block.content) || (isEditMode ? 'Tap to edit...' : '')}
@@ -485,6 +535,16 @@ const styles = StyleSheet.create({
   blockCount: {
     fontSize: 14,
     color: '#8E8E93',
+  },
+  headerBackButton: {
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    minHeight: 44,
+    justifyContent: 'center',
+  },
+  headerBackText: {
+    fontSize: 17,
+    color: '#007AFF',
   },
   headerButton: {
     paddingHorizontal: 16,
