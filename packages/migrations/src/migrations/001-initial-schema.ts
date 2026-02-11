@@ -47,9 +47,9 @@ export const migration: Migration = {
 
 ?[key, value] <- [["schema_version", "1"]] :put metadata {key => value}
 
-::fts create blocks:fts { extractor: content, extract_filter: !is_deleted }
+::fts create blocks:fts { extractor: content, tokenizer: Simple, extract_filter: !is_deleted }
 
-::fts create pages:fts { extractor: title, extract_filter: !is_deleted }
+::fts create pages:fts { extractor: title, tokenizer: Simple, extract_filter: !is_deleted }
 
 ::index create links:by_target { target_id, source_id, link_type }
 

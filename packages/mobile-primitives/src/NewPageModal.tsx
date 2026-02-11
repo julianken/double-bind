@@ -19,17 +19,15 @@
  * ```
  */
 
-import { useState, type ReactElement } from 'react';
+import React, { useState, type ReactElement } from 'react';
 import {
-  Modal,
   View,
   Text,
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
 } from 'react-native';
+import { ModalOverlay } from './ModalOverlay';
 
 /**
  * Props for NewPageModal component.
@@ -84,71 +82,56 @@ export function NewPageModal({
   };
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={handleCancel}
-      statusBarTranslucent
-    >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.container}
-      >
-        <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={handleCancel}>
-          <TouchableOpacity activeOpacity={1} onPress={(e) => e.stopPropagation()}>
-            <View style={styles.modal}>
-              <Text style={styles.title}>New Page</Text>
+    <ModalOverlay visible={visible} onClose={handleCancel}>
+      <View style={styles.modal}>
+        <Text style={styles.title}>New Page</Text>
 
-              <TextInput
-                style={styles.input}
-                value={title}
-                onChangeText={setTitle}
-                placeholder={placeholder}
-                placeholderTextColor="#999999"
-                autoFocus
-                returnKeyType="done"
-                onSubmitEditing={handleSubmit}
-                editable={!isLoading}
-                testID="new-page-input"
-              />
+        <TextInput
+          style={styles.input}
+          value={title}
+          onChangeText={setTitle}
+          placeholder={placeholder}
+          placeholderTextColor="#999999"
+          autoFocus
+          returnKeyType="done"
+          onSubmitEditing={handleSubmit}
+          editable={!isLoading}
+          testID="new-page-input"
+        />
 
-              {error && (
-                <Text style={styles.errorText} testID="error-message">
-                  {error}
-                </Text>
-              )}
+        {error && (
+          <Text style={styles.errorText} testID="error-message">
+            {error}
+          </Text>
+        )}
 
-              <View style={styles.buttonRow}>
-                <TouchableOpacity
-                  style={[styles.button, styles.cancelButton]}
-                  onPress={handleCancel}
-                  disabled={isLoading}
-                  accessibilityRole="button"
-                  accessibilityLabel="Cancel"
-                  testID="cancel-button"
-                >
-                  <Text style={[styles.buttonText, styles.cancelButtonText]}>Cancel</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[styles.button, styles.createButton, isLoading && styles.buttonDisabled]}
-                  onPress={handleSubmit}
-                  disabled={isLoading}
-                  accessibilityRole="button"
-                  accessibilityLabel="Create page"
-                  testID="create-button"
-                >
-                  <Text style={[styles.buttonText, styles.createButtonText]}>
-                    {isLoading ? 'Creating...' : 'Create'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
+        <View style={styles.buttonRow}>
+          <TouchableOpacity
+            style={[styles.button, styles.cancelButton]}
+            onPress={handleCancel}
+            disabled={isLoading}
+            accessibilityRole="button"
+            accessibilityLabel="Cancel"
+            testID="cancel-button"
+          >
+            <Text style={[styles.buttonText, styles.cancelButtonText]}>Cancel</Text>
           </TouchableOpacity>
-        </TouchableOpacity>
-      </KeyboardAvoidingView>
-    </Modal>
+
+          <TouchableOpacity
+            style={[styles.button, styles.createButton, isLoading && styles.buttonDisabled]}
+            onPress={handleSubmit}
+            disabled={isLoading}
+            accessibilityRole="button"
+            accessibilityLabel="Create page"
+            testID="create-button"
+          >
+            <Text style={[styles.buttonText, styles.createButtonText]}>
+              {isLoading ? 'Creating...' : 'Create'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </ModalOverlay>
   );
 }
 
