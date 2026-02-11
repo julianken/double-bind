@@ -31,17 +31,22 @@ const shimPackages = {
   "ulid": path.resolve(__dirname, "shims/ulid.js"),
 };
 
+// Local vendor copy of react-native-external-keyboard (pnpm symlinks cause Metro/watchman issues)
+const externalKeyboardPath = path.resolve(__dirname, "vendor/react-native-external-keyboard");
+
 // Force React and React Native to resolve to mobile-app's node_modules
 // This prevents duplicate React instances in monorepo packages which causes
 // "Objects are not valid as a React child" errors
 const coreModules = {
   "react": path.resolve(__dirname, "node_modules/react"),
   "react-native": path.resolve(__dirname, "node_modules/react-native"),
+  "react-native-external-keyboard": path.resolve(__dirname, "node_modules/react-native-external-keyboard"),
 };
 
 const config = {
   // Watch the entire monorepo for changes
-  watchFolders: [monorepoRoot],
+  // Include the .pnpm store explicitly for packages that need it (symlinks not followed)
+  watchFolders: [monorepoRoot, externalKeyboardPath],
 
   resolver: {
     // Allow Metro to resolve modules from these locations
@@ -62,6 +67,22 @@ const config = {
       if (shimPackages[moduleName]) {
         return {
           filePath: shimPackages[moduleName],
+          type: "sourceFile",
+        };
+      }
+
+      // Handle react-native-external-keyboard explicitly (pnpm symlink issue)
+      // Use the local vendor copy with commonjs to avoid codegen issues
+      if (moduleName === "react-native-external-keyboard") {
+        return {
+          filePath: path.resolve(externalKeyboardPath, "lib/commonjs/index.js"),
+          type: "sourceFile",
+        };
+      }
+      if (moduleName.startsWith("react-native-external-keyboard/")) {
+        const subpath = moduleName.slice("react-native-external-keyboard/".length);
+        return {
+          filePath: path.resolve(externalKeyboardPath, "lib/commonjs", subpath + ".js"),
           type: "sourceFile",
         };
       }

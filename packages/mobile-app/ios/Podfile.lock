@@ -891,6 +891,10 @@ PODS:
   - React-Mapbuffer (0.73.11):
     - glog
     - React-debug
+  - react-native-external-keyboard (0.7.0):
+    - glog
+    - RCT-Folly (= 2022.05.16.00)
+    - React-Core
   - react-native-netinfo (11.5.2):
     - React-Core
   - react-native-safe-area-context (4.14.1):
@@ -1118,6 +1122,7 @@ DEPENDENCIES:
   - React-jsinspector (from `../node_modules/react-native/ReactCommon/jsinspector-modern`)
   - React-logger (from `../node_modules/react-native/ReactCommon/logger`)
   - React-Mapbuffer (from `../node_modules/react-native/ReactCommon`)
+  - react-native-external-keyboard (from `../node_modules/react-native-external-keyboard`)
   - "react-native-netinfo (from `../node_modules/@react-native-community/netinfo`)"
   - react-native-safe-area-context (from `../node_modules/react-native-safe-area-context`)
   - react-native-webview (from `../node_modules/react-native-webview`)
@@ -1213,6 +1218,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native/ReactCommon/logger"
   React-Mapbuffer:
     :path: "../node_modules/react-native/ReactCommon"
+  react-native-external-keyboard:
+    :path: "../node_modules/react-native-external-keyboard"
   react-native-netinfo:
     :path: "../node_modules/@react-native-community/netinfo"
   react-native-safe-area-context:
@@ -1302,6 +1309,7 @@ SPEC CHECKSUMS:
   React-jsinspector: a98428936fb888cc15d857226a26d9ac0a668a0e
   React-logger: 6e4873d1f9c54cca30f6c91a6617f8c91b75ba4c
   React-Mapbuffer: 57bf49a458398d329dad2bf8bc660e3e35b96989
+  react-native-external-keyboard: 3543ea26f479f5114744252b80b68b905705033e
   react-native-netinfo: 387c95161b1971d0b2acd61f5ecf394c8fd3fb95
   react-native-safe-area-context: 758e894ca5a9bd1868d2a9cfbca7326a2b6bf9dc
   react-native-webview: b30882679aaf3fdf8702f71ffc78fdc6c017dbe9
@@ -1326,7 +1334,7 @@ SPEC CHECKSUMS:
   React-utils: e8549669b504c18929b2e9aa4d87657e530a91a4
   ReactCommon: 9c38e8797dc2ac72edf63cd18cf450d918575666
   RNGestureHandler: ad7bdf3340a16d433d58023d4bddde2d633904f9
-  RNReanimated: 521195239d91527f73ba24cb707d13d5f3337c73
+  RNReanimated: 2ca45de833cb04ccfe52014ddb4ae5ea67e1fca8
   RNScreens: 523d1da8b1c0b73dd804095a6c00de47c023b6ce
   RNSVG: 7c30db7db27afaa6e4d38a598371b98a1b2bd181
   SocketRocket: f32cd54efbe0f095c4d7594881e52619cfe80b17

@@ -1,0 +1,1 @@
+{"version":3,"file":"KeyboardFocusLock.types.d.ts","sourceRoot":"","sources":["../../../../src/types/KeyboardFocusLock.types.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,SAAS,EAAE,MAAM,cAAc,CAAC;AAE9C,MAAM,MAAM,sBAAsB,GAAG,SAAS,GAAG;IAC/C,aAAa,CAAC,EAAE,MAAM,CAAC;IACvB,YAAY,CAAC,EAAE,OAAO,CAAC;CACxB,CAAC"}

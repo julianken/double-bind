@@ -1,0 +1,2 @@
+export declare const Pressable: import("react").MemoExoticComponent<import("react").ForwardRefExoticComponent<Omit<import("../../utils/withKeyboardFocus").WithKeyboardFocus<unknown, unknown, import("react-native").PressableProps & import("react").RefAttributes<import("react-native").View>, unknown>, "ref"> & import("react").RefAttributes<import("react-native").View | import("../..").KeyboardFocus>>>;
+//# sourceMappingURL=Pressable.d.ts.map
