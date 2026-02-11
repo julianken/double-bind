@@ -273,11 +273,17 @@ export function BlockView({
   }, [block.blockId, onToggleCollapse]);
 
   // Set up gesture handlers
-  const tapGesture = Gesture.Tap().numberOfTaps(1).maxDuration(250).onEnd(handlePress);
+  // Use runOnJS(true) since callbacks are JS functions, not Reanimated worklets
+  const tapGesture = Gesture.Tap()
+    .numberOfTaps(1)
+    .maxDuration(250)
+    .runOnJS(true)
+    .onEnd(handlePress);
 
   const longPressGesture = Gesture.LongPress()
     .minDuration(500)
     .maxDistance(10)
+    .runOnJS(true)
     .onEnd(handleLongPress);
 
   // Ensure single tap waits for long press check

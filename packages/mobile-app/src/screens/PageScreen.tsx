@@ -9,27 +9,33 @@
  * - Collapsible/expandable nested blocks
  * - Smooth scrolling for large pages
  * - Loading and error states
- * - Edit mode toggle
+ * - Edit mode with inline text editing
  */
 
 import * as React from 'react';
 import {
   View,
   Text,
+  TextInput,
   StyleSheet,
   ActivityIndicator,
   TouchableOpacity,
   ScrollView,
   RefreshControl,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
-import type { Block, BlockId } from '@double-bind/types';
+import type { Block, BlockId, PageId } from '@double-bind/types';
 import { createServices } from '@double-bind/core';
-import { BlockView, FloatingActionButton } from '@double-bind/mobile-primitives';
+import { FloatingActionButton } from '@double-bind/mobile-primitives';
 import { useDatabase } from '../hooks/useDatabase';
 import type { PagesStackScreenProps } from '../navigation/types';
 import { buildBlockTree } from '../utils/blockTree';
 
 type Props = PagesStackScreenProps<'Page'>;
+
+// Indentation per nesting level (in pixels)
+const INDENT_SIZE = 24;
 
 export function PageScreen({ route, navigation }: Props): React.ReactElement {
   const { pageId } = route.params;
@@ -43,6 +49,11 @@ export function PageScreen({ route, navigation }: Props): React.ReactElement {
   const [selectedBlockId, setSelectedBlockId] = React.useState<BlockId | null>(null);
   const [refreshing, setRefreshing] = React.useState(false);
   const [isEditMode, setIsEditMode] = React.useState(false);
+  const [editingBlockId, setEditingBlockId] = React.useState<BlockId | null>(null);
+  const [editingContent, setEditingContent] = React.useState('');
+
+  // Services ref for block operations
+  const servicesRef = React.useRef<ReturnType<typeof createServices> | null>(null);
 
   // Load page data
   const loadPage = React.useCallback(async () => {
@@ -51,6 +62,7 @@ export function PageScreen({ route, navigation }: Props): React.ReactElement {
     try {
       setError(null);
       const loadedServices = createServices(db);
+      servicesRef.current = loadedServices;
       const pageWithBlocks = await loadedServices.pageService.getPageWithBlocks(pageId);
 
       setPage(pageWithBlocks.page);
@@ -81,7 +93,14 @@ export function PageScreen({ route, navigation }: Props): React.ReactElement {
     navigation.setOptions({
       headerRight: () => (
         <TouchableOpacity
-          onPress={() => setIsEditMode((prev) => !prev)}
+          onPress={() => {
+            if (isEditMode && editingBlockId) {
+              // Save current edit before exiting edit mode
+              void handleSaveEdit();
+            }
+            setIsEditMode((prev) => !prev);
+            setEditingBlockId(null);
+          }}
           style={styles.headerButton}
           accessibilityRole="button"
           accessibilityLabel={isEditMode ? 'Done editing' : 'Edit page'}
@@ -91,7 +110,7 @@ export function PageScreen({ route, navigation }: Props): React.ReactElement {
         </TouchableOpacity>
       ),
     });
-  }, [navigation, isEditMode]);
+  }, [navigation, isEditMode, editingBlockId]);
 
   // Handle pull to refresh
   const handleRefresh = React.useCallback(() => {
@@ -99,18 +118,34 @@ export function PageScreen({ route, navigation }: Props): React.ReactElement {
     void loadPage();
   }, [loadPage]);
 
-  // Handle block press
+  // Handle block press - start editing in edit mode
   const handleBlockPress = React.useCallback(
-    (blockId: BlockId) => {
-      setSelectedBlockId((prev) => (prev === blockId ? null : blockId));
+    (blockId: BlockId, content: string) => {
+      if (isEditMode) {
+        // Save previous edit if switching blocks
+        if (editingBlockId && editingBlockId !== blockId) {
+          void handleSaveEdit();
+        }
+        setEditingBlockId(blockId);
+        setEditingContent(content);
+      } else {
+        setSelectedBlockId((prev) => (prev === blockId ? null : blockId));
+      }
     },
-    []
+    [isEditMode, editingBlockId]
   );
 
-  // Handle block long press
-  const handleBlockLongPress = React.useCallback((_blockId: BlockId) => {
-    // Future: show context menu
-  }, []);
+  // Handle save edit
+  const handleSaveEdit = React.useCallback(async () => {
+    if (!editingBlockId || !servicesRef.current) return;
+
+    try {
+      await servicesRef.current.blockService.updateContent(editingBlockId, editingContent);
+      await loadPage();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save');
+    }
+  }, [editingBlockId, editingContent, loadPage]);
 
   // Handle toggle collapse
   const handleToggleCollapse = React.useCallback((blockId: BlockId) => {
@@ -124,6 +159,30 @@ export function PageScreen({ route, navigation }: Props): React.ReactElement {
       return next;
     });
   }, []);
+
+  // Handle create new block
+  const handleCreateBlock = React.useCallback(async () => {
+    if (!servicesRef.current) return;
+
+    try {
+      // Find the last root-level block
+      const rootBlocks = blocks.filter((b) => b.parentId === null);
+      const lastRootBlock = rootBlocks[rootBlocks.length - 1];
+
+      const newBlock = await servicesRef.current.blockService.createBlock(
+        pageId as PageId,
+        null, // parentId
+        '', // empty content
+        lastRootBlock?.blockId // afterBlockId
+      );
+      await loadPage();
+      // Start editing the new block
+      setEditingBlockId(newBlock.blockId);
+      setEditingContent('');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create block');
+    }
+  }, [blocks, pageId, loadPage]);
 
   // Build flat block list for rendering
   const blockList = React.useMemo(() => {
@@ -146,7 +205,13 @@ export function PageScreen({ route, navigation }: Props): React.ReactElement {
       <View style={styles.centerContainer}>
         <Text style={styles.errorTitle}>Error</Text>
         <Text style={styles.errorText}>{String(error)}</Text>
-        <TouchableOpacity onPress={() => loadPage()} style={styles.retryButton}>
+        <TouchableOpacity
+          onPress={() => {
+            setError(null);
+            void loadPage();
+          }}
+          style={styles.retryButton}
+        >
           <Text style={styles.retryButtonText}>Retry</Text>
         </TouchableOpacity>
       </View>
@@ -177,9 +242,7 @@ export function PageScreen({ route, navigation }: Props): React.ReactElement {
         {isEditMode && (
           <FloatingActionButton
             icon="+"
-            onPress={() => {
-              // Future: create new block
-            }}
+            onPress={handleCreateBlock}
             accessibilityLabel="Create new block"
             testID="create-block-fab"
           />
@@ -188,41 +251,88 @@ export function PageScreen({ route, navigation }: Props): React.ReactElement {
     );
   }
 
+  // Render a single block
+  const renderBlock = (item: { block: Block; depth: number; hasChildren: boolean }) => {
+    const { block, depth, hasChildren } = item;
+    const isEditing = editingBlockId === block.blockId;
+    const isSelected = selectedBlockId === block.blockId;
+    const marginLeft = depth * INDENT_SIZE;
+
+    return (
+      <TouchableOpacity
+        key={block.blockId}
+        onPress={() => handleBlockPress(block.blockId, String(block.content))}
+        style={[
+          styles.blockContainer,
+          { marginLeft },
+          isSelected && styles.blockSelected,
+          isEditing && styles.blockEditing,
+        ]}
+        activeOpacity={0.7}
+        testID={`block-${block.blockId}`}
+      >
+        {/* Bullet */}
+        <TouchableOpacity
+          onPress={() => hasChildren && handleToggleCollapse(block.blockId)}
+          style={styles.bulletContainer}
+        >
+          {hasChildren ? (
+            <Text style={styles.collapseIcon}>
+              {collapsedBlocks.has(block.blockId) ? '▶' : '▼'}
+            </Text>
+          ) : (
+            <View style={styles.bullet} />
+          )}
+        </TouchableOpacity>
+
+        {/* Content */}
+        <View style={styles.contentContainer}>
+          {isEditing ? (
+            <TextInput
+              style={styles.textInput}
+              value={editingContent}
+              onChangeText={setEditingContent}
+              onBlur={handleSaveEdit}
+              autoFocus
+              multiline
+              placeholder="Type here..."
+              placeholderTextColor="#8E8E93"
+              testID={`block-input-${block.blockId}`}
+            />
+          ) : (
+            <Text style={styles.blockText}>
+              {String(block.content) || (isEditMode ? 'Tap to edit...' : '')}
+            </Text>
+          )}
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
   // Main render with ScrollView (workaround for FlatList bug)
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={100}
+    >
       <ScrollView
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
-        }
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
         contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
       >
         {headerComponent}
-        {blockList.map((item) => (
-          <BlockView
-            key={item.block.blockId}
-            block={item.block}
-            depth={item.depth}
-            hasChildren={item.hasChildren}
-            isSelected={selectedBlockId === item.block.blockId}
-            onPress={handleBlockPress}
-            onLongPress={handleBlockLongPress}
-            onToggleCollapse={handleToggleCollapse}
-            testID={`block-${item.block.blockId}`}
-          />
-        ))}
+        {blockList.map(renderBlock)}
       </ScrollView>
       {isEditMode && (
         <FloatingActionButton
           icon="+"
-          onPress={() => {
-            // Future: create new block
-          }}
+          onPress={handleCreateBlock}
           accessibilityLabel="Create new block"
           testID="create-block-fab"
         />
       )}
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -307,5 +417,54 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#8E8E93',
     textAlign: 'center',
+  },
+  // Block styles
+  blockContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    minHeight: 44,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  blockSelected: {
+    backgroundColor: 'rgba(0, 122, 255, 0.08)',
+  },
+  blockEditing: {
+    backgroundColor: 'rgba(0, 122, 255, 0.12)',
+  },
+  bulletContainer: {
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  bullet: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#8E8E93',
+  },
+  collapseIcon: {
+    fontSize: 10,
+    color: '#8E8E93',
+  },
+  contentContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    minHeight: 28,
+  },
+  blockText: {
+    fontSize: 17,
+    lineHeight: 22,
+    color: '#000000',
+  },
+  textInput: {
+    fontSize: 17,
+    lineHeight: 22,
+    color: '#000000',
+    padding: 0,
+    margin: 0,
+    minHeight: 22,
   },
 });
