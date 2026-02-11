@@ -389,7 +389,8 @@ describe('PageService', () => {
 
       expect(error).toBeInstanceOf(DoubleBindError);
       expect(error.code).toBe(ErrorCode.DB_QUERY_FAILED);
-      expect(error.message).toContain("Failed to get today's daily note");
+      // getTodaysDailyNote delegates to getOrCreateDailyNote, so error includes the date
+      expect(error.message).toContain('Failed to get or create daily note');
       expect(error.cause).toBe(originalError);
     });
 
@@ -402,6 +403,79 @@ describe('PageService', () => {
 
       expect(error).toBe(originalError);
       expect(error.code).toBe(ErrorCode.DB_CONNECTION_FAILED);
+    });
+  });
+
+  describe('getOrCreateDailyNote', () => {
+    it('should create initial empty block when daily note has no blocks', async () => {
+      const now = Date.now();
+      const testDate = '2026-02-10';
+      const pageId = 'daily-page-id';
+
+      const getOrCreateSpy = vi.spyOn(pageRepo, 'getOrCreateDailyNote');
+      getOrCreateSpy.mockResolvedValueOnce({
+        pageId,
+        title: testDate,
+        createdAt: now,
+        updatedAt: now,
+        isDeleted: false,
+        dailyNoteDate: testDate,
+      });
+
+      const getByPageSpy = vi.spyOn(blockRepo, 'getByPage');
+      getByPageSpy.mockResolvedValueOnce([]); // No existing blocks
+
+      const createSpy = vi.spyOn(blockRepo, 'create');
+      createSpy.mockResolvedValueOnce('new-block-id');
+
+      const result = await service.getOrCreateDailyNote(testDate);
+
+      expect(result.pageId).toBe(pageId);
+      expect(getByPageSpy).toHaveBeenCalledWith(pageId);
+      expect(createSpy).toHaveBeenCalledWith({
+        pageId,
+        content: '',
+      });
+    });
+
+    it('should not create block when daily note already has blocks', async () => {
+      const now = Date.now();
+      const testDate = '2026-02-10';
+      const pageId = 'daily-page-id';
+
+      const getOrCreateSpy = vi.spyOn(pageRepo, 'getOrCreateDailyNote');
+      getOrCreateSpy.mockResolvedValueOnce({
+        pageId,
+        title: testDate,
+        createdAt: now,
+        updatedAt: now,
+        isDeleted: false,
+        dailyNoteDate: testDate,
+      });
+
+      const getByPageSpy = vi.spyOn(blockRepo, 'getByPage');
+      getByPageSpy.mockResolvedValueOnce([
+        {
+          blockId: 'existing-block',
+          pageId,
+          parentId: null,
+          content: 'Hello',
+          contentType: 'text' as const,
+          order: 'a0',
+          isCollapsed: false,
+          isDeleted: false,
+          createdAt: now,
+          updatedAt: now,
+        },
+      ]);
+
+      const createSpy = vi.spyOn(blockRepo, 'create');
+
+      const result = await service.getOrCreateDailyNote(testDate);
+
+      expect(result.pageId).toBe(pageId);
+      expect(getByPageSpy).toHaveBeenCalledWith(pageId);
+      expect(createSpy).not.toHaveBeenCalled();
     });
   });
 

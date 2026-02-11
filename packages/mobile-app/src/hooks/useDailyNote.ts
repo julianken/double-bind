@@ -4,6 +4,9 @@
  * This hook provides a convenient interface for working with daily notes,
  * handling date formatting, creation, and loading states.
  *
+ * Uses PageService.getOrCreateDailyNote() to ensure daily notes are created
+ * with an initial empty block for immediate typing (consistent with regular pages).
+ *
  * @example
  * ```tsx
  * function DailyNoteScreen() {
@@ -18,7 +21,6 @@
  */
 import { useState, useEffect, useCallback } from 'react';
 import type { Page } from '@double-bind/types';
-import { PageRepository } from '@double-bind/core';
 import { useDatabase } from './useDatabase';
 
 /**
@@ -42,7 +44,7 @@ export interface UseDailyNoteResult {
  * @returns Daily note state and operations
  */
 export function useDailyNote(date: string): UseDailyNoteResult {
-  const { db, status } = useDatabase();
+  const { services, status } = useDatabase();
   const [dailyNote, setDailyNote] = useState<Page | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -53,11 +55,13 @@ export function useDailyNote(date: string): UseDailyNoteResult {
   }, []);
 
   useEffect(() => {
-    // Wait for database to be ready
-    if (status !== 'ready' || !db) {
+    // Wait for database and services to be ready
+    if (status !== 'ready' || !services) {
       return;
     }
 
+    // Capture services to satisfy TypeScript narrowing in async function
+    const pageService = services.pageService;
     let mounted = true;
 
     async function fetchDailyNote() {
@@ -65,8 +69,8 @@ export function useDailyNote(date: string): UseDailyNoteResult {
       setError(null);
 
       try {
-        const pageRepo = new PageRepository(db);
-        const page = await pageRepo.getOrCreateDailyNote(date);
+        // Use PageService to get/create daily note with initial block
+        const page = await pageService.getOrCreateDailyNote(date);
 
         if (mounted) {
           setDailyNote(page);
@@ -86,7 +90,7 @@ export function useDailyNote(date: string): UseDailyNoteResult {
     return () => {
       mounted = false;
     };
-  }, [db, status, date, fetchTrigger]);
+  }, [services, status, date, fetchTrigger]);
 
   return {
     dailyNote,
