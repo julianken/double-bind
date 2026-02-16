@@ -1,149 +1,214 @@
 # @double-bind/mobile
 
-Mobile platform implementations for Double-Bind, providing native database access on iOS and Android.
+Mobile platform implementation for Double-Bind using SQLite and op-sqlite.
 
 ## Overview
 
-This package contains the native implementations of the `GraphDB` interface for mobile platforms:
+This package provides the `Database` interface implementation for React Native mobile applications (iOS and Android). It uses [op-sqlite](https://github.com/OP-Engineering/op-sqlite) for high-performance SQLite access via JSI (JavaScript Interface).
 
-- **Android**: Kotlin implementation using `cozo_android`
-- **iOS**: Swift implementation using `CozoSwiftBridge`
+## Migration from CozoDB
 
-Both implementations use SQLite as the storage backend, which is optimal for mobile devices.
+This package was migrated from CozoDB to SQLite as part of the broader database migration (DBB-437). The mobile implementation now uses:
 
-## Structure
+- **op-sqlite** for direct SQLite access via JSI
+- **Simplified native modules** that only provide database path utilities
+- **SQL queries** instead of Datalog
 
-```
-packages/mobile/
-├── android/
-│   ├── core/                    # Core Kotlin library
-│   │   ├── src/main/kotlin/     # Implementation
-│   │   └── src/test/kotlin/     # Unit tests
-│   ├── build.gradle.kts         # Root build config
-│   └── settings.gradle.kts      # Project settings
-└── ios/
-    └── (Coming soon)
+## Installation
+
+```bash
+pnpm add @double-bind/mobile
 ```
 
-## Android Module
+### iOS Setup
 
-### Requirements
+```bash
+cd ios
+pod install
+```
 
-- Android SDK 24+ (Android 7.0)
+### Android Setup
+
+Gradle will automatically sync the dependencies. Ensure you're using:
+
+- Android SDK 24+
 - Kotlin 1.9+
-- Gradle 8.4+
+- Java 17
 
-### Building
+## Usage
 
-```bash
-cd packages/mobile/android
-./gradlew build
-```
+```typescript
+import { MobileDatabaseProvider } from '@double-bind/mobile';
 
-### Running Tests
+// Create a database instance (uses default platform path)
+const db = await MobileDatabaseProvider.create();
 
-```bash
-# Run all tests
-./gradlew test
-
-# Run specific test class
-./gradlew test --tests "com.doublebind.core.CozoGraphDBQueryTest"
-
-# Run with verbose output
-./gradlew test --info
-```
-
-### Usage
-
-```kotlin
-import com.doublebind.core.CozoGraphDB
-
-// Create database (in-memory for testing)
-val db = CozoGraphDB("mem", "")
-
-// Create database (SQLite for production)
-val dbPath = context.filesDir.resolve("double-bind.db").absolutePath
-val db = CozoGraphDB("sqlite", dbPath)
+// Or specify a custom path
+const dbCustom = await MobileDatabaseProvider.create('/custom/path/to/db.sqlite');
 
 // Execute queries
-val result = db.query<Any>("?[id, name] := *users{ id, name }")
-println(result.headers) // ["id", "name"]
-println(result.rows)    // [[1, "Alice"], [2, "Bob"]]
+const result = await db.query('SELECT * FROM pages WHERE id = $id', { id: '123' });
 
 // Execute mutations
-db.mutate(":create users { id: Int => name: String }")
-db.mutate("?[id, name] <- [[1, \"Alice\"]] :put users { id => name }")
+await db.mutate('INSERT INTO pages (id, title) VALUES ($id, $title)', {
+  id: '456',
+  title: 'New Page',
+});
 
-// Always close when done
-db.close()
+// Use transactions
+await db.transaction(async (tx) => {
+  await tx.execute('INSERT INTO pages (id, title) VALUES ($id, $title)', {
+    id: '789',
+    title: 'Page in Transaction',
+  });
+  const pages = await tx.query('SELECT * FROM pages');
+  return pages;
+});
+
+// Close the database when done
+await db.close();
 ```
 
-### Lifecycle Integration
+## Database Lifecycle (Mobile-Specific)
 
-```kotlin
-class DatabaseManager(context: Context) : Closeable {
-    private val db: CozoGraphDB
+The mobile database provider implements lifecycle methods for proper mobile app behavior:
 
-    init {
-        val dbPath = context.filesDir.resolve("double-bind.db").absolutePath
-        db = CozoGraphDB("sqlite", dbPath)
-    }
+```typescript
+// App goes to background
+await db.suspend(); // Flushes pending writes (WAL checkpoint)
 
-    // Call from Activity.onPause() or onStop()
-    suspend fun onBackground() = db.suspend()
+// App returns to foreground
+await db.resume(); // Validates database state
 
-    // Call from Activity.onResume()
-    suspend fun onForeground() = db.resume()
-
-    // Call from Application.onTrimMemory()
-    suspend fun onMemoryPressure() = db.onLowMemory()
-
-    override fun close() = db.close()
-}
+// System signals memory pressure
+await db.onLowMemory(); // Shrinks memory usage
 ```
 
-## GraphDB Interface
+These should be called from your React Native app's lifecycle events.
 
-The `GraphDB` interface provides:
+## Native Modules
 
-| Method | Description |
-|--------|-------------|
-| `query<T>()` | Execute read-only Datalog queries |
-| `mutate()` | Execute mutations (insert/update/delete) |
-| `importRelations()` | Bulk import data |
-| `exportRelations()` | Export relation data |
-| `backup()` | Create database backup |
-| `restore()` | Restore from backup |
-| `importRelationsFromBackup()` | Selective restore |
-| `suspend()` | Prepare for background |
-| `resume()` | Resume from background |
-| `onLowMemory()` | Handle memory pressure |
-| `close()` | Release resources |
+### DatabaseModule (iOS/Android)
+
+Provides utility methods for database path management:
+
+```typescript
+import { getDatabaseModule } from '@double-bind/mobile';
+
+const nativeModule = getDatabaseModule();
+
+// Get the default database path for the platform
+const path = await nativeModule.getDatabasePath();
+
+// Ensure the database directory exists
+await nativeModule.ensureDatabaseDirectory(path);
+```
+
+## Architecture
+
+```
+┌─────────────────────────────────────────┐
+│ MobileDatabaseProvider (TypeScript)     │
+│ - Implements Database interface         │
+│ - Converts named params ($name) to (?)  │
+│ - Converts result format                │
+└─────────────────┬───────────────────────┘
+                  │
+                  ▼
+┌─────────────────────────────────────────┐
+│ op-sqlite (JSI Bridge)                  │
+│ - Direct SQLite access via JSI          │
+│ - No React Native bridge overhead       │
+└─────────────────┬───────────────────────┘
+                  │
+                  ▼
+┌─────────────────────────────────────────┐
+│ SQLite (Native)                         │
+│ - iOS: Uses system SQLite               │
+│ - Android: Bundled SQLite 3.x           │
+└─────────────────────────────────────────┘
+```
+
+## Named Parameters
+
+The Database interface uses named parameters (`$name`), but op-sqlite uses positional parameters (`?`). The MobileDatabaseProvider automatically converts:
+
+```typescript
+// You write:
+await db.query('SELECT * FROM pages WHERE id = $id AND status = $status', {
+  id: '123',
+  status: 'published',
+});
+
+// Converted to:
+// SQL: SELECT * FROM pages WHERE id = ? AND status = ?
+// Params: ['123', 'published']
+```
+
+## Performance
+
+op-sqlite provides excellent performance through JSI:
+
+- **No bridge serialization** — Direct memory access from JavaScript to native
+- **Synchronous API available** — `executeSync()` for blocking operations
+- **WAL mode enabled** — Better concurrency and crash recovery
+- **Prepared statements** — For repeated queries (not yet exposed in Database interface)
+
+## Limitations
+
+Some Database interface methods are not yet implemented for mobile:
+
+- `backup(path)` — File system copy operations should be used instead
+- `restore(path)` — Create a new database from the backup file instead
+- `importRelationsFromBackup(path, relations)` — Not supported
+
+## Differences from Desktop
+
+| Feature         | Desktop (better-sqlite3)      | Mobile (op-sqlite)          |
+| --------------- | ----------------------------- | --------------------------- |
+| API             | Synchronous                   | Async (with sync variant)   |
+| Parameter style | Named (`$name`) or positional | Positional (`?`) only       |
+| Result format   | Objects                       | Objects                     |
+| Transaction API | Manual BEGIN/COMMIT           | Native transaction() method |
+| Performance     | Fast (V8)                     | Very fast (JSI)             |
 
 ## Testing
 
-Tests are written with JUnit 5 and kotlinx-coroutines-test. All tests use in-memory databases for speed.
+```bash
+# Type checking
+pnpm typecheck
 
-Test coverage includes:
-- **Query operations**: Basic queries, parameters, data types, joins
-- **Mutation operations**: Create, insert, update, delete
-- **Data transfer**: Import/export, round-trip integrity
-- **Persistence**: Backup, restore, cross-engine compatibility
-- **Lifecycle**: Close, suspend, resume, onLowMemory
-- **Error handling**: Syntax errors, type mismatches, constraint violations
+# Build
+pnpm build
 
-## Dependencies
+# Android unit tests (Kotlin) - DEPRECATED (CozoDB tests)
+# pnpm test:android
 
-```kotlin
-dependencies {
-    implementation("io.github.cozodb:cozo_android:0.7.6")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
-}
+# Build Android library
+pnpm build:android
 ```
 
-## See Also
+## Troubleshooting
 
-- [Mobile Database Strategy](../../docs/architecture/mobile-database-strategy.md)
-- [GraphDB Interface](../types/src/graph-db.ts)
-- [CozoDB Documentation](https://github.com/cozodb/cozo)
+### "op-sqlite native module is not available"
+
+Ensure you've run `pod install` on iOS or synced Gradle on Android. The op-sqlite library requires native setup.
+
+### "Database has been closed"
+
+You're trying to use the database after calling `close()`. Create a new instance.
+
+### Transaction returns undefined
+
+The transaction function must return a value. If you don't need a result, return `null`:
+
+```typescript
+await db.transaction(async (tx) => {
+  await tx.execute('INSERT ...');
+  return null; // ✓ Returns a value
+});
+```
+
+## License
+
+MIT

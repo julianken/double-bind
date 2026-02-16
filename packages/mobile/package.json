@@ -2,7 +2,7 @@
   "name": "@double-bind/mobile",
   "version": "0.0.1",
   "private": true,
-  "description": "Mobile platform implementations for Double-Bind",
+  "description": "Mobile platform implementations for Double-Bind (SQLite + op-sqlite)",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
@@ -18,12 +18,14 @@
     "mobile",
     "android",
     "ios",
-    "cozodb"
+    "sqlite",
+    "op-sqlite"
   ],
   "author": "",
   "license": "MIT",
   "dependencies": {
     "@double-bind/types": "workspace:*",
+    "@op-engineering/op-sqlite": "^15.2.5",
     "ulid": "^3.0.2"
   },
   "devDependencies": {
