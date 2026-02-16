@@ -61,6 +61,7 @@ export default defineConfig({
     timeout: 120000,
     env: {
       E2E_TEST: 'true',
+      VITE_BRIDGE_PORT: '3001',
     },
   },
 });
