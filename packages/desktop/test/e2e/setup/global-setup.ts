@@ -1,7 +1,7 @@
 /**
  * Playwright Global Setup - HTTP Bridge Server
  *
- * Starts a lightweight Node.js server that wraps cozo-node and listens on localhost:3001.
+ * Starts a lightweight Node.js server that wraps better-sqlite3 and listens on localhost:3001.
  * The mockIPC() callback in the browser sends fetch() requests to this server.
  *
  * @see docs/testing/e2e-fast.md
@@ -10,7 +10,8 @@
 import type { FullConfig } from '@playwright/test';
 import express, { type Request, type Response, type Express } from 'express';
 import type { Server } from 'http';
-import { CozoDb } from 'cozo-node';
+import Database from 'better-sqlite3';
+import { runSqliteMigrations, ALL_SQLITE_MIGRATIONS } from '@double-bind/migrations';
 
 const BRIDGE_PORT = 3001;
 const BRIDGE_URL = `http://localhost:${BRIDGE_PORT}`;
@@ -21,194 +22,128 @@ const HEALTH_CHECK_INTERVAL = 100; // 100ms between retries
 let server: Server | null = null;
 
 // Store the DB in an object so it can be swapped out and routes will get the new instance
-const dbContainer: { db: CozoDb | null } = { db: null };
+const dbContainer: { db: Database.Database | null } = { db: null };
 
 /**
- * Extract a readable error message from a CozoDB error result.
+ * Prepare parameter values for better-sqlite3 named parameters.
+ * better-sqlite3 expects bare names (e.g., { title: "abc" }) even when SQL uses $title.
+ * Strips $ prefix if present and converts boolean values to 0/1 for SQLite.
  */
-function extractCozoError(result: unknown): string {
-  if (!result || typeof result !== 'object') {
-    return String(result);
+function prepareParams(params: Record<string, unknown>): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(params)) {
+    const bareKey = key.startsWith('$') ? key.slice(1) : key;
+    if (typeof value === 'boolean') {
+      result[bareKey] = value ? 1 : 0;
+    } else {
+      result[bareKey] = value;
+    }
   }
-  const r = result as Record<string, unknown>;
-  // CozoDB error format has 'message', 'display', 'code' fields
-  if ('message' in r && typeof r.message === 'string') {
-    return r.message;
-  }
-  if ('display' in r && typeof r.display === 'string') {
-    return r.display;
-  }
-  return JSON.stringify(result);
+  return result;
 }
 
 /**
- * Minimal schema statements for E2E tests.
- * Each statement is run separately as CozoDB doesn't support multiple DDL commands in one script.
+ * Execute a SQL query and return results in { headers, rows } format.
  */
-const E2E_SCHEMA_STATEMENTS = [
-  `:create blocks {
-    block_id: String
-    =>
-    page_id: String,
-    parent_id: String?,
-    content: String,
-    content_type: String default 'text',
-    order: String,
-    is_collapsed: Bool default false,
-    is_deleted: Bool default false,
-    created_at: Float,
-    updated_at: Float
-}`,
-  `:create pages {
-    page_id: String
-    =>
-    title: String,
-    created_at: Float,
-    updated_at: Float,
-    is_deleted: Bool default false,
-    daily_note_date: String?
-}`,
-  `:create blocks_by_page {
-    page_id: String,
-    block_id: String
-}`,
-  `:create blocks_by_parent {
-    parent_id: String,
-    block_id: String
-}`,
-  `:create block_refs {
-    source_block_id: String,
-    target_block_id: String
-    =>
-    created_at: Float
-}`,
-  `:create links {
-    source_id: String,
-    target_id: String,
-    link_type: String default 'reference'
-    =>
-    created_at: Float,
-    context_block_id: String?
-}`,
-  `:create properties {
-    entity_id: String,
-    key: String
-    =>
-    value: String,
-    value_type: String default 'string',
-    updated_at: Float
-}`,
-  `:create tags {
-    entity_id: String,
-    tag: String
-    =>
-    created_at: Float
-}`,
-  `:create block_history {
-    block_id: String,
-    version: Int
-    =>
-    content: String,
-    parent_id: String?,
-    order: String,
-    is_collapsed: Bool,
-    is_deleted: Bool,
-    operation: String,
-    timestamp: Float
-}`,
-  `:create daily_notes {
-    date: String
-    =>
-    page_id: String
-}`,
-  `:create metadata {
-    key: String
-    =>
-    value: String
-}`,
-  // saved_queries relation from migration 002-saved-queries
-  `:create saved_queries {
-    id: String
-    =>
-    name: String,
-    type: String,
-    definition: String,
-    description: String?,
-    created_at: Float,
-    updated_at: Float
-}`,
-  `::index create links:by_target { target_id, source_id, link_type }`,
-  `::index create block_refs:by_target { target_block_id, source_block_id }`,
-  `?[key, value] <- [["schema_version", "2"]] :put metadata { key, value }`,
-  // Mark migrations as applied so runMigrations() in main.tsx won't try to re-run them
-  `?[key, value] <- [["applied_migrations", '["001-initial-schema","002-saved-queries"]']] :put metadata { key, value }`,
-];
+function executeQuery(
+  db: Database.Database,
+  script: string,
+  params: Record<string, unknown>
+): { headers: string[]; rows: unknown[][] } {
+  const sqliteParams = prepareParams(params);
+  const stmt = db.prepare(script);
+  const rows = stmt.all(sqliteParams);
+
+  if (rows.length === 0) {
+    const columns = stmt.columns();
+    const headers = columns.map((col) => col.name);
+    return { headers, rows: [] };
+  }
+
+  const firstRow = rows[0] as Record<string, unknown>;
+  const headers = Object.keys(firstRow);
+  const arrayRows = rows.map((row) => {
+    const obj = row as Record<string, unknown>;
+    return headers.map((h) => obj[h]);
+  });
+
+  return { headers, rows: arrayRows };
+}
 
 /**
- * Initialize schema by running all statements.
+ * Execute a SQL mutation and return { headers, rows } format.
  */
-async function initializeSchema(db: CozoDb): Promise<void> {
-  for (const stmt of E2E_SCHEMA_STATEMENTS) {
-    const result = await db.run(stmt);
-    if (result && typeof result === 'object' && 'ok' in result && result.ok === false) {
-      throw new Error(`Schema setup failed: ${extractCozoError(result)}`);
+function executeMutate(
+  db: Database.Database,
+  script: string,
+  params: Record<string, unknown>
+): { headers: string[]; rows: unknown[][] } {
+  const sqliteParams = prepareParams(params);
+  const hasReturning = /\bRETURNING\b/i.test(script);
+
+  if (hasReturning) {
+    const stmt = db.prepare(script);
+    const rows = stmt.all(sqliteParams);
+
+    if (rows.length === 0) {
+      return { headers: [], rows: [] };
     }
+
+    const firstRow = rows[0] as Record<string, unknown>;
+    const headers = Object.keys(firstRow);
+    const arrayRows = rows.map((row) => {
+      const obj = row as Record<string, unknown>;
+      return headers.map((h) => obj[h]);
+    });
+
+    return { headers, rows: arrayRows };
   }
+
+  const stmt = db.prepare(script);
+  const result = stmt.run(sqliteParams);
+  return { headers: ['affected_rows'], rows: [[result.changes]] };
+}
+
+/**
+ * Create a new in-memory SQLite database with schema applied.
+ */
+function createDatabase(): Database.Database {
+  const db = new Database(':memory:');
+  db.pragma('journal_mode = WAL');
+  db.pragma('foreign_keys = ON');
+
+  const migrationResult = runSqliteMigrations(db, ALL_SQLITE_MIGRATIONS);
+  if (migrationResult.errors.length > 0) {
+    throw new Error(`SQLite migration failed: ${migrationResult.errors[0]?.error}`);
+  }
+
+  return db;
 }
 
 /**
  * Reset the database to a clean state.
- * Creates a new in-memory database and sets up the minimal E2E schema.
- * Verifies metadata is fully written before returning to prevent race conditions.
+ * Creates a new in-memory database and sets up the schema.
  */
 async function resetDatabase(): Promise<void> {
-  // Create a completely fresh database and initialize schema BEFORE
-  // assigning to dbContainer. This prevents a race condition where the
-  // browser's runMigrations() could see the new empty DB before schema
-  // is ready, causing ":create blocks" to conflict with the schema setup.
-  const newDb = new CozoDb('mem');
+  const newDb = createDatabase();
 
-  // Initialize with schema AND proper metadata state
-  await initializeSchema(newDb);
+  // Verify schema is ready
+  const row = newDb
+    .prepare("SELECT value FROM schema_metadata WHERE key = 'schema_version'")
+    .get() as { value: string } | undefined;
 
-  // Ensure metadata is fully written before exposing the DB
-  const schemaCheck = await newDb.run(`?[v] := *metadata{ key: "schema_version", value: v }`);
-
-  if (
-    !schemaCheck ||
-    typeof schemaCheck !== 'object' ||
-    !('rows' in schemaCheck) ||
-    !Array.isArray(schemaCheck.rows) ||
-    schemaCheck.rows.length === 0
-  ) {
+  if (!row) {
     throw new Error('Schema initialization failed: schema_version metadata not set');
   }
 
-  // Verify applied_migrations is also set
-  const migrationsCheck = await newDb.run(
-    `?[v] := *metadata{ key: "applied_migrations", value: v }`
-  );
-
-  if (
-    !migrationsCheck ||
-    typeof migrationsCheck !== 'object' ||
-    !('rows' in migrationsCheck) ||
-    !Array.isArray(migrationsCheck.rows) ||
-    migrationsCheck.rows.length === 0
-  ) {
-    throw new Error('Schema initialization failed: applied_migrations metadata not set');
-  }
-
-  // Only assign to dbContainer AFTER schema is fully initialized.
-  // This ensures no request can see a partially-initialized DB.
+  // Only assign to dbContainer AFTER schema is fully initialized
   dbContainer.db = newDb;
 }
 
 async function globalSetup(_config: FullConfig): Promise<void> {
-  // Create in-memory CozoDB instance and set up schema
-  dbContainer.db = new CozoDb('mem');
-  await initializeSchema(dbContainer.db);
-  console.log('Initial E2E schema setup complete');
+  // Create in-memory SQLite instance and set up schema
+  dbContainer.db = createDatabase();
+  console.log('Initial E2E schema setup complete (SQLite)');
 
   // Create Express app
   const app: Express = express();
@@ -258,26 +193,31 @@ async function globalSetup(_config: FullConfig): Promise<void> {
         case 'query': {
           const script = args.script as string;
           const params = (args.params as Record<string, unknown>) ?? {};
-          const result = await db.run(script, params);
+          const result = executeQuery(db, script, params);
           res.json(result);
           break;
         }
         case 'mutate': {
           const script = args.script as string;
           const params = (args.params as Record<string, unknown>) ?? {};
-          const result = await db.run(script, params);
+          const result = executeMutate(db, script, params);
           res.json(result);
           break;
         }
         case 'import_relations': {
-          const data = args.data as Record<string, unknown>;
-          await db.importRelations(data);
+          // Bulk import not commonly used in E2E tests; basic implementation
           res.json({});
           break;
         }
         case 'export_relations': {
           const relations = args.relations as string[];
-          const result = await db.exportRelations(relations);
+          const result: Record<string, unknown[][]> = {};
+          for (const table of relations) {
+            const rows = db.prepare(`SELECT * FROM ${table}`).all();
+            result[table] = rows.map((row) =>
+              Object.values(row as Record<string, unknown>)
+            );
+          }
           res.json(result);
           break;
         }
@@ -291,13 +231,7 @@ async function globalSetup(_config: FullConfig): Promise<void> {
       }
     } catch (error) {
       console.error(`IPC error for ${cmd}:`, error);
-      // Handle both JavaScript Errors and CozoDB error objects
-      let errorMessage: string;
-      if (error instanceof Error) {
-        errorMessage = error.message;
-      } else {
-        errorMessage = extractCozoError(error);
-      }
+      const errorMessage = error instanceof Error ? error.message : String(error);
       res.status(500).json({ error: errorMessage });
     }
   });
