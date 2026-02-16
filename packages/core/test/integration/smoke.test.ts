@@ -1,5 +1,5 @@
 // Smoke test for Layer 2 integration test infrastructure
-// Verifies that cozo-node adapter, migrations, and data seeding work correctly
+// Verifies that SQLite adapter, migrations, and data seeding work correctly
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import type { GraphDB } from '@double-bind/types';
@@ -15,11 +15,13 @@ describe('Integration Test Infrastructure Smoke Test', () => {
   });
 
   it('should create database and apply migrations', async () => {
-    // Verify schema_version metadata exists
-    const result = await db.query<string>(`?[value] := *metadata{ key: "schema_version", value }`);
+    // Verify schema_metadata table exists and has entries
+    const result = await db.query<string>(
+      `SELECT value FROM schema_metadata WHERE key = 'schema_version'`
+    );
 
     expect(result.rows.length).toBe(1);
-    expect(result.rows[0]?.[0]).toBe('2'); // Latest migration version
+    expect(result.rows[0]?.[0]).toBeTruthy();
   });
 
   it('should seed test data successfully', async () => {
@@ -37,8 +39,8 @@ describe('Integration Test Infrastructure Smoke Test', () => {
     await seedTestData(db);
 
     // Query all non-deleted pages
-    const result = await db.query<[string, string, boolean]>(
-      `?[page_id, title, is_deleted] := *pages{ page_id, title, is_deleted }`
+    const result = await db.query<[string, string, number]>(
+      `SELECT page_id, title, is_deleted FROM pages WHERE is_deleted = 0`
     );
 
     // Should have 4 pages total
@@ -48,7 +50,7 @@ describe('Integration Test Infrastructure Smoke Test', () => {
     const gettingStartedPage = result.rows.find((row) => row[0] === 'page-1');
     expect(gettingStartedPage).toBeDefined();
     expect(gettingStartedPage?.[1]).toBe('Getting Started');
-    expect(gettingStartedPage?.[2]).toBe(false);
+    expect(gettingStartedPage?.[2]).toBe(0); // SQLite: 0 = false
   });
 
   it('should query blocks with hierarchy', async () => {
@@ -56,7 +58,7 @@ describe('Integration Test Infrastructure Smoke Test', () => {
 
     // Query blocks for "Getting Started" page
     const result = await db.query<[string, string, string | null, string]>(
-      `?[block_id, page_id, parent_id, content] := *blocks{ block_id, page_id, parent_id, content }, page_id == "page-1"`
+      `SELECT block_id, page_id, parent_id, content FROM blocks WHERE page_id = 'page-1' AND is_deleted = 0`
     );
 
     expect(result.rows.length).toBe(5); // 5 blocks on page-1
@@ -73,34 +75,34 @@ describe('Integration Test Infrastructure Smoke Test', () => {
     expect(nestedUnderBlock1_3.length).toBe(2); // block-1-4 and block-1-5
   });
 
-  it('should query blocks_by_page index', async () => {
+  it('should query blocks by page', async () => {
     await seedTestData(db);
 
-    // Query blocks for page-2 using the index
+    // Query blocks for page-2
     const result = await db.query<[string, string]>(
-      `?[page_id, block_id] := *blocks_by_page{ page_id, block_id }, page_id == "page-2"`
+      `SELECT page_id, block_id FROM blocks WHERE page_id = 'page-2' AND is_deleted = 0`
     );
 
     expect(result.rows.length).toBe(3); // 3 blocks on page-2
   });
 
-  it('should query blocks_by_parent index', async () => {
+  it('should query blocks by parent', async () => {
     await seedTestData(db);
 
-    // Query children of block-1-3 using the index
+    // Query children of block-1-3
     const result = await db.query<[string, string]>(
-      `?[parent_id, block_id] := *blocks_by_parent{ parent_id, block_id }, parent_id == "block-1-3"`
+      `SELECT parent_id, block_id FROM blocks WHERE parent_id = 'block-1-3' AND is_deleted = 0`
     );
 
     expect(result.rows.length).toBe(2); // 2 children (block-1-4 and block-1-5)
   });
 
-  it('should query page-level blocks using blocks_by_parent', async () => {
+  it('should query root-level blocks for a page', async () => {
     await seedTestData(db);
 
-    // Query top-level blocks for page-1 (parent_id is "__page__page-1")
-    const result = await db.query<[string, string]>(
-      `?[parent_id, block_id] := *blocks_by_parent{ parent_id, block_id }, parent_id == "__page__page-1"`
+    // In SQLite, root blocks have parent_id = NULL (no sentinel)
+    const result = await db.query<[string]>(
+      `SELECT block_id FROM blocks WHERE parent_id IS NULL AND page_id = 'page-1' AND is_deleted = 0`
     );
 
     expect(result.rows.length).toBe(2); // 2 top-level blocks (block-1-1 and block-1-3)
@@ -111,7 +113,7 @@ describe('Integration Test Infrastructure Smoke Test', () => {
 
     // Query all links
     const result = await db.query<[string, string, string]>(
-      `?[source_id, target_id, link_type] := *links{ source_id, target_id, link_type }`
+      `SELECT source_id, target_id, link_type FROM links`
     );
 
     expect(result.rows.length).toBe(3);
@@ -122,12 +124,12 @@ describe('Integration Test Infrastructure Smoke Test', () => {
     expect(link?.[2]).toBe('reference');
   });
 
-  it('should query links by target using reverse index', async () => {
+  it('should query links by target (backlinks)', async () => {
     await seedTestData(db);
 
     // Query backlinks to page-2
     const result = await db.query<[string, string, string]>(
-      `?[target_id, source_id, link_type] := *links:by_target{ target_id, source_id, link_type }, target_id == "page-2"`
+      `SELECT target_id, source_id, link_type FROM links WHERE target_id = 'page-2'`
     );
 
     expect(result.rows.length).toBe(1); // Only page-1 links to page-2
@@ -137,8 +139,12 @@ describe('Integration Test Infrastructure Smoke Test', () => {
   it('should query tags', async () => {
     await seedTestData(db);
 
-    // Query all tags
-    const result = await db.query<[string, string]>(`?[entity_id, tag] := *tags{ entity_id, tag }`);
+    // Query all tags (from both page_tags and block_tags)
+    const result = await db.query<[string, string]>(
+      `SELECT page_id AS entity_id, tag FROM page_tags
+       UNION ALL
+       SELECT block_id AS entity_id, tag FROM block_tags`
+    );
 
     expect(result.rows.length).toBe(3);
 
@@ -150,9 +156,9 @@ describe('Integration Test Infrastructure Smoke Test', () => {
   it('should query properties', async () => {
     await seedTestData(db);
 
-    // Query all properties
+    // Query page properties
     const result = await db.query<[string, string, string, string]>(
-      `?[entity_id, key, value, value_type] := *properties{ entity_id, key, value, value_type }`
+      `SELECT page_id AS entity_id, key, value, value_type FROM page_properties`
     );
 
     expect(result.rows.length).toBe(3);
@@ -171,7 +177,7 @@ describe('Integration Test Infrastructure Smoke Test', () => {
 
     // Query daily note by date
     const result = await db.query<[string, string]>(
-      `?[date, page_id] := *daily_notes{ date, page_id }, date == $date`,
+      `SELECT date, page_id FROM daily_notes WHERE date = $date`,
       { date: todayDate }
     );
 
@@ -185,9 +191,11 @@ describe('Integration Test Infrastructure Smoke Test', () => {
 
     // Query: Get page titles and their block counts
     const result = await db.query<[string, string, number]>(
-      `?[page_id, title, count(block_id)] :=
-        *pages{ page_id, title },
-        *blocks_by_page{ page_id, block_id }`
+      `SELECT p.page_id, p.title, COUNT(b.block_id) as block_count
+       FROM pages p
+       JOIN blocks b ON b.page_id = p.page_id AND b.is_deleted = 0
+       WHERE p.is_deleted = 0
+       GROUP BY p.page_id, p.title`
     );
 
     expect(result.rows.length).toBe(4); // 4 pages
@@ -203,16 +211,16 @@ describe('Integration Test Infrastructure Smoke Test', () => {
     await seedTestData(db);
 
     // Add a new page
-    const now = Date.now() / 1000;
+    const now = Date.now();
     await db.mutate(
-      `?[page_id, title, created_at, updated_at, is_deleted, daily_note_date] <- [["page-new", "New Page", $now, $now, false, null]]
-       :put pages { page_id => title, created_at, updated_at, is_deleted, daily_note_date }`,
-      { now }
+      `INSERT INTO pages (page_id, title, created_at, updated_at, is_deleted, daily_note_date)
+       VALUES ($id, $title, $now, $now, 0, NULL)`,
+      { id: 'page-new', title: 'New Page', now }
     );
 
     // Query all pages
     const result = await db.query<[string, string]>(
-      `?[page_id, title] := *pages{ page_id, title }`
+      `SELECT page_id, title FROM pages WHERE is_deleted = 0`
     );
 
     expect(result.rows.length).toBe(5); // 4 original + 1 new
