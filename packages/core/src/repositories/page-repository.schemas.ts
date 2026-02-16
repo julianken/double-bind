@@ -1,8 +1,11 @@
 /**
  * Zod validation schemas for PageRepository
  *
- * Validates CozoDB query results at the boundary between raw rows and domain types.
+ * Validates database query results at the boundary between raw rows and domain types.
  * Throws DoubleBindError(DB_QUERY_FAILED) with Zod error as cause on validation failure.
+ *
+ * SQLite compatibility: Boolean fields use sqliteBool which accepts both
+ * native booleans (true/false) and SQLite integers (0/1), converting to boolean.
  */
 
 import { z } from 'zod';
@@ -10,7 +13,16 @@ import { DoubleBindError, ErrorCode } from '@double-bind/types';
 import type { Page } from '@double-bind/types';
 
 /**
- * Schema for validating raw CozoDB row tuple from pages relation.
+ * Schema for boolean values that may come from SQLite as 0/1 integers.
+ * Backwards-compatible: works with both CozoDB booleans and SQLite integers.
+ */
+const sqliteBool = z.union([
+  z.boolean(),
+  z.number().transform((n) => n !== 0),
+]);
+
+/**
+ * Schema for validating raw database row tuple from pages relation.
  * Order matches: page_id, title, created_at, updated_at, is_deleted, daily_note_date
  */
 export const PageRowSchema = z.tuple([
@@ -18,7 +30,7 @@ export const PageRowSchema = z.tuple([
   z.string(), // title
   z.number(), // created_at (Unix timestamp)
   z.number(), // updated_at (Unix timestamp)
-  z.boolean(), // is_deleted
+  sqliteBool, // is_deleted (boolean or 0/1)
   z.string().nullable(), // daily_note_date (YYYY-MM-DD or null)
 ]);
 

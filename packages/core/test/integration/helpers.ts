@@ -52,14 +52,6 @@ export interface TestFixtures {
  *
  * @param db - GraphDB instance to seed
  * @returns TestFixtures with all created entity IDs and metadata
- *
- * @example
- * ```typescript
- * const db = await createTestDatabase();
- * const fixtures = await seedTestData(db);
- * // fixtures.pages[0].page_id === 'page-1'
- * // fixtures.blocks.length === 12
- * ```
  */
 export async function seedTestData(db: GraphDB): Promise<TestFixtures> {
   const now = Date.now();
@@ -229,7 +221,8 @@ export async function seedTestData(db: GraphDB): Promise<TestFixtures> {
 
   for (const block of blocksToCreate) {
     await db.mutate(
-      `INSERT INTO blocks (block_id, page_id, parent_id, content, content_type, "order", is_collapsed, is_deleted, created_at, updated_at)
+      `INSERT INTO blocks (block_id, page_id, parent_id, content, content_type, "order",
+                           is_collapsed, is_deleted, created_at, updated_at)
        VALUES ($id, $page_id, $parent_id, $content, 'text', $order, 0, 0, $now, $now)`,
       {
         id: block.block_id,
@@ -285,15 +278,13 @@ export async function seedTestData(db: GraphDB): Promise<TestFixtures> {
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // Create Tags (split into block_tags and page_tags)
+  // Create Tags (using page_tags and block_tags tables)
   // ─────────────────────────────────────────────────────────────────────────────
 
   const pageTags = [
     { entity_id: 'page-1', tag: 'documentation' },
     { entity_id: 'page-3', tag: 'tasks' },
   ];
-
-  const blockTags = [{ entity_id: 'block-3-1', tag: 'todo' }];
 
   for (const tag of pageTags) {
     await db.mutate(
@@ -302,6 +293,8 @@ export async function seedTestData(db: GraphDB): Promise<TestFixtures> {
     );
     fixtures.tags.push(tag);
   }
+
+  const blockTags = [{ entity_id: 'block-3-1', tag: 'todo' }];
 
   for (const tag of blockTags) {
     await db.mutate(
@@ -312,7 +305,7 @@ export async function seedTestData(db: GraphDB): Promise<TestFixtures> {
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // Create Properties (split into block_properties and page_properties)
+  // Create Properties (using page_properties table)
   // ─────────────────────────────────────────────────────────────────────────────
 
   const pageProperties = [
@@ -342,8 +335,9 @@ export async function seedTestData(db: GraphDB): Promise<TestFixtures> {
 /**
  * Cleanup a test database instance.
  *
- * For in-memory SQLite databases, they are garbage collected when the
- * adapter is dereferenced. This function calls close() for safety.
+ * For in-memory SQLite (used in integration tests), databases are garbage
+ * collected when no references remain. This function calls close() to
+ * explicitly release resources.
  *
  * @param db - GraphDB instance to clean up
  */
