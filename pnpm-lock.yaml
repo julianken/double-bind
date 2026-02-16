@@ -79,6 +79,9 @@ importers:
       '@double-bind/test-utils':
         specifier: workspace:*
         version: link:../test-utils
+      cozo-node:
+        specifier: 0.7.6
+        version: 0.7.6
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
