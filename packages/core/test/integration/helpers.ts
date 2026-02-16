@@ -358,3 +358,19 @@ export async function seedTestData(db: GraphDB): Promise<TestFixtures> {
 
   return fixtures;
 }
+
+/**
+ * Cleanup a test database instance.
+ *
+ * For in-memory CozoDB (used in integration tests), databases are garbage
+ * collected when no references remain. This function is a no-op for in-memory
+ * databases but is exported to satisfy the test helper API contract and to
+ * support future database backends (e.g., SQLite with file-based storage)
+ * that may require explicit cleanup.
+ *
+ * @param _db - GraphDB instance to clean up (unused for in-memory databases)
+ */
+export async function cleanupDatabase(_db: GraphDB): Promise<void> {
+  // In-memory CozoDB databases are garbage collected automatically.
+  // No explicit cleanup needed.
+}
