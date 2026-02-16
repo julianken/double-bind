@@ -41,14 +41,16 @@ export default tseslint.config(
       parserOptions: {
         projectService: {
           allowDefaultProject: [
-            'packages/*/test/*.ts',
-            'packages/*/test/*/*.ts',
-            'packages/*/test/*/*/*.ts',
-            'packages/*/test/*/*/*/*.ts',
-            'packages/*/test/*.tsx',
-            'packages/*/test/*/*.tsx',
-            'packages/*/test/*/*/*.tsx',
-            'packages/*/test/*/*/*/*.tsx',
+            // Only include test files for packages without test in tsconfig
+            // migrations package includes test dir in tsconfig, so exclude it here
+            'packages/!(migrations)/test/*.ts',
+            'packages/!(migrations)/test/*/*.ts',
+            'packages/!(migrations)/test/*/*/*.ts',
+            'packages/!(migrations)/test/*/*/*/*.ts',
+            'packages/!(migrations)/test/*.tsx',
+            'packages/!(migrations)/test/*/*.tsx',
+            'packages/!(migrations)/test/*/*/*.tsx',
+            'packages/!(migrations)/test/*/*/*/*.tsx',
           ],
           // Allow more test files - E2E tests add many files
           maximumDefaultProjectFileMatchCount_THIS_WILL_SLOW_DOWN_LINTING: 50,
