@@ -12,7 +12,7 @@ import type { GraphDB, QueryResult, MutationResult } from '@double-bind/types';
 import { DoubleBindError, ErrorCode } from '@double-bind/types';
 import type { GraphDBProvider } from './TauriGraphDBProvider.js';
 
-const BRIDGE_URL = 'http://localhost:3001';
+const BRIDGE_URL = `http://localhost:${import.meta.env.VITE_BRIDGE_PORT ?? '3008'}`;
 
 /**
  * Maps error strings to typed DoubleBindError instances.

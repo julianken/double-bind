@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:bridge": "tsx scripts/bridge-server.ts",
     "build": "tsc --build && vite build",
     "preview": "vite preview",
     "tauri:dev": "tauri dev",
