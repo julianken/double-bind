@@ -47,10 +47,12 @@ export interface RowObjectResult<T = unknown> {
 
 /**
  * Context for executing queries within a transaction.
+ * Uses `script` parameter name (not `sql`) to remain engine-agnostic —
+ * consistent with Database.query() and Database.mutate().
  */
 export interface TransactionContext {
-  query<T = unknown>(sql: string, params?: Record<string, unknown>): Promise<T[]>;
-  execute(sql: string, params?: Record<string, unknown>): Promise<{ affectedRows: number }>;
+  query<T = unknown>(script: string, params?: Record<string, unknown>): Promise<T[]>;
+  execute(script: string, params?: Record<string, unknown>): Promise<{ affectedRows: number }>;
 }
 
 /**
