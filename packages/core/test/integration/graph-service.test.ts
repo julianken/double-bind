@@ -1,15 +1,14 @@
 // Integration tests for GraphService
 // Tests graph algorithms (PageRank, Louvain) and neighborhood queries
 //
-// SKIPPED: GraphService still uses CozoDB Datalog queries (PageRank, Louvain).
-// Will be migrated to SQL in Phase 3 (DBB-436).
+// Migrated to SQLite SQL queries and graphology algorithms.
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import type { GraphDB } from '@double-bind/types';
 import { GraphService } from '../../src/services/graph-service.js';
 import { createTestDatabase } from './setup.js';
 
-describe.skip('GraphService Integration Tests', () => {
+describe('GraphService Integration Tests', () => {
   let db: GraphDB;
   let service: GraphService;
 
@@ -32,24 +31,20 @@ describe.skip('GraphService Integration Tests', () => {
 
     it('should return all pages and links', async () => {
       // Create pages
-      const now = Date.now() / 1000;
+      const now = Date.now();
       await db.mutate(
-        `?[page_id, title, created_at, updated_at, is_deleted, daily_note_date] <- [
-          ["p1", "Page 1", $now, $now, false, null],
-          ["p2", "Page 2", $now, $now, false, null],
-          ["p3", "Page 3", $now, $now, false, null]
-        ]
-         :put pages { page_id => title, created_at, updated_at, is_deleted, daily_note_date }`,
+        `INSERT INTO pages (page_id, title, created_at, updated_at, is_deleted, daily_note_date)
+         VALUES ('p1', 'Page 1', $now, $now, 0, NULL),
+                ('p2', 'Page 2', $now, $now, 0, NULL),
+                ('p3', 'Page 3', $now, $now, 0, NULL)`,
         { now }
       );
 
       // Create links
       await db.mutate(
-        `?[source_id, target_id, link_type, created_at, context_block_id] <- [
-          ["p1", "p2", "reference", $now, null],
-          ["p2", "p3", "reference", $now, null]
-        ]
-         :put links { source_id, target_id, link_type => created_at, context_block_id }`,
+        `INSERT INTO links (source_id, target_id, link_type, created_at, context_block_id)
+         VALUES ('p1', 'p2', 'reference', $now, NULL),
+                ('p2', 'p3', 'reference', $now, NULL)`,
         { now }
       );
 
@@ -74,27 +69,23 @@ describe.skip('GraphService Integration Tests', () => {
     });
 
     it('should exclude deleted pages and their links', async () => {
-      const now = Date.now() / 1000;
+      const now = Date.now();
 
       // Create pages (one deleted)
       await db.mutate(
-        `?[page_id, title, created_at, updated_at, is_deleted, daily_note_date] <- [
-          ["p1", "Page 1", $now, $now, false, null],
-          ["p2", "Page 2 (Deleted)", $now, $now, true, null],
-          ["p3", "Page 3", $now, $now, false, null]
-        ]
-         :put pages { page_id => title, created_at, updated_at, is_deleted, daily_note_date }`,
+        `INSERT INTO pages (page_id, title, created_at, updated_at, is_deleted, daily_note_date)
+         VALUES ('p1', 'Page 1', $now, $now, 0, NULL),
+                ('p2', 'Page 2 (Deleted)', $now, $now, 1, NULL),
+                ('p3', 'Page 3', $now, $now, 0, NULL)`,
         { now }
       );
 
       // Create links
       await db.mutate(
-        `?[source_id, target_id, link_type, created_at, context_block_id] <- [
-          ["p1", "p2", "reference", $now, null],
-          ["p2", "p3", "reference", $now, null],
-          ["p1", "p3", "reference", $now, null]
-        ]
-         :put links { source_id, target_id, link_type => created_at, context_block_id }`,
+        `INSERT INTO links (source_id, target_id, link_type, created_at, context_block_id)
+         VALUES ('p1', 'p2', 'reference', $now, NULL),
+                ('p2', 'p3', 'reference', $now, NULL),
+                ('p1', 'p3', 'reference', $now, NULL)`,
         { now }
       );
 
@@ -120,29 +111,25 @@ describe.skip('GraphService Integration Tests', () => {
       // Create a network:
       // center -> n1 -> n2 -> n3
       // center -> n4
-      const now = Date.now() / 1000;
+      const now = Date.now();
 
       await db.mutate(
-        `?[page_id, title, created_at, updated_at, is_deleted, daily_note_date] <- [
-          ["center", "Center", $now, $now, false, null],
-          ["n1", "Neighbor 1", $now, $now, false, null],
-          ["n2", "Neighbor 2", $now, $now, false, null],
-          ["n3", "Neighbor 3", $now, $now, false, null],
-          ["n4", "Neighbor 4", $now, $now, false, null],
-          ["isolated", "Isolated", $now, $now, false, null]
-        ]
-         :put pages { page_id => title, created_at, updated_at, is_deleted, daily_note_date }`,
+        `INSERT INTO pages (page_id, title, created_at, updated_at, is_deleted, daily_note_date)
+         VALUES ('center', 'Center', $now, $now, 0, NULL),
+                ('n1', 'Neighbor 1', $now, $now, 0, NULL),
+                ('n2', 'Neighbor 2', $now, $now, 0, NULL),
+                ('n3', 'Neighbor 3', $now, $now, 0, NULL),
+                ('n4', 'Neighbor 4', $now, $now, 0, NULL),
+                ('isolated', 'Isolated', $now, $now, 0, NULL)`,
         { now }
       );
 
       await db.mutate(
-        `?[source_id, target_id, link_type, created_at, context_block_id] <- [
-          ["center", "n1", "reference", $now, null],
-          ["n1", "n2", "reference", $now, null],
-          ["n2", "n3", "reference", $now, null],
-          ["center", "n4", "reference", $now, null]
-        ]
-         :put links { source_id, target_id, link_type => created_at, context_block_id }`,
+        `INSERT INTO links (source_id, target_id, link_type, created_at, context_block_id)
+         VALUES ('center', 'n1', 'reference', $now, NULL),
+                ('n1', 'n2', 'reference', $now, NULL),
+                ('n2', 'n3', 'reference', $now, NULL),
+                ('center', 'n4', 'reference', $now, NULL)`,
         { now }
       );
     });
@@ -173,10 +160,8 @@ describe.skip('GraphService Integration Tests', () => {
     it('should return 2-hop neighborhood', async () => {
       const result = await service.getNeighborhood('center', 2);
 
-      // CozoDB's recursive rules traverse bidirectionally
-      // Links are: center->n1, n1->n2, n2->n3, center->n4
-      // From center: 1-hop = n1, n4; 2-hop = n2 (via n1), n3 (via n1->n2 if bidirectional)
-      // The actual result depends on CozoDB's traversal behavior
+      // From center: 1-hop = n1, n4; 2-hop = n2 (via n1)
+      // Bidirectional traversal means we also get reverse links
       expect(result.nodes.length).toBeGreaterThanOrEqual(4);
       expect(result.nodes.length).toBeLessThanOrEqual(5);
 
@@ -192,12 +177,12 @@ describe.skip('GraphService Integration Tests', () => {
     });
 
     it('should follow bidirectional links', async () => {
-      const now = Date.now() / 1000;
+      const now = Date.now();
 
       // Add reverse link from n1 back to center
       await db.mutate(
-        `?[source_id, target_id, link_type, created_at, context_block_id] <- [["n1", "center", "reference", $now, null]]
-         :put links { source_id, target_id, link_type => created_at, context_block_id }`,
+        `INSERT INTO links (source_id, target_id, link_type, created_at, context_block_id)
+         VALUES ('n1', 'center', 'reference', $now, NULL)`,
         { now }
       );
 
@@ -226,18 +211,18 @@ describe.skip('GraphService Integration Tests', () => {
     });
 
     it('should handle self-links', async () => {
-      const now = Date.now() / 1000;
+      const now = Date.now();
 
       // Create a page with a self-link
       await db.mutate(
-        `?[page_id, title, created_at, updated_at, is_deleted, daily_note_date] <- [["self", "Self-Linked", $now, $now, false, null]]
-         :put pages { page_id => title, created_at, updated_at, is_deleted, daily_note_date }`,
+        `INSERT INTO pages (page_id, title, created_at, updated_at, is_deleted, daily_note_date)
+         VALUES ('self', 'Self-Linked', $now, $now, 0, NULL)`,
         { now }
       );
 
       await db.mutate(
-        `?[source_id, target_id, link_type, created_at, context_block_id] <- [["self", "self", "reference", $now, null]]
-         :put links { source_id, target_id, link_type => created_at, context_block_id }`,
+        `INSERT INTO links (source_id, target_id, link_type, created_at, context_block_id)
+         VALUES ('self', 'self', 'reference', $now, NULL)`,
         { now }
       );
 
@@ -264,33 +249,33 @@ describe.skip('GraphService Integration Tests', () => {
     it('should compute PageRank for interconnected pages', async () => {
       // Create a realistic network with 20+ pages
       // Structure: Hub page with many incoming links should have highest rank
-      const now = Date.now() / 1000;
+      const now = Date.now();
 
-      const pages = [];
+      const pageValues: string[] = [];
       for (let i = 1; i <= 25; i++) {
-        pages.push(`["p${i}", "Page ${i}", ${now}, ${now}, false, null]`);
+        pageValues.push(`('p${i}', 'Page ${i}', ${now}, ${now}, 0, NULL)`);
       }
 
       await db.mutate(
-        `?[page_id, title, created_at, updated_at, is_deleted, daily_note_date] <- [${pages.join(', ')}]
-         :put pages { page_id => title, created_at, updated_at, is_deleted, daily_note_date }`
+        `INSERT INTO pages (page_id, title, created_at, updated_at, is_deleted, daily_note_date)
+         VALUES ${pageValues.join(', ')}`
       );
 
       // Create links: p1 is a hub (many pages link to it)
       // p2-p10 all link to p1 (hub)
       // p11-p20 form a chain
       // p21-p25 are isolated
-      const links = [];
+      const linkValues: string[] = [];
       for (let i = 2; i <= 10; i++) {
-        links.push(`["p${i}", "p1", "reference", ${now}, null]`);
+        linkValues.push(`('p${i}', 'p1', 'reference', ${now}, NULL)`);
       }
       for (let i = 11; i < 20; i++) {
-        links.push(`["p${i}", "p${i + 1}", "reference", ${now}, null]`);
+        linkValues.push(`('p${i}', 'p${i + 1}', 'reference', ${now}, NULL)`);
       }
 
       await db.mutate(
-        `?[source_id, target_id, link_type, created_at, context_block_id] <- [${links.join(', ')}]
-         :put links { source_id, target_id, link_type => created_at, context_block_id }`
+        `INSERT INTO links (source_id, target_id, link_type, created_at, context_block_id)
+         VALUES ${linkValues.join(', ')}`
       );
 
       const ranks = await service.getPageRank();
@@ -318,15 +303,13 @@ describe.skip('GraphService Integration Tests', () => {
     });
 
     it('should handle pages with no links', async () => {
-      const now = Date.now() / 1000;
+      const now = Date.now();
 
       // Create isolated pages
       await db.mutate(
-        `?[page_id, title, created_at, updated_at, is_deleted, daily_note_date] <- [
-          ["p1", "Page 1", $now, $now, false, null],
-          ["p2", "Page 2", $now, $now, false, null]
-        ]
-         :put pages { page_id => title, created_at, updated_at, is_deleted, daily_note_date }`,
+        `INSERT INTO pages (page_id, title, created_at, updated_at, is_deleted, daily_note_date)
+         VALUES ('p1', 'Page 1', $now, $now, 0, NULL),
+                ('p2', 'Page 2', $now, $now, 0, NULL)`,
         { now }
       );
 
@@ -337,23 +320,19 @@ describe.skip('GraphService Integration Tests', () => {
     });
 
     it('should handle bidirectional links', async () => {
-      const now = Date.now() / 1000;
+      const now = Date.now();
 
       await db.mutate(
-        `?[page_id, title, created_at, updated_at, is_deleted, daily_note_date] <- [
-          ["p1", "Page 1", $now, $now, false, null],
-          ["p2", "Page 2", $now, $now, false, null]
-        ]
-         :put pages { page_id => title, created_at, updated_at, is_deleted, daily_note_date }`,
+        `INSERT INTO pages (page_id, title, created_at, updated_at, is_deleted, daily_note_date)
+         VALUES ('p1', 'Page 1', $now, $now, 0, NULL),
+                ('p2', 'Page 2', $now, $now, 0, NULL)`,
         { now }
       );
 
       await db.mutate(
-        `?[source_id, target_id, link_type, created_at, context_block_id] <- [
-          ["p1", "p2", "reference", $now, null],
-          ["p2", "p1", "reference", $now, null]
-        ]
-         :put links { source_id, target_id, link_type => created_at, context_block_id }`,
+        `INSERT INTO links (source_id, target_id, link_type, created_at, context_block_id)
+         VALUES ('p1', 'p2', 'reference', $now, NULL),
+                ('p2', 'p1', 'reference', $now, NULL)`,
         { now }
       );
 
@@ -383,56 +362,57 @@ describe.skip('GraphService Integration Tests', () => {
 
     it('should detect communities in clustered graph', async () => {
       // Create a graph with two distinct communities
-      // Cluster A: p1-p5 densely connected
-      // Cluster B: p6-p10 densely connected
+      // Cluster A: p1-p8 densely connected
+      // Cluster B: p9-p16 densely connected
+      // Cluster C: p17-p24 densely connected
       // Sparse links between clusters
-      const now = Date.now() / 1000;
+      const now = Date.now();
 
-      const pages = [];
+      const pageValues: string[] = [];
       for (let i = 1; i <= 25; i++) {
-        pages.push(`["p${i}", "Page ${i}", ${now}, ${now}, false, null]`);
+        pageValues.push(`('p${i}', 'Page ${i}', ${now}, ${now}, 0, NULL)`);
       }
 
       await db.mutate(
-        `?[page_id, title, created_at, updated_at, is_deleted, daily_note_date] <- [${pages.join(', ')}]
-         :put pages { page_id => title, created_at, updated_at, is_deleted, daily_note_date }`
+        `INSERT INTO pages (page_id, title, created_at, updated_at, is_deleted, daily_note_date)
+         VALUES ${pageValues.join(', ')}`
       );
 
       // Cluster A (p1-p8): Dense internal links
-      const clusterALinks = [];
+      const clusterALinks: string[] = [];
       for (let i = 1; i <= 8; i++) {
         for (let j = i + 1; j <= 8; j++) {
-          clusterALinks.push(`["p${i}", "p${j}", "reference", ${now}, null]`);
+          clusterALinks.push(`('p${i}', 'p${j}', 'reference', ${now}, NULL)`);
         }
       }
 
       // Cluster B (p9-p16): Dense internal links
-      const clusterBLinks = [];
+      const clusterBLinks: string[] = [];
       for (let i = 9; i <= 16; i++) {
         for (let j = i + 1; j <= 16; j++) {
-          clusterBLinks.push(`["p${i}", "p${j}", "reference", ${now}, null]`);
+          clusterBLinks.push(`('p${i}', 'p${j}', 'reference', ${now}, NULL)`);
         }
       }
 
       // Cluster C (p17-p24): Dense internal links
-      const clusterCLinks = [];
+      const clusterCLinks: string[] = [];
       for (let i = 17; i <= 24; i++) {
         for (let j = i + 1; j <= 24; j++) {
-          clusterCLinks.push(`["p${i}", "p${j}", "reference", ${now}, null]`);
+          clusterCLinks.push(`('p${i}', 'p${j}', 'reference', ${now}, NULL)`);
         }
       }
 
       // Sparse inter-cluster links
       const bridgeLinks = [
-        `["p4", "p12", "reference", ${now}, null]`,
-        `["p12", "p20", "reference", ${now}, null]`,
+        `('p4', 'p12', 'reference', ${now}, NULL)`,
+        `('p12', 'p20', 'reference', ${now}, NULL)`,
       ];
 
       const allLinks = [...clusterALinks, ...clusterBLinks, ...clusterCLinks, ...bridgeLinks];
 
       await db.mutate(
-        `?[source_id, target_id, link_type, created_at, context_block_id] <- [${allLinks.join(', ')}]
-         :put links { source_id, target_id, link_type => created_at, context_block_id }`
+        `INSERT INTO links (source_id, target_id, link_type, created_at, context_block_id)
+         VALUES ${allLinks.join(', ')}`
       );
 
       const communities = await service.getCommunities();
@@ -472,28 +452,28 @@ describe.skip('GraphService Integration Tests', () => {
 
     it('should handle single-community graph', async () => {
       // All pages connected to each other (complete graph)
-      const now = Date.now() / 1000;
+      const now = Date.now();
 
-      const pages = [];
+      const pageValues: string[] = [];
       for (let i = 1; i <= 10; i++) {
-        pages.push(`["p${i}", "Page ${i}", ${now}, ${now}, false, null]`);
+        pageValues.push(`('p${i}', 'Page ${i}', ${now}, ${now}, 0, NULL)`);
       }
 
       await db.mutate(
-        `?[page_id, title, created_at, updated_at, is_deleted, daily_note_date] <- [${pages.join(', ')}]
-         :put pages { page_id => title, created_at, updated_at, is_deleted, daily_note_date }`
+        `INSERT INTO pages (page_id, title, created_at, updated_at, is_deleted, daily_note_date)
+         VALUES ${pageValues.join(', ')}`
       );
 
-      const links = [];
+      const linkValues: string[] = [];
       for (let i = 1; i <= 10; i++) {
         for (let j = i + 1; j <= 10; j++) {
-          links.push(`["p${i}", "p${j}", "reference", ${now}, null]`);
+          linkValues.push(`('p${i}', 'p${j}', 'reference', ${now}, NULL)`);
         }
       }
 
       await db.mutate(
-        `?[source_id, target_id, link_type, created_at, context_block_id] <- [${links.join(', ')}]
-         :put links { source_id, target_id, link_type => created_at, context_block_id }`
+        `INSERT INTO links (source_id, target_id, link_type, created_at, context_block_id)
+         VALUES ${linkValues.join(', ')}`
       );
 
       const communities = await service.getCommunities();
@@ -508,14 +488,12 @@ describe.skip('GraphService Integration Tests', () => {
     });
 
     it('should handle graph with no links', async () => {
-      const now = Date.now() / 1000;
+      const now = Date.now();
 
       await db.mutate(
-        `?[page_id, title, created_at, updated_at, is_deleted, daily_note_date] <- [
-          ["p1", "Page 1", $now, $now, false, null],
-          ["p2", "Page 2", $now, $now, false, null]
-        ]
-         :put pages { page_id => title, created_at, updated_at, is_deleted, daily_note_date }`,
+        `INSERT INTO pages (page_id, title, created_at, updated_at, is_deleted, daily_note_date)
+         VALUES ('p1', 'Page 1', $now, $now, 0, NULL),
+                ('p2', 'Page 2', $now, $now, 0, NULL)`,
         { now }
       );
 
@@ -533,17 +511,15 @@ describe.skip('GraphService Integration Tests', () => {
   describe('getSuggestedLinks', () => {
     beforeEach(async () => {
       // Create a network with potential suggestions
-      const now = Date.now() / 1000;
+      const now = Date.now();
 
       await db.mutate(
-        `?[page_id, title, created_at, updated_at, is_deleted, daily_note_date] <- [
-          ["center", "Center", $now, $now, false, null],
-          ["connected", "Connected", $now, $now, false, null],
-          ["suggested1", "Suggested 1", $now, $now, false, null],
-          ["suggested2", "Suggested 2", $now, $now, false, null],
-          ["distant", "Distant", $now, $now, false, null]
-        ]
-         :put pages { page_id => title, created_at, updated_at, is_deleted, daily_note_date }`,
+        `INSERT INTO pages (page_id, title, created_at, updated_at, is_deleted, daily_note_date)
+         VALUES ('center', 'Center', $now, $now, 0, NULL),
+                ('connected', 'Connected', $now, $now, 0, NULL),
+                ('suggested1', 'Suggested 1', $now, $now, 0, NULL),
+                ('suggested2', 'Suggested 2', $now, $now, 0, NULL),
+                ('distant', 'Distant', $now, $now, 0, NULL)`,
         { now }
       );
 
@@ -552,13 +528,11 @@ describe.skip('GraphService Integration Tests', () => {
       // connected -> suggested2
       // suggested1 -> distant
       await db.mutate(
-        `?[source_id, target_id, link_type, created_at, context_block_id] <- [
-          ["center", "connected", "reference", $now, null],
-          ["connected", "suggested1", "reference", $now, null],
-          ["connected", "suggested2", "reference", $now, null],
-          ["suggested1", "distant", "reference", $now, null]
-        ]
-         :put links { source_id, target_id, link_type => created_at, context_block_id }`,
+        `INSERT INTO links (source_id, target_id, link_type, created_at, context_block_id)
+         VALUES ('center', 'connected', 'reference', $now, NULL),
+                ('connected', 'suggested1', 'reference', $now, NULL),
+                ('connected', 'suggested2', 'reference', $now, NULL),
+                ('suggested1', 'distant', 'reference', $now, NULL)`,
         { now }
       );
     });
@@ -583,12 +557,12 @@ describe.skip('GraphService Integration Tests', () => {
     });
 
     it('should return empty array when no suggestions exist', async () => {
-      const now = Date.now() / 1000;
+      const now = Date.now();
 
       // Create an isolated page
       await db.mutate(
-        `?[page_id, title, created_at, updated_at, is_deleted, daily_note_date] <- [["isolated", "Isolated", $now, $now, false, null]]
-         :put pages { page_id => title, created_at, updated_at, is_deleted, daily_note_date }`,
+        `INSERT INTO pages (page_id, title, created_at, updated_at, is_deleted, daily_note_date)
+         VALUES ('isolated', 'Isolated', $now, $now, 0, NULL)`,
         { now }
       );
 
@@ -602,18 +576,16 @@ describe.skip('GraphService Integration Tests', () => {
     });
 
     it('should rank suggestions by number of shared connections', async () => {
-      const now = Date.now() / 1000;
+      const now = Date.now();
 
       // Create pages
       await db.mutate(
-        `?[page_id, title, created_at, updated_at, is_deleted, daily_note_date] <- [
-          ["source", "Source", $now, $now, false, null],
-          ["neighbor1", "Neighbor 1", $now, $now, false, null],
-          ["neighbor2", "Neighbor 2", $now, $now, false, null],
-          ["suggested_high", "Suggested High", $now, $now, false, null],
-          ["suggested_low", "Suggested Low", $now, $now, false, null]
-        ]
-         :put pages { page_id => title, created_at, updated_at, is_deleted, daily_note_date }`,
+        `INSERT INTO pages (page_id, title, created_at, updated_at, is_deleted, daily_note_date)
+         VALUES ('source', 'Source', $now, $now, 0, NULL),
+                ('neighbor1', 'Neighbor 1', $now, $now, 0, NULL),
+                ('neighbor2', 'Neighbor 2', $now, $now, 0, NULL),
+                ('suggested_high', 'Suggested High', $now, $now, 0, NULL),
+                ('suggested_low', 'Suggested Low', $now, $now, 0, NULL)`,
         { now }
       );
 
@@ -621,14 +593,12 @@ describe.skip('GraphService Integration Tests', () => {
       // neighbor1, neighbor2 -> suggested_high (2 shared connections)
       // neighbor1 -> suggested_low (1 shared connection)
       await db.mutate(
-        `?[source_id, target_id, link_type, created_at, context_block_id] <- [
-          ["source", "neighbor1", "reference", $now, null],
-          ["source", "neighbor2", "reference", $now, null],
-          ["neighbor1", "suggested_high", "reference", $now, null],
-          ["neighbor2", "suggested_high", "reference", $now, null],
-          ["neighbor1", "suggested_low", "reference", $now, null]
-        ]
-         :put links { source_id, target_id, link_type => created_at, context_block_id }`,
+        `INSERT INTO links (source_id, target_id, link_type, created_at, context_block_id)
+         VALUES ('source', 'neighbor1', 'reference', $now, NULL),
+                ('source', 'neighbor2', 'reference', $now, NULL),
+                ('neighbor1', 'suggested_high', 'reference', $now, NULL),
+                ('neighbor2', 'suggested_high', 'reference', $now, NULL),
+                ('neighbor1', 'suggested_low', 'reference', $now, NULL)`,
         { now }
       );
 
