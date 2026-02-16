@@ -79,6 +79,12 @@ importers:
       '@double-bind/test-utils':
         specifier: workspace:*
         version: link:../test-utils
+      '@types/better-sqlite3':
+        specifier: ^7.6.12
+        version: 7.6.13
+      better-sqlite3:
+        specifier: ^11.8.1
+        version: 11.10.0
       cozo-node:
         specifier: 0.7.6
         version: 0.7.6

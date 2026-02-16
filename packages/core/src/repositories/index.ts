@@ -55,7 +55,7 @@ export {
   type SavedQueryRow,
 } from './saved-query-repository.schemas.js';
 
-// Repositories - Datalog query construction for domain entities
+// Repositories - SQL query construction for domain entities
 export { PageRepository, type GetAllOptions } from './page-repository.js';
 export { TagRepository, type TagWithCount } from './tag-repository.js';
 export {

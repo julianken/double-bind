@@ -1,7 +1,7 @@
 /**
  * Zod validation schemas for PropertyRepository
  *
- * Validates CozoDB query results at the boundary between raw rows and domain types.
+ * Validates SQLite query results at the boundary between raw rows and domain types.
  * Throws DoubleBindError(DB_QUERY_FAILED) with Zod error as cause on validation failure.
  */
 
@@ -15,7 +15,7 @@ import type { Property } from '@double-bind/types';
 const ValueTypeSchema = z.enum(['string', 'number', 'boolean', 'date']);
 
 /**
- * Schema for validating raw CozoDB row tuple from properties relation.
+ * Schema for validating raw SQLite row tuple from block_properties/page_properties tables.
  * Order matches: entity_id, key, value, value_type, updated_at
  */
 export const PropertyRowSchema = z.tuple([
@@ -41,9 +41,9 @@ export const PropertySchema = z.object({
 });
 
 /**
- * Parses a raw CozoDB row into a Property domain object.
+ * Parses a raw SQLite row into a Property domain object.
  *
- * @param row - Raw row from CozoDB query result
+ * @param row - Raw row from SQLite query result
  * @returns Property domain object
  * @throws DoubleBindError with DB_QUERY_FAILED code if validation fails
  */
