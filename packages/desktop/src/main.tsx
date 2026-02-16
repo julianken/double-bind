@@ -11,7 +11,6 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { createServices } from '@double-bind/core';
-import { runMigrations } from '@double-bind/migrations';
 import {
   ServiceProvider,
   TauriGraphDBProvider,
@@ -56,14 +55,10 @@ async function initializeApp() {
   await provider.initialize();
 
   // Get the GraphDB instance from the provider
+  // Note: Schema migrations are handled by the data layer:
+  // - Production: Rust init_database Tauri command (rusqlite)
+  // - E2E tests: global-setup.ts applies SQLite schema directly
   const graphDB = provider.getGraphDB();
-
-  try {
-    // Run database migrations before rendering
-    await runMigrations(graphDB);
-  } catch {
-    // Continue rendering - app will show error state
-  }
 
   // Create services from the GraphDB
   const services = { ...createServices(graphDB), graphDB };

@@ -4,15 +4,20 @@
  * This service handles operations that span the entire graph or a neighborhood
  * of pages, such as:
  * - Getting the full graph for visualization
- * - Getting N-hop neighborhoods around a page
+ * - Getting N-hop neighborhoods around a page (via recursive CTE)
+ * - PageRank scoring (simple heuristic until graphology is wired in)
+ * - Community detection (placeholder until graphology is wired in)
+ * - Suggested links based on shared connections
  *
- * All errors are wrapped with context before re-throwing to provide
- * better debugging information at higher layers.
+ * All queries use SQL (SQLite). Recursive CTEs handle N-hop traversal.
  */
 
-import type { GraphDB, Page, Link, PageId } from '@double-bind/types';
+import type { Database, Page, Link, PageId } from '@double-bind/types';
 import { DoubleBindError, ErrorCode } from '@double-bind/types';
 import { z } from 'zod';
+
+// Backwards compatibility alias (used by existing consumers)
+import type { GraphDB } from '@double-bind/types';
 
 /**
  * Result type for graph operations containing nodes and edges.
@@ -30,10 +35,11 @@ export interface SuggestedLink {
   score: number;
 }
 
-/** Database row type for pages relation */
-type PageRow = [string, string, number, number, boolean, string | null];
+/** Database row type for pages query (array format from adapter).
+ *  is_deleted can be boolean (CozoDB legacy) or number 0/1 (SQLite). */
+type PageRow = [string, string, number, number, boolean | number, string | null];
 
-/** Database row type for links relation */
+/** Database row type for links query (array format from adapter) */
 type LinkRow = [string, string, string, number, string | null];
 
 /**
@@ -48,51 +54,34 @@ const LinkTypeSchema = z.enum(['reference', 'embed', 'tag']);
  * specific neighborhoods for visualization and traversal.
  */
 export class GraphService {
-  constructor(private readonly db: GraphDB) {}
+  constructor(private readonly db: Database | GraphDB) {}
 
   /**
    * Get the full graph with all non-deleted pages and their links.
-   *
-   * This operation retrieves all pages and links in the database
-   * for full graph visualization.
-   *
-   * @returns Object containing all pages as nodes and all links as edges
-   * @throws DoubleBindError with context on query failure
    */
   async getFullGraph(): Promise<GraphResult> {
     try {
-      // Query all non-deleted pages
-      // Note: We must bind is_deleted explicitly before filtering, otherwise it's unbound in head
-      const pagesScript = `
-?[page_id, title, created_at, updated_at, is_deleted, daily_note_date] :=
-    *pages{ page_id, title, created_at, updated_at, is_deleted, daily_note_date },
-    is_deleted = false
-`.trim();
-
-      const pagesResult = await this.db.query(pagesScript);
+      const pagesResult = await this.db.query(
+        `SELECT page_id, title, created_at, updated_at, is_deleted, daily_note_date
+         FROM pages WHERE is_deleted = 0`
+      );
       const pages = pagesResult.rows.map((row) => this.rowToPage(row as PageRow));
 
-      // Build a set of valid page IDs for filtering edges
       const validPageIds = new Set(pages.map((p) => p.pageId));
 
-      // Query all links where both source and target exist and are non-deleted
-      const linksScript = `
-?[source_id, target_id, link_type, created_at, context_block_id] :=
-    *links{ source_id, target_id, link_type, created_at, context_block_id },
-    *pages{ page_id: source_id, is_deleted: false },
-    *pages{ page_id: target_id, is_deleted: false }
-`.trim();
-
-      const linksResult = await this.db.query(linksScript);
+      const linksResult = await this.db.query(
+        `SELECT l.source_id, l.target_id, l.link_type, l.created_at, l.context_block_id
+         FROM links l
+         JOIN pages sp ON l.source_id = sp.page_id AND sp.is_deleted = 0
+         JOIN pages tp ON l.target_id = tp.page_id AND tp.is_deleted = 0`
+      );
       const edges = linksResult.rows
         .map((row) => this.rowToLink(row as LinkRow))
         .filter((link) => validPageIds.has(link.sourceId) && validPageIds.has(link.targetId));
 
       return { nodes: pages, edges };
     } catch (error) {
-      if (error instanceof DoubleBindError) {
-        throw error;
-      }
+      if (error instanceof DoubleBindError) throw error;
       throw new DoubleBindError(
         `Failed to get full graph: ${error instanceof Error ? error.message : String(error)}`,
         ErrorCode.DB_QUERY_FAILED,
@@ -104,19 +93,11 @@ export class GraphService {
   /**
    * Get a neighborhood of pages within N hops of a center page.
    *
-   * This operation performs a breadth-first traversal from the center page,
-   * collecting all pages reachable within the specified number of hops.
-   * Links are followed bidirectionally (both outgoing and incoming).
-   *
-   * @param pageId - The center page identifier
-   * @param hops - Maximum number of hops from center (must be >= 0)
-   * @returns Object containing neighborhood pages as nodes and their links as edges
-   * @throws DoubleBindError with PAGE_NOT_FOUND if center page doesn't exist
-   * @throws DoubleBindError with context on query failure
+   * Uses a recursive CTE for bidirectional N-hop traversal via links.
+   * UNION (not UNION ALL) prevents cycles by deduplicating rows.
    */
   async getNeighborhood(pageId: PageId, hops: number): Promise<GraphResult> {
     try {
-      // Validate hops parameter
       if (hops < 0) {
         throw new DoubleBindError(
           `Invalid hops parameter: ${hops}. Must be >= 0`,
@@ -125,16 +106,11 @@ export class GraphService {
       }
 
       // Verify the center page exists
-      // Note: We must bind variables explicitly in body before using in head
-      // Using page_id: $center_id does pattern matching but doesn't bind the variable
-      const centerPageScript = `
-?[page_id, title, created_at, updated_at, is_deleted, daily_note_date] :=
-    *pages{ page_id, title, created_at, updated_at, is_deleted, daily_note_date },
-    page_id == $center_id,
-    is_deleted = false
-`.trim();
-
-      const centerResult = await this.db.query(centerPageScript, { center_id: pageId });
+      const centerResult = await this.db.query(
+        `SELECT page_id, title, created_at, updated_at, is_deleted, daily_note_date
+         FROM pages WHERE page_id = $center_id AND is_deleted = 0`,
+        { center_id: pageId }
+      );
 
       if (centerResult.rows.length === 0) {
         throw new DoubleBindError(`Page not found: ${pageId}`, ErrorCode.PAGE_NOT_FOUND);
@@ -142,60 +118,55 @@ export class GraphService {
 
       const centerPage = this.rowToPage(centerResult.rows[0] as PageRow);
 
-      // If hops is 0, return just the center page with no edges
       if (hops === 0) {
         return { nodes: [centerPage], edges: [] };
       }
 
-      // Build neighborhood using recursive Datalog query
-      // CozoDB supports recursive rules for graph traversal
-      const neighborhoodScript = this.buildNeighborhoodQuery(hops);
-
-      const neighborResult = await this.db.query(neighborhoodScript, { center_id: pageId });
-
-      // Parse the neighbor page IDs from the result
-      const neighborIds = new Set<string>([pageId]);
-      for (const row of neighborResult.rows) {
-        const neighborId = row[0] as string;
-        neighborIds.add(neighborId);
-      }
-
-      // Fetch full page data for all neighbors
-      // Note: We must bind is_deleted explicitly before filtering, otherwise it's unbound in head
-      const nodesScript = `
-?[page_id, title, created_at, updated_at, is_deleted, daily_note_date] :=
-    *pages{ page_id, title, created_at, updated_at, is_deleted, daily_note_date },
-    is_deleted = false,
-    page_id in $page_ids
-`.trim();
-
-      const nodesResult = await this.db.query(nodesScript, {
-        page_ids: Array.from(neighborIds),
-      });
+      // Recursive CTE: bidirectional N-hop traversal
+      const nodesResult = await this.db.query(
+        `WITH RECURSIVE neighborhood(page_id, depth) AS (
+           VALUES ($center_id, 0)
+           UNION
+           SELECT CASE WHEN l.source_id = n.page_id THEN l.target_id ELSE l.source_id END,
+                  n.depth + 1
+           FROM neighborhood n
+           JOIN links l ON (l.source_id = n.page_id OR l.target_id = n.page_id)
+           WHERE n.depth < $max_hops
+         )
+         SELECT p.page_id, p.title, p.created_at, p.updated_at, p.is_deleted, p.daily_note_date
+         FROM pages p
+         JOIN (SELECT DISTINCT page_id FROM neighborhood) nh ON p.page_id = nh.page_id
+         WHERE p.is_deleted = 0`,
+        { center_id: pageId, max_hops: hops }
+      );
 
       const nodes = nodesResult.rows.map((row) => this.rowToPage(row as PageRow));
+      const neighborIds = new Set(nodes.map((n) => n.pageId));
 
-      // Fetch edges between nodes in the neighborhood
-      const edgesScript = `
-?[source_id, target_id, link_type, created_at, context_block_id] :=
-    *links{ source_id, target_id, link_type, created_at, context_block_id },
-    source_id in $page_ids,
-    target_id in $page_ids,
-    *pages{ page_id: source_id, is_deleted: false },
-    *pages{ page_id: target_id, is_deleted: false }
-`.trim();
-
-      const edgesResult = await this.db.query(edgesScript, {
-        page_ids: Array.from(neighborIds),
+      // Build parameterized IN clause for edge query
+      // (SQLite doesn't support array binding like CozoDB's `page_id in $page_ids`)
+      const idArray = Array.from(neighborIds);
+      const placeholders = idArray.map((_, i) => `$id${i}`).join(', ');
+      const edgeParams: Record<string, unknown> = {};
+      idArray.forEach((id, i) => {
+        edgeParams[`id${i}`] = id;
       });
+
+      const edgesResult = await this.db.query(
+        `SELECT l.source_id, l.target_id, l.link_type, l.created_at, l.context_block_id
+         FROM links l
+         JOIN pages sp ON l.source_id = sp.page_id AND sp.is_deleted = 0
+         JOIN pages tp ON l.target_id = tp.page_id AND tp.is_deleted = 0
+         WHERE l.source_id IN (${placeholders})
+           AND l.target_id IN (${placeholders})`,
+        edgeParams
+      );
 
       const edges = edgesResult.rows.map((row) => this.rowToLink(row as LinkRow));
 
       return { nodes, edges };
     } catch (error) {
-      if (error instanceof DoubleBindError) {
-        throw error;
-      }
+      if (error instanceof DoubleBindError) throw error;
       throw new DoubleBindError(
         `Failed to get neighborhood for page "${pageId}" with ${hops} hops: ${error instanceof Error ? error.message : String(error)}`,
         ErrorCode.DB_QUERY_FAILED,
@@ -207,49 +178,28 @@ export class GraphService {
   /**
    * Calculate PageRank scores for all pages in the graph.
    *
-   * Uses CozoDB's built-in PageRank algorithm to compute the importance
-   * of each page based on the link structure.
-   *
-   * @returns Map of page IDs to their PageRank scores (higher = more important)
-   * @throws DoubleBindError with context on query failure
+   * Uses a simple heuristic: uniform base score boosted by incoming links.
+   * TODO(Phase 3): Replace with graphology's pagerank algorithm.
    */
   async getPageRank(): Promise<Map<PageId, number>> {
     try {
-      // Use CozoDB's built-in PageRank algorithm
-      // The algorithm takes the links relation and computes scores
-      const script = `
-rank[page_id, score] <~ PageRank(*links[source_id, target_id])
-?[page_id, score] := rank[page_id, score], *pages{ page_id, is_deleted: false }
-`.trim();
-
-      const result = await this.db.query(script);
+      const { nodes, edges } = await this.getFullGraph();
 
       const ranks = new Map<PageId, number>();
-      for (const row of result.rows) {
-        const pageId = row[0] as string;
-        const score = row[1] as number;
+      const uniformScore = nodes.length > 0 ? 1.0 / nodes.length : 0;
+      for (const node of nodes) {
+        ranks.set(node.pageId, uniformScore);
+      }
 
-        if (typeof pageId !== 'string') {
-          throw new DoubleBindError(
-            'Invalid page_id type in PageRank result',
-            ErrorCode.DB_QUERY_FAILED
-          );
-        }
-        if (typeof score !== 'number') {
-          throw new DoubleBindError(
-            'Invalid score type in PageRank result',
-            ErrorCode.DB_QUERY_FAILED
-          );
-        }
-
-        ranks.set(pageId, score);
+      // Boost pages with incoming links as a simple heuristic
+      for (const edge of edges) {
+        const current = ranks.get(edge.targetId) ?? uniformScore;
+        ranks.set(edge.targetId, current + uniformScore * 0.1);
       }
 
       return ranks;
     } catch (error) {
-      if (error instanceof DoubleBindError) {
-        throw error;
-      }
+      if (error instanceof DoubleBindError) throw error;
       throw new DoubleBindError(
         `Failed to compute PageRank: ${error instanceof Error ? error.message : String(error)}`,
         ErrorCode.DB_QUERY_FAILED,
@@ -259,57 +209,25 @@ rank[page_id, score] <~ PageRank(*links[source_id, target_id])
   }
 
   /**
-   * Detect communities in the graph using the Louvain algorithm.
+   * Detect communities in the graph.
    *
-   * Uses CozoDB's built-in CommunityDetectionLouvain algorithm to partition
-   * pages into communities based on link density.
-   *
-   * @returns Map of page IDs to their community group IDs
-   * @throws DoubleBindError with context on query failure
+   * Assigns all pages to community 0 as a placeholder.
+   * TODO(Phase 3): Replace with graphology-communities-louvain.
    */
   async getCommunities(): Promise<Map<PageId, number>> {
     try {
-      // Use CozoDB's built-in Louvain community detection algorithm
-      // CozoDB's CommunityDetectionLouvain returns (group, node).
-      // The group value is a nested array [n], so we extract the integer.
-      // Edges must be bidirectional for Louvain to detect communities.
-      const script = `
-edges[s, t] := *links{ source_id: s, target_id: t }
-edges[t, s] := *links{ source_id: s, target_id: t }
-community[grp, node] <~ CommunityDetectionLouvain(edges[s, t])
-?[page_id, grp] := community[grp, page_id], *pages{ page_id, is_deleted: false }
-`.trim();
-
-      const result = await this.db.query(script);
+      const pagesResult = await this.db.query(
+        `SELECT page_id FROM pages WHERE is_deleted = 0`
+      );
 
       const communities = new Map<PageId, number>();
-      for (const row of result.rows) {
-        const pageId = row[0] as string;
-        // CozoDB returns group as nested array [n]
-        const rawGroup = row[1];
-        const group = Array.isArray(rawGroup) ? (rawGroup[0] as number) : (rawGroup as number);
-
-        if (typeof pageId !== 'string') {
-          throw new DoubleBindError(
-            'Invalid page_id type in community result',
-            ErrorCode.DB_QUERY_FAILED
-          );
-        }
-        if (typeof group !== 'number') {
-          throw new DoubleBindError(
-            'Invalid group type in community result',
-            ErrorCode.DB_QUERY_FAILED
-          );
-        }
-
-        communities.set(pageId, group);
+      for (const row of pagesResult.rows) {
+        communities.set(row[0] as string, 0);
       }
 
       return communities;
     } catch (error) {
-      if (error instanceof DoubleBindError) {
-        throw error;
-      }
+      if (error instanceof DoubleBindError) throw error;
       throw new DoubleBindError(
         `Failed to detect communities: ${error instanceof Error ? error.message : String(error)}`,
         ErrorCode.DB_QUERY_FAILED,
@@ -321,88 +239,65 @@ community[grp, node] <~ CommunityDetectionLouvain(edges[s, t])
   /**
    * Get suggested pages to link to from a given page.
    *
-   * Returns pages that are not yet linked from the source page but have
-   * high relevance based on shared connections (common neighbors).
-   * Uses Jaccard similarity to score potential links.
-   *
-   * @param pageId - The source page to get suggestions for
-   * @returns Array of suggested pages with their relevance scores, sorted by score descending
-   * @throws DoubleBindError with PAGE_NOT_FOUND if source page doesn't exist
-   * @throws DoubleBindError with context on query failure
+   * Finds pages reachable in 2 hops that aren't directly connected,
+   * scored by the number of shared connections.
    */
   async getSuggestedLinks(pageId: PageId): Promise<SuggestedLink[]> {
     try {
-      // First verify the page exists
-      // Note: Use page_id == $page_id rather than page_id: $page_id to bind the variable
-      const verifyScript = `
-?[page_id] := *pages{ page_id, is_deleted }, page_id == $page_id, is_deleted == false
-`.trim();
-
-      const verifyResult = await this.db.query(verifyScript, { page_id: pageId });
+      // Verify the page exists
+      const verifyResult = await this.db.query(
+        `SELECT page_id FROM pages WHERE page_id = $page_id AND is_deleted = 0`,
+        { page_id: pageId }
+      );
       if (verifyResult.rows.length === 0) {
         throw new DoubleBindError(`Page not found: ${pageId}`, ErrorCode.PAGE_NOT_FOUND);
       }
 
-      // Find pages that share common neighbors but aren't directly linked
-      // Score is based on number of shared connections (Jaccard-like scoring)
-      const script = `
-# Get all pages linked FROM the source page
-outgoing[target] := *links{ source_id: $page_id, target_id: target }
-
-# Get all pages that link TO the source page
-incoming[source] := *links{ target_id: $page_id, source_id: source }
-
-# All directly connected pages (both directions)
-connected[other] := outgoing[other]
-connected[other] := incoming[other]
-
-# Get neighbors of neighbors (2-hop connections)
-# These are candidates for suggested links
-candidates[candidate, count(shared)] :=
-    connected[shared],
-    *links{ source_id: shared, target_id: candidate },
-    *pages{ page_id: candidate, is_deleted: false },
-    candidate != $page_id,
-    not connected[candidate]
-
-candidates[candidate, count(shared)] :=
-    connected[shared],
-    *links{ target_id: shared, source_id: candidate },
-    *pages{ page_id: candidate, is_deleted: false },
-    candidate != $page_id,
-    not connected[candidate]
-
-# Return candidates with their scores and full page info
-?[page_id, title, created_at, updated_at, is_deleted, daily_note_date, score] :=
-    candidates[page_id, score],
-    *pages{ page_id, title, created_at, updated_at, is_deleted, daily_note_date }
-
-:order -score
-:limit 20
-`.trim();
-
-      const result = await this.db.query(script, { page_id: pageId });
+      // Find 2-hop candidates not directly connected, scored by shared connections
+      const result = await this.db.query(
+        `WITH
+           connected(page_id) AS (
+             SELECT target_id FROM links WHERE source_id = $page_id
+             UNION
+             SELECT source_id FROM links WHERE target_id = $page_id
+           ),
+           candidates(page_id, score) AS (
+             SELECT candidate_id, COUNT(DISTINCT shared_id)
+             FROM (
+               SELECT c.page_id AS shared_id, l.target_id AS candidate_id
+               FROM connected c
+               JOIN links l ON l.source_id = c.page_id
+               WHERE l.target_id != $page_id
+                 AND l.target_id NOT IN (SELECT page_id FROM connected)
+               UNION ALL
+               SELECT c.page_id AS shared_id, l.source_id AS candidate_id
+               FROM connected c
+               JOIN links l ON l.target_id = c.page_id
+               WHERE l.source_id != $page_id
+                 AND l.source_id NOT IN (SELECT page_id FROM connected)
+             )
+             GROUP BY candidate_id
+           )
+         SELECT p.page_id, p.title, p.created_at, p.updated_at, p.is_deleted,
+                p.daily_note_date, c.score
+         FROM candidates c
+         JOIN pages p ON c.page_id = p.page_id
+         WHERE p.is_deleted = 0
+         ORDER BY c.score DESC
+         LIMIT 20`,
+        { page_id: pageId }
+      );
 
       const suggestions: SuggestedLink[] = [];
       for (const row of result.rows) {
         const page = this.rowToPage(row.slice(0, 6) as PageRow);
         const score = row[6] as number;
-
-        if (typeof score !== 'number') {
-          throw new DoubleBindError(
-            'Invalid score type in suggested links result',
-            ErrorCode.DB_QUERY_FAILED
-          );
-        }
-
         suggestions.push({ target: page, score });
       }
 
       return suggestions;
     } catch (error) {
-      if (error instanceof DoubleBindError) {
-        throw error;
-      }
+      if (error instanceof DoubleBindError) throw error;
       throw new DoubleBindError(
         `Failed to get suggested links for page "${pageId}": ${error instanceof Error ? error.message : String(error)}`,
         ErrorCode.DB_QUERY_FAILED,
@@ -412,64 +307,12 @@ candidates[candidate, count(shared)] :=
   }
 
   /**
-   * Build a recursive Datalog query for N-hop neighborhood traversal.
-   *
-   * Uses CozoDB's recursive rule support to traverse links in both directions.
-   *
-   * @param hops - Number of hops to traverse
-   * @returns Datalog query string
-   */
-  private buildNeighborhoodQuery(hops: number): string {
-    // Use recursive Datalog query with path length constraint
-    // The query finds all pages reachable within N hops via links (bidirectional)
-    return `
-neighbors[neighbor] :=
-    *links{ source_id: $center_id, target_id: neighbor },
-    *pages{ page_id: neighbor, is_deleted: false }
-neighbors[neighbor] :=
-    *links{ target_id: $center_id, source_id: neighbor },
-    *pages{ page_id: neighbor, is_deleted: false }
-${hops > 1 ? this.buildRecursiveRules(hops) : ''}
-?[neighbor] := neighbors[neighbor]
-`.trim();
-  }
-
-  /**
-   * Build recursive rules for multi-hop traversal.
-   *
-   * @param hops - Total number of hops
-   * @returns Recursive rule definitions
-   */
-  private buildRecursiveRules(hops: number): string {
-    const rules: string[] = [];
-
-    // Add rules for each additional hop level
-    for (let hop = 2; hop <= hops; hop++) {
-      rules.push(`
-neighbors[next] :=
-    neighbors[current],
-    *links{ source_id: current, target_id: next },
-    *pages{ page_id: next, is_deleted: false }
-neighbors[next] :=
-    neighbors[current],
-    *links{ target_id: current, source_id: next },
-    *pages{ page_id: next, is_deleted: false }`);
-    }
-
-    return rules.join('\n');
-  }
-
-  /**
    * Convert a database row to a Page object.
-   *
-   * @param row - Database row tuple
-   * @returns Page domain object
-   * @throws DoubleBindError if row validation fails
+   * Handles both boolean (CozoDB legacy) and integer 0/1 (SQLite) for is_deleted.
    */
   private rowToPage(row: PageRow): Page {
     const [pageId, title, createdAt, updatedAt, isDeleted, dailyNoteDate] = row;
 
-    // Simple type validation
     if (typeof pageId !== 'string') {
       throw new DoubleBindError('Invalid page_id type in database row', ErrorCode.DB_QUERY_FAILED);
     }
@@ -488,7 +331,8 @@ neighbors[next] :=
         ErrorCode.DB_QUERY_FAILED
       );
     }
-    if (typeof isDeleted !== 'boolean') {
+    // Accept both boolean (CozoDB) and integer 0/1 (SQLite) for is_deleted
+    if (typeof isDeleted !== 'boolean' && typeof isDeleted !== 'number') {
       throw new DoubleBindError(
         'Invalid is_deleted type in database row',
         ErrorCode.DB_QUERY_FAILED
@@ -506,22 +350,17 @@ neighbors[next] :=
       title,
       createdAt,
       updatedAt,
-      isDeleted,
+      isDeleted: typeof isDeleted === 'boolean' ? isDeleted : Boolean(isDeleted),
       dailyNoteDate,
     };
   }
 
   /**
    * Convert a database row to a Link object.
-   *
-   * @param row - Database row tuple
-   * @returns Link domain object
-   * @throws DoubleBindError if row validation fails
    */
   private rowToLink(row: LinkRow): Link {
     const [sourceId, targetId, linkType, createdAt, contextBlockId] = row;
 
-    // Validate types
     if (typeof sourceId !== 'string') {
       throw new DoubleBindError(
         'Invalid source_id type in database row',
@@ -547,7 +386,6 @@ neighbors[next] :=
       );
     }
 
-    // Validate link type using Zod
     const parsedLinkType = LinkTypeSchema.safeParse(linkType);
     if (!parsedLinkType.success) {
       throw new DoubleBindError(

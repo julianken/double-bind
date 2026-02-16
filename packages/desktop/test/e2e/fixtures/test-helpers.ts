@@ -27,7 +27,7 @@ export async function resetDatabase(): Promise<void> {
 }
 
 /**
- * Execute a Datalog query against the test database.
+ * Execute a SQL query against the test database.
  */
 export async function executeQuery(
   script: string,
@@ -48,7 +48,7 @@ export async function executeQuery(
 }
 
 /**
- * Execute a Datalog mutation against the test database.
+ * Execute a SQL mutation against the test database.
  */
 export async function executeMutation(
   script: string,
@@ -77,36 +77,33 @@ export async function seedPage(data: {
   dailyNoteDate?: string | null;
 }): Promise<void> {
   const now = Date.now();
-  const script = `
-    ?[page_id, title, daily_note_date, is_deleted, created_at, updated_at] <- [[
-      $page_id, $title, $daily_note_date, false, $now, $now
-    ]]
-    :put pages { page_id, title, daily_note_date, is_deleted, created_at, updated_at }
-  `;
 
-  await executeMutation(script, {
-    page_id: data.pageId,
-    title: data.title,
-    daily_note_date: data.dailyNoteDate ?? null,
-    now,
-  });
+  await executeMutation(
+    `INSERT INTO pages (page_id, title, daily_note_date, is_deleted, created_at, updated_at)
+     VALUES ($page_id, $title, $daily_note_date, 0, $now, $now)`,
+    {
+      page_id: data.pageId,
+      title: data.title,
+      daily_note_date: data.dailyNoteDate ?? null,
+      now,
+    }
+  );
 
   // Also populate the daily_notes lookup table if this is a daily note
   if (data.dailyNoteDate) {
-    const dailyNotesScript = `
-      ?[date, page_id] <- [[$date, $page_id]]
-      :put daily_notes { date, page_id }
-    `;
-    await executeMutation(dailyNotesScript, {
-      date: data.dailyNoteDate,
-      page_id: data.pageId,
-    });
+    await executeMutation(
+      `INSERT INTO daily_notes (date, page_id) VALUES ($date, $page_id)`,
+      {
+        date: data.dailyNoteDate,
+        page_id: data.pageId,
+      }
+    );
   }
 }
 
 /**
  * Seed a block in the test database.
- * Also maintains the blocks_by_page and blocks_by_parent indexes.
+ * SQLite indexes are automatic — no manual index maintenance needed.
  */
 export async function seedBlock(data: {
   blockId: string;
@@ -119,52 +116,23 @@ export async function seedBlock(data: {
   const parentId = data.parentId ?? null;
   const order = data.order ?? 'a0';
 
-  // For root blocks, parent key is "__page:<pageId>", otherwise it's the parent's block_id
-  const parentKey = parentId === null ? `__page:${data.pageId}` : parentId;
-
-  // 1. Insert into blocks relation
-  const blocksScript = `
-    ?[block_id, page_id, content, content_type, parent_id, order, is_collapsed, is_deleted, created_at, updated_at] <- [[
-      $block_id, $page_id, $content, "text", $parent_id, $order, false, false, $now, $now
-    ]]
-    :put blocks { block_id, page_id, content, content_type, parent_id, order, is_collapsed, is_deleted, created_at, updated_at }
-  `;
-
-  await executeMutation(blocksScript, {
-    block_id: data.blockId,
-    page_id: data.pageId,
-    content: data.content,
-    parent_id: parentId,
-    order,
-    now,
-  });
-
-  // 2. Insert into blocks_by_page index
-  const pageIndexScript = `
-    ?[page_id, block_id] <- [[$page_id, $block_id]]
-    :put blocks_by_page { page_id, block_id }
-  `;
-
-  await executeMutation(pageIndexScript, {
-    page_id: data.pageId,
-    block_id: data.blockId,
-  });
-
-  // 3. Insert into blocks_by_parent index
-  const parentIndexScript = `
-    ?[parent_id, block_id] <- [[$parent_key, $block_id]]
-    :put blocks_by_parent { parent_id, block_id }
-  `;
-
-  await executeMutation(parentIndexScript, {
-    parent_key: parentKey,
-    block_id: data.blockId,
-  });
+  await executeMutation(
+    `INSERT INTO blocks (block_id, page_id, content, content_type, parent_id, "order",
+                         is_collapsed, is_deleted, created_at, updated_at)
+     VALUES ($block_id, $page_id, $content, 'text', $parent_id, $order, 0, 0, $now, $now)`,
+    {
+      block_id: data.blockId,
+      page_id: data.pageId,
+      content: data.content,
+      parent_id: parentId,
+      order,
+      now,
+    }
+  );
 }
 
 /**
  * Seed a link between pages in the test database.
- * Note: links relation uses composite key (source_id, target_id, link_type)
  */
 export async function seedLink(data: {
   sourceId: string;
@@ -173,20 +141,18 @@ export async function seedLink(data: {
   linkType?: string;
 }): Promise<void> {
   const now = Date.now();
-  const script = `
-    ?[source_id, target_id, link_type, context_block_id, created_at] <- [[
-      $source_id, $target_id, $link_type, $context_block_id, $now
-    ]]
-    :put links { source_id, target_id, link_type, context_block_id, created_at }
-  `;
 
-  await executeMutation(script, {
-    source_id: data.sourceId,
-    target_id: data.targetId,
-    link_type: data.linkType ?? 'reference',
-    context_block_id: data.contextBlockId ?? null,
-    now,
-  });
+  await executeMutation(
+    `INSERT INTO links (source_id, target_id, link_type, context_block_id, created_at)
+     VALUES ($source_id, $target_id, $link_type, $context_block_id, $now)`,
+    {
+      source_id: data.sourceId,
+      target_id: data.targetId,
+      link_type: data.linkType ?? 'reference',
+      context_block_id: data.contextBlockId ?? null,
+      now,
+    }
+  );
 }
 
 /**

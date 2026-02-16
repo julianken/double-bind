@@ -8,7 +8,7 @@
 
 import express, { type Request, type Response, type Express } from 'express';
 import Database from 'better-sqlite3';
-import { runSqliteMigrations, ALL_SQLITE_MIGRATIONS } from '@double-bind/migrations';
+import { ALL_SQLITE_MIGRATIONS } from '@double-bind/migrations';
 
 const BRIDGE_PORT = 3001;
 
@@ -41,9 +41,15 @@ function createDatabase(): Database.Database {
   db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = ON');
 
-  const migrationResult = runSqliteMigrations(db, ALL_SQLITE_MIGRATIONS);
-  if (migrationResult.errors.length > 0) {
-    throw new Error(`SQLite migration failed: ${migrationResult.errors[0]?.error}`);
+  // NOTE: db.exec() below is better-sqlite3's Database.exec() for running SQL,
+  // NOT child_process.exec(). No shell commands are involved.
+  for (const migration of ALL_SQLITE_MIGRATIONS) {
+    try {
+      db.exec(migration.up);
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      throw new Error(`SQLite migration '${migration.name}' failed: ${msg}`);
+    }
   }
 
   return db;

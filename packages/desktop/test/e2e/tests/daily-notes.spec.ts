@@ -150,7 +150,7 @@ test.describe('Daily Notes', () => {
     // Verify a page with today's daily_note_date exists in the database
     const today = getTodayISODate();
     const result = await executeQuery(
-      `?[page_id, title, daily_note_date] := *pages{ page_id, title, daily_note_date }, daily_note_date == $today`,
+      `SELECT page_id, title, daily_note_date FROM pages WHERE daily_note_date = $today`,
       { today }
     );
 
@@ -267,7 +267,7 @@ test.describe('Daily Notes', () => {
 
     // Verify the page exists in the database
     const dbResult = await executeQuery(
-      `?[page_id] := *pages{ page_id, daily_note_date }, daily_note_date == $today`,
+      `SELECT page_id FROM pages WHERE daily_note_date = $today`,
       { today }
     );
     expect(dbResult.rows.length).toBeGreaterThanOrEqual(1);

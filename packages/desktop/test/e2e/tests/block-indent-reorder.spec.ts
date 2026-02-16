@@ -71,7 +71,7 @@ async function focusBlock(page: import('@playwright/test').Page, blockId: string
  */
 async function getBlockParentId(blockId: string): Promise<string | null> {
   const result = await executeQuery(
-    `?[parent_id] := *blocks{ block_id, parent_id }, block_id == $block_id`,
+    `SELECT parent_id FROM blocks WHERE block_id = $block_id AND is_deleted = 0`,
     { block_id: blockId }
   );
   if (result.rows.length > 0 && result.rows[0]) {
@@ -153,10 +153,9 @@ async function callBlockService(
  * Helper to get all sibling blocks in order (blocks with same parent).
  */
 async function getSiblingBlockIds(pageId: string, parentId: string | null): Promise<string[]> {
-  // Note: Must bind all variables used in head. Use == constraints instead of pattern matching
   const script = parentId
-    ? `?[block_id, order] := *blocks{ block_id, page_id, parent_id, order, is_deleted }, page_id == $page_id, parent_id == $parent_id, is_deleted == false :order order`
-    : `?[block_id, order] := *blocks{ block_id, page_id, parent_id, order, is_deleted }, page_id == $page_id, is_null(parent_id), is_deleted == false :order order`;
+    ? `SELECT block_id, "order" FROM blocks WHERE page_id = $page_id AND parent_id = $parent_id AND is_deleted = 0 ORDER BY "order"`
+    : `SELECT block_id, "order" FROM blocks WHERE page_id = $page_id AND parent_id IS NULL AND is_deleted = 0 ORDER BY "order"`;
 
   const params = parentId ? { page_id: pageId, parent_id: parentId } : { page_id: pageId };
 

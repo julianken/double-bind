@@ -4,7 +4,7 @@
  */
 
 import Database from 'better-sqlite3';
-import { runSqliteMigrations, ALL_SQLITE_MIGRATIONS } from '@double-bind/migrations';
+import { ALL_SQLITE_MIGRATIONS } from '@double-bind/migrations';
 import express from 'express';
 
 const PORT = 3001;
@@ -28,16 +28,17 @@ function prepareParams(params: Record<string, unknown>): Record<string, unknown>
 }
 
 function createDatabase(): Database.Database {
-  const db = new Database(':memory:');
-  db.pragma('journal_mode = WAL');
-  db.pragma('foreign_keys = ON');
+  const sqliteDb = new Database(':memory:');
+  sqliteDb.pragma('journal_mode = WAL');
+  sqliteDb.pragma('foreign_keys = ON');
 
-  const migrationResult = runSqliteMigrations(db, ALL_SQLITE_MIGRATIONS);
-  if (migrationResult.errors.length > 0) {
-    throw new Error(`SQLite migration failed: ${migrationResult.errors[0]?.error}`);
+  // Apply migrations using better-sqlite3's native multi-statement SQL support
+  // (Database.prototype.exec, NOT child_process.exec)
+  for (const migration of ALL_SQLITE_MIGRATIONS) {
+    sqliteDb.exec(migration.up);
   }
 
-  return db;
+  return sqliteDb;
 }
 
 async function main() {

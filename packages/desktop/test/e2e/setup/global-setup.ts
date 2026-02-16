@@ -11,7 +11,7 @@ import type { FullConfig } from '@playwright/test';
 import express, { type Request, type Response, type Express } from 'express';
 import type { Server } from 'http';
 import Database from 'better-sqlite3';
-import { runSqliteMigrations, ALL_SQLITE_MIGRATIONS } from '@double-bind/migrations';
+import { ALL_SQLITE_MIGRATIONS } from '@double-bind/migrations';
 
 const BRIDGE_PORT = 3001;
 const BRIDGE_URL = `http://localhost:${BRIDGE_PORT}`;
@@ -106,15 +106,26 @@ function executeMutate(
 
 /**
  * Create a new in-memory SQLite database with schema applied.
+ *
+ * Uses better-sqlite3's exec() directly instead of runSqliteMigrations() because
+ * the runner's ensureSchemaMetadataTable() conflicts with the migration's own
+ * CREATE TABLE schema_metadata, and the runner's statement splitter incorrectly
+ * parses trigger bodies. better-sqlite3's exec() handles multi-statement SQL natively.
  */
 function createDatabase(): Database.Database {
   const db = new Database(':memory:');
   db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = ON');
 
-  const migrationResult = runSqliteMigrations(db, ALL_SQLITE_MIGRATIONS);
-  if (migrationResult.errors.length > 0) {
-    throw new Error(`SQLite migration failed: ${migrationResult.errors[0]?.error}`);
+  // Apply migration SQL directly — better-sqlite3's exec() handles
+  // multi-statement SQL including triggers, FTS5 tables, and inserts.
+  for (const migration of ALL_SQLITE_MIGRATIONS) {
+    try {
+      db.exec(migration.up);
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      throw new Error(`SQLite migration '${migration.name}' failed: ${msg}`);
+    }
   }
 
   return db;
