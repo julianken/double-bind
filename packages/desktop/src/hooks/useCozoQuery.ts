@@ -1,5 +1,10 @@
 /**
- * useCozoQuery - Reactive hook for CozoDB queries
+ * useCozoQuery - Reactive hook for database queries
+ *
+ * NOTE: Despite the name "useCozoQuery", this hook is NOT CozoDB-specific.
+ * It's a generic TanStack Query wrapper that works with any database backend.
+ * The name is kept for backward compatibility after the SQLite migration (DBB-438).
+ * Consider renaming to "useDbQuery" in a future refactoring.
  *
  * Now backed by TanStack Query instead of Zustand for better stability.
  * This migration fixes the infinite re-render loop bug (DBB-341) caused
@@ -31,6 +36,7 @@ import { queryClient } from '../lib/queryClient.js';
 
 /**
  * Options for useCozoQuery hook.
+ * @deprecated Consider renaming this interface after full CozoDB removal
  */
 export interface UseCozoQueryOptions {
   /** Whether the query should execute. Defaults to true. */
@@ -39,6 +45,7 @@ export interface UseCozoQueryOptions {
 
 /**
  * Result returned by useCozoQuery hook.
+ * @deprecated Consider renaming this interface after full CozoDB removal
  */
 export interface UseCozoQueryResult<T> {
   data: T | undefined;
@@ -100,7 +107,7 @@ export const resetQueries = (keyPrefix: string[]): void => {
 };
 
 /**
- * React hook for executing CozoDB queries with automatic caching and invalidation.
+ * React hook for executing database queries with automatic caching and invalidation.
  *
  * Now powered by TanStack Query for stable identity guarantees.
  * This fixes the infinite re-render loop bug caused by Zustand selectors.

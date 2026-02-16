@@ -38,16 +38,3 @@ export {
   AUTOCOMPLETE_DEFAULT_STYLES,
   type AutocompleteDropdownProps,
 } from './AutocompleteDropdown.js';
-
-// CozoScript/Datalog language support (DBB-229)
-export {
-  cozoLanguage,
-  tokenize,
-  tokenTable,
-  KEYWORDS,
-  OPERATOR_KEYWORDS,
-  BUILTINS,
-  RULE_OPERATORS,
-  type CozoTokenType,
-  type CozoParserState,
-} from './cozo-language.js';

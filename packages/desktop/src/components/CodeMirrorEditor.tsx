@@ -1,11 +1,11 @@
 /**
  * CodeMirrorEditor - Reusable CodeMirror 6 wrapper component
  *
- * A React component that wraps CodeMirror 6 for use with CozoScript/Datalog
- * syntax highlighting. Designed for raw query editing in Double-Bind.
+ * A React component that wraps CodeMirror 6 for code editing in Double-Bind.
+ * Designed for raw query/code editing needs.
  *
  * Features:
- * - CozoScript syntax highlighting
+ * - Syntax highlighting support
  * - Controlled and uncontrolled modes
  * - Customizable theme support
  * - Line numbers (optional)
@@ -20,7 +20,6 @@ import { EditorState, type Extension } from '@codemirror/state';
 import { EditorView, keymap, lineNumbers, highlightActiveLine } from '@codemirror/view';
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
 import { syntaxHighlighting, defaultHighlightStyle } from '@codemirror/language';
-import { cozoLanguage } from '../editor/cozo-language.js';
 
 // ============================================================================
 // Types
@@ -128,7 +127,7 @@ export const CODEMIRROR_DEFAULT_STYLES: React.CSSProperties = {
 // ============================================================================
 
 /**
- * Base theme for the CozoScript editor.
+ * Base theme for the code editor.
  * Provides sensible defaults that work with both light and dark modes.
  */
 const baseTheme = EditorView.theme({
@@ -199,18 +198,18 @@ const baseTheme = EditorView.theme({
 // ============================================================================
 
 /**
- * CodeMirrorEditor component for CozoScript editing.
+ * CodeMirrorEditor component for code editing.
  *
  * @example
  * ```tsx
  * function QueryEditor() {
- *   const [query, setQuery] = useState('?[name] := *page{name}');
+ *   const [query, setQuery] = useState('SELECT * FROM pages');
  *
  *   return (
  *     <CodeMirrorEditor
  *       value={query}
  *       onChange={setQuery}
- *       placeholder="Enter CozoDB query..."
+ *       placeholder="Enter SQL query..."
  *     />
  *   );
  * }
@@ -270,8 +269,7 @@ export function CodeMirrorEditor({
   // Build extensions array
   const extensions = useMemo(() => {
     const ext: Extension[] = [
-      // Core language support
-      cozoLanguage,
+      // Core editor support
       syntaxHighlighting(defaultHighlightStyle),
       baseTheme,
 
@@ -407,7 +405,7 @@ export function CodeMirrorEditor({
       role="textbox"
       aria-multiline="true"
       aria-readonly={readOnly}
-      aria-label="CozoScript editor"
+      aria-label="Code editor"
       onClick={focus}
     />
   );
