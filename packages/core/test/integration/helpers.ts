@@ -1,4 +1,4 @@
-// Integration test helpers for seeding realistic test data
+// Integration test helpers for seeding realistic test data (SQLite)
 
 import type { GraphDB } from '@double-bind/types';
 
@@ -86,7 +86,7 @@ export async function seedTestData(db: GraphDB): Promise<TestFixtures> {
   // Create Daily Note
   // ─────────────────────────────────────────────────────────────────────────────
 
-  const todayDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+  const todayDate = new Date().toISOString().split('T')[0]!; // YYYY-MM-DD
   const dailyNoteId = `daily-${todayDate}`;
 
   // Create the daily note page
@@ -202,15 +202,15 @@ export async function seedTestData(db: GraphDB): Promise<TestFixtures> {
 
     // Daily note blocks
     {
-      block_id: `block-daily-1`,
+      block_id: 'block-daily-1',
       page_id: dailyNoteId,
       parent_id: null,
-      content: `Today's notes`,
+      content: "Today's notes",
       order: 'a0',
       level: 0,
     },
     {
-      block_id: `block-daily-2`,
+      block_id: 'block-daily-2',
       page_id: dailyNoteId,
       parent_id: null,
       content: 'Link to [[Getting Started]]',
@@ -308,13 +308,13 @@ export async function seedTestData(db: GraphDB): Promise<TestFixtures> {
   // Create Properties (using page_properties table)
   // ─────────────────────────────────────────────────────────────────────────────
 
-  const properties = [
+  const pageProperties = [
     { entity_id: 'page-1', key: 'status', value: 'published', value_type: 'string' },
     { entity_id: 'page-2', key: 'status', value: 'draft', value_type: 'string' },
     { entity_id: 'page-3', key: 'priority', value: 'high', value_type: 'string' },
   ];
 
-  for (const prop of properties) {
+  for (const prop of pageProperties) {
     await db.mutate(
       `INSERT INTO page_properties (page_id, key, value, value_type, updated_at)
        VALUES ($entity, $key, $value, $type, $now)`,
