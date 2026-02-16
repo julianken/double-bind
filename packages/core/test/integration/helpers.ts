@@ -52,17 +52,9 @@ export interface TestFixtures {
  *
  * @param db - GraphDB instance to seed
  * @returns TestFixtures with all created entity IDs and metadata
- *
- * @example
- * ```typescript
- * const db = await createTestDatabase();
- * const fixtures = await seedTestData(db);
- * // fixtures.pages[0].page_id === 'page-1'
- * // fixtures.blocks.length === 12
- * ```
  */
 export async function seedTestData(db: GraphDB): Promise<TestFixtures> {
-  const now = Date.now() / 1000; // CozoDB uses Unix seconds
+  const now = Date.now();
   const fixtures: TestFixtures = {
     pages: [],
     blocks: [],
@@ -83,8 +75,8 @@ export async function seedTestData(db: GraphDB): Promise<TestFixtures> {
 
   for (const page of pages) {
     await db.mutate(
-      `?[page_id, title, created_at, updated_at, is_deleted, daily_note_date] <- [[$id, $title, $now, $now, false, null]]
-       :put pages { page_id => title, created_at, updated_at, is_deleted, daily_note_date }`,
+      `INSERT INTO pages (page_id, title, created_at, updated_at, is_deleted, daily_note_date)
+       VALUES ($id, $title, $now, $now, 0, NULL)`,
       { id: page.page_id, title: page.title, now }
     );
     fixtures.pages.push({ ...page, daily_note_date: undefined });
@@ -99,15 +91,14 @@ export async function seedTestData(db: GraphDB): Promise<TestFixtures> {
 
   // Create the daily note page
   await db.mutate(
-    `?[page_id, title, created_at, updated_at, is_deleted, daily_note_date] <- [[$id, $title, $now, $now, false, $date]]
-     :put pages { page_id => title, created_at, updated_at, is_deleted, daily_note_date }`,
+    `INSERT INTO pages (page_id, title, created_at, updated_at, is_deleted, daily_note_date)
+     VALUES ($id, $title, $now, $now, 0, $date)`,
     { id: dailyNoteId, title: todayDate, date: todayDate, now }
   );
 
   // Add the daily notes index entry
   await db.mutate(
-    `?[date, page_id] <- [[$date, $id]]
-     :put daily_notes { date => page_id }`,
+    `INSERT INTO daily_notes (date, page_id) VALUES ($date, $id)`,
     { date: todayDate, id: dailyNoteId }
   );
 
@@ -121,13 +112,6 @@ export async function seedTestData(db: GraphDB): Promise<TestFixtures> {
   // ─────────────────────────────────────────────────────────────────────────────
   // Create Blocks with Hierarchy
   // ─────────────────────────────────────────────────────────────────────────────
-
-  // Block structure for "Getting Started" (page-1):
-  // - block-1-1 (top-level)
-  //   - block-1-2 (child of block-1-1)
-  // - block-1-3 (top-level)
-  //   - block-1-4 (child of block-1-3)
-  //   - block-1-5 (child of block-1-3)
 
   const blocksToCreate = [
     // Getting Started blocks
@@ -236,15 +220,10 @@ export async function seedTestData(db: GraphDB): Promise<TestFixtures> {
   ];
 
   for (const block of blocksToCreate) {
-    // Parent key for blocks_by_parent:
-    // - null parent_id -> "__page__" + page_id
-    // - non-null parent_id -> parent_id
-    const parentKey = block.parent_id ?? `__page__${block.page_id}`;
-
-    // Insert into blocks relation
     await db.mutate(
-      `?[block_id, page_id, parent_id, content, content_type, order, is_collapsed, is_deleted, created_at, updated_at] <- [[$id, $page_id, $parent_id, $content, "text", $order, false, false, $now, $now]]
-       :put blocks { block_id => page_id, parent_id, content, content_type, order, is_collapsed, is_deleted, created_at, updated_at }`,
+      `INSERT INTO blocks (block_id, page_id, parent_id, content, content_type, "order",
+                           is_collapsed, is_deleted, created_at, updated_at)
+       VALUES ($id, $page_id, $parent_id, $content, 'text', $order, 0, 0, $now, $now)`,
       {
         id: block.block_id,
         page_id: block.page_id,
@@ -253,20 +232,6 @@ export async function seedTestData(db: GraphDB): Promise<TestFixtures> {
         order: block.order,
         now,
       }
-    );
-
-    // Add to blocks_by_page index
-    await db.mutate(
-      `?[page_id, block_id] <- [[$page_id, $id]]
-       :put blocks_by_page { page_id, block_id }`,
-      { page_id: block.page_id, id: block.block_id }
-    );
-
-    // Add to blocks_by_parent index
-    await db.mutate(
-      `?[parent_id, block_id] <- [[$parent_key, $id]]
-       :put blocks_by_parent { parent_id, block_id }`,
-      { parent_key: parentKey, id: block.block_id }
     );
 
     fixtures.blocks.push(block);
@@ -299,8 +264,8 @@ export async function seedTestData(db: GraphDB): Promise<TestFixtures> {
 
   for (const link of links) {
     await db.mutate(
-      `?[source_id, target_id, link_type, created_at, context_block_id] <- [[$source, $target, $type, $now, $context]]
-       :put links { source_id, target_id, link_type => created_at, context_block_id }`,
+      `INSERT INTO links (source_id, target_id, link_type, created_at, context_block_id)
+       VALUES ($source, $target, $type, $now, $context)`,
       {
         source: link.source_id,
         target: link.target_id,
@@ -313,26 +278,34 @@ export async function seedTestData(db: GraphDB): Promise<TestFixtures> {
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // Create Tags
+  // Create Tags (using page_tags and block_tags tables)
   // ─────────────────────────────────────────────────────────────────────────────
 
-  const tags = [
+  const pageTags = [
     { entity_id: 'page-1', tag: 'documentation' },
     { entity_id: 'page-3', tag: 'tasks' },
-    { entity_id: 'block-3-1', tag: 'todo' },
   ];
 
-  for (const tag of tags) {
+  for (const tag of pageTags) {
     await db.mutate(
-      `?[entity_id, tag, created_at] <- [[$entity, $tag, $now]]
-       :put tags { entity_id, tag => created_at }`,
+      `INSERT INTO page_tags (page_id, tag, created_at) VALUES ($entity, $tag, $now)`,
+      { entity: tag.entity_id, tag: tag.tag, now }
+    );
+    fixtures.tags.push(tag);
+  }
+
+  const blockTags = [{ entity_id: 'block-3-1', tag: 'todo' }];
+
+  for (const tag of blockTags) {
+    await db.mutate(
+      `INSERT INTO block_tags (block_id, tag, created_at) VALUES ($entity, $tag, $now)`,
       { entity: tag.entity_id, tag: tag.tag, now }
     );
     fixtures.tags.push(tag);
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // Create Properties
+  // Create Properties (using page_properties table)
   // ─────────────────────────────────────────────────────────────────────────────
 
   const properties = [
@@ -343,8 +316,8 @@ export async function seedTestData(db: GraphDB): Promise<TestFixtures> {
 
   for (const prop of properties) {
     await db.mutate(
-      `?[entity_id, key, value, value_type, updated_at] <- [[$entity, $key, $value, $type, $now]]
-       :put properties { entity_id, key => value, value_type, updated_at }`,
+      `INSERT INTO page_properties (page_id, key, value, value_type, updated_at)
+       VALUES ($entity, $key, $value, $type, $now)`,
       {
         entity: prop.entity_id,
         key: prop.key,
@@ -362,15 +335,12 @@ export async function seedTestData(db: GraphDB): Promise<TestFixtures> {
 /**
  * Cleanup a test database instance.
  *
- * For in-memory CozoDB (used in integration tests), databases are garbage
- * collected when no references remain. This function is a no-op for in-memory
- * databases but is exported to satisfy the test helper API contract and to
- * support future database backends (e.g., SQLite with file-based storage)
- * that may require explicit cleanup.
+ * For in-memory SQLite (used in integration tests), databases are garbage
+ * collected when no references remain. This function calls close() to
+ * explicitly release resources.
  *
- * @param _db - GraphDB instance to clean up (unused for in-memory databases)
+ * @param db - GraphDB instance to clean up
  */
-export async function cleanupDatabase(_db: GraphDB): Promise<void> {
-  // In-memory CozoDB databases are garbage collected automatically.
-  // No explicit cleanup needed.
+export async function cleanupDatabase(db: GraphDB): Promise<void> {
+  await db.close();
 }

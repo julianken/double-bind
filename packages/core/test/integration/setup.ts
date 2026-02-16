@@ -1,108 +1,48 @@
-// Integration test setup utilities for real CozoDB testing
-// Provides createTestDatabase() with cozo-node adapter and migrations
+// Integration test setup utilities for real SQLite testing
+// Provides createTestDatabase() with better-sqlite3 adapter and SQLite migrations
 
-import type { GraphDB, QueryResult, MutationResult } from '@double-bind/types';
-import { runMigrations } from '@double-bind/migrations';
-
-/**
- * Type for cozo-node CozoDb instance.
- * We use unknown since cozo-node is a native module without TypeScript types.
- */
-type CozoDb = unknown;
+import type { GraphDB } from '@double-bind/types';
+import Database from 'better-sqlite3';
+import { SqliteNodeAdapter } from '../../src/adapters/sqlite-node-adapter.js';
+import { ALL_SQLITE_MIGRATIONS } from '@double-bind/migrations';
 
 /**
- * Adapter wrapping cozo-node's CozoDb to implement the GraphDB interface.
- * Provides thin compatibility layer between cozo-node API and our abstractions.
- */
-export class CozoNodeAdapter implements GraphDB {
-  private db: CozoDb;
-
-  constructor(db: CozoDb) {
-    this.db = db;
-  }
-
-  async query<T = unknown>(
-    script: string,
-    params?: Record<string, unknown>
-  ): Promise<QueryResult<T>> {
-    // cozo-node run() returns a Promise with { headers, rows } on success
-    // Rejects the promise on error
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const result = await (this.db as any).run(script, params ?? {});
-    return { headers: result.headers ?? [], rows: (result.rows ?? []) as T[][] };
-  }
-
-  async mutate(script: string, params?: Record<string, unknown>): Promise<MutationResult> {
-    // cozo-node run() returns a Promise with { headers, rows } on success
-    // Rejects the promise on error
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const result = await (this.db as any).run(script, params ?? {});
-    return { headers: result.headers ?? [], rows: result.rows ?? [] };
-  }
-
-  async importRelations(data: Record<string, unknown[][]>): Promise<void> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (this.db as any).import_relations(data);
-  }
-
-  async exportRelations(relations: string[]): Promise<Record<string, unknown[][]>> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return (this.db as any).export_relations(relations);
-  }
-
-  async backup(path: string): Promise<void> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (this.db as any).backup(path);
-  }
-
-  async restore(path: string): Promise<void> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (this.db as any).restore(path);
-  }
-
-  async importRelationsFromBackup(path: string, relations: string[]): Promise<void> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (this.db as any).import_relations_from_backup(path, relations);
-  }
-
-  async close(): Promise<void> {
-    // cozo-node handles cleanup via garbage collection
-    // Explicit close() not required but we could call db.close() if it exists
-  }
-}
-
-/**
- * Create a real CozoDB instance for integration testing.
- * Uses in-memory storage and applies all migrations.
+ * Create a real SQLite instance for integration testing.
+ * Uses in-memory storage and applies all SQLite migrations.
+ *
+ * NOTE: We execute migration SQL directly rather than using runSqliteMigrations()
+ * because the runner's ensureSchemaMetadataTable() creates schema_metadata
+ * before running migrations, conflicting with the migration's own
+ * CREATE TABLE schema_metadata statement (which lacks IF NOT EXISTS).
+ * Direct execution avoids the conflict since better-sqlite3 handles
+ * multiple statements and trigger bodies natively.
  *
  * @returns GraphDB instance ready for testing with full schema applied
  *
  * @example
  * ```typescript
  * const db = await createTestDatabase();
- * await db.mutate('?[page_id, title] <- [["p1", "Test"]] :put pages {...}');
- * const result = await db.query('?[page_id, title] := *pages{ page_id, title }');
+ * const result = await db.query('SELECT page_id, title FROM pages');
  * ```
  */
 export async function createTestDatabase(): Promise<GraphDB> {
-  // Dynamic import of cozo-node (native module without TS types)
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { CozoDb } = require('cozo-node') as {
-    CozoDb: new (engine: string, path: string) => CozoDb;
-  };
+  // Create in-memory SQLite instance
+  const sqliteDb = new Database(':memory:');
 
-  // Create in-memory CozoDB instance
-  const cozoDb = new CozoDb('mem', '');
+  // Apply pragmas for performance and correctness
+  sqliteDb.pragma('journal_mode = WAL');
+  sqliteDb.pragma('foreign_keys = ON');
 
-  // Wrap with adapter
-  const db = new CozoNodeAdapter(cozoDb);
-
-  // Apply all migrations to get full schema
-  const result = await runMigrations(db);
-
-  if (result.errors.length > 0) {
-    throw new Error(`Migration failed: ${result.errors[0]?.error}`);
+  // Apply migration SQL directly (bypasses runner to avoid schema_metadata conflict)
+  for (const migration of ALL_SQLITE_MIGRATIONS) {
+    try {
+      sqliteDb.exec(migration.up);
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      throw new Error(`SQLite migration '${migration.name}' failed: ${msg}`);
+    }
   }
 
-  return db;
+  // Wrap with adapter that implements the Database interface
+  return new SqliteNodeAdapter(sqliteDb);
 }
