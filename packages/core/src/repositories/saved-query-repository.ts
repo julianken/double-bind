@@ -1,8 +1,8 @@
 /**
- * SavedQueryRepository - Encapsulates all Datalog queries for SavedQuery entities.
+ * SavedQueryRepository - Encapsulates all SQL queries for SavedQuery entities.
  *
- * Each method constructs parameterized Datalog queries that are executed
- * against CozoDB. User data never enters the query string directly;
+ * Each method constructs parameterized SQL queries that are executed
+ * against SQLite. User data never enters the query string directly;
  * all values are passed as parameters.
  */
 
@@ -31,7 +31,7 @@ export interface GetAllSavedQueriesOptions {
 
 /**
  * Repository for SavedQuery entity operations.
- * All methods use parameterized Datalog queries for security.
+ * All methods use parameterized SQL queries for security.
  */
 export class SavedQueryRepository {
   constructor(private readonly db: GraphDB) {}
@@ -44,10 +44,10 @@ export class SavedQueryRepository {
    */
   async getById(id: SavedQueryId): Promise<SavedQuery | null> {
     const script = `
-?[id, name, type, definition, description, created_at, updated_at] :=
-    *saved_queries{ id, name, type, definition, description, created_at, updated_at },
-    id == $id
-`.trim();
+      SELECT id, name, type, definition, description, created_at, updated_at
+      FROM saved_queries
+      WHERE id = $id
+    `;
 
     const result = await this.db.query(script, { id });
 
@@ -69,31 +69,31 @@ export class SavedQueryRepository {
     const { type, limit = 100, offset = 0 } = options;
 
     let script: string;
+    let params: Record<string, unknown>;
 
     if (type) {
       script = `
-?[id, name, type, definition, description, created_at, updated_at] :=
-    *saved_queries{ id, name, type, definition, description, created_at, updated_at },
-    type == $type
-:order -updated_at
-:limit $limit
-:offset $offset
-`.trim();
-
-      const result = await this.db.query(script, { type, limit, offset });
-      return result.rows.map((row) => parseSavedQueryRow(row as SavedQueryRow));
+        SELECT id, name, type, definition, description, created_at, updated_at
+        FROM saved_queries
+        WHERE type = $type
+        ORDER BY updated_at DESC
+        LIMIT $limit
+        OFFSET $offset
+      `;
+      params = { type, limit, offset };
     } else {
       script = `
-?[id, name, type, definition, description, created_at, updated_at] :=
-    *saved_queries{ id, name, type, definition, description, created_at, updated_at }
-:order -updated_at
-:limit $limit
-:offset $offset
-`.trim();
-
-      const result = await this.db.query(script, { limit, offset });
-      return result.rows.map((row) => parseSavedQueryRow(row as SavedQueryRow));
+        SELECT id, name, type, definition, description, created_at, updated_at
+        FROM saved_queries
+        ORDER BY updated_at DESC
+        LIMIT $limit
+        OFFSET $offset
+      `;
+      params = { limit, offset };
     }
+
+    const result = await this.db.query(script, params);
+    return result.rows.map((row) => parseSavedQueryRow(row as SavedQueryRow));
   }
 
   /**
@@ -104,18 +104,25 @@ export class SavedQueryRepository {
    * @returns Array of saved queries matching the search, sorted by relevance score
    */
   async search(query: string, limit = 50): Promise<SavedQuery[]> {
+    // Sanitize query for FTS5
+    const sanitized = query.trim().replace(/['"(){}[\]*:^~]/g, '');
+    if (!sanitized) {
+      return [];
+    }
+
     const script = `
-?[id, name, type, definition, description, created_at, updated_at, score] :=
-    ~saved_queries:fts{ id, name | query: $query, k: $limit, bind_score: score },
-    *saved_queries{ id, name, type, definition, description, created_at, updated_at }
-:order -score
-`.trim();
+      SELECT sq.id, sq.name, sq.type, sq.definition, sq.description, sq.created_at, sq.updated_at
+      FROM saved_queries_fts sqf
+      JOIN saved_queries sq ON sqf.query_id = sq.id
+      WHERE saved_queries_fts MATCH $query
+      ORDER BY sqf.rank
+      LIMIT $limit
+    `;
 
-    const result = await this.db.query(script, { query, limit });
+    const result = await this.db.query(script, { query: sanitized, limit });
 
-    // Map rows to SavedQuery (excluding the score column at index 7)
     return result.rows.map((row) => {
-      const queryRow = (row as unknown[]).slice(0, 7) as SavedQueryRow;
+      const queryRow = row as SavedQueryRow;
       return parseSavedQueryRow(queryRow);
     });
   }
@@ -132,11 +139,9 @@ export class SavedQueryRepository {
     const description = input.description ?? null;
 
     const script = `
-?[id, name, type, definition, description, created_at, updated_at] <- [
-    [$id, $name, $type, $definition, $description, $now, $now]
-]
-:put saved_queries { id, name, type, definition, description, created_at, updated_at }
-`.trim();
+      INSERT INTO saved_queries (id, name, type, definition, description, created_at, updated_at)
+      VALUES ($id, $name, $type, $definition, $description, $now, $now)
+    `;
 
     await this.db.mutate(script, {
       id,
@@ -175,11 +180,11 @@ export class SavedQueryRepository {
       input.description !== undefined ? input.description : existing.description;
 
     const script = `
-?[id, name, type, definition, description, created_at, updated_at] <- [
-    [$id, $name, $type, $definition, $description, $created_at, $now]
-]
-:put saved_queries { id, name, type, definition, description, created_at, updated_at }
-`.trim();
+      UPDATE saved_queries
+      SET name = $name, type = $type, definition = $definition,
+          description = $description, updated_at = $now
+      WHERE id = $id
+    `;
 
     await this.db.mutate(script, {
       id,
@@ -187,7 +192,6 @@ export class SavedQueryRepository {
       type: newType,
       definition: newDefinition,
       description: newDescription,
-      created_at: existing.createdAt,
       now,
     });
   }
@@ -208,12 +212,10 @@ export class SavedQueryRepository {
       throw new DoubleBindError(`Saved query not found: ${id}`, ErrorCode.SAVED_QUERY_NOT_FOUND);
     }
 
-    const script = `
-?[id] <- [[$id]]
-:rm saved_queries { id }
-`.trim();
-
-    await this.db.mutate(script, { id });
+    await this.db.mutate(
+      `DELETE FROM saved_queries WHERE id = $id`,
+      { id }
+    );
   }
 
   /**
@@ -224,10 +226,10 @@ export class SavedQueryRepository {
    */
   async getByName(name: string): Promise<SavedQuery | null> {
     const script = `
-?[id, name, type, definition, description, created_at, updated_at] :=
-    *saved_queries{ id, name, type, definition, description, created_at, updated_at },
-    name == $name
-`.trim();
+      SELECT id, name, type, definition, description, created_at, updated_at
+      FROM saved_queries
+      WHERE name = $name
+    `;
 
     const result = await this.db.query(script, { name });
 
