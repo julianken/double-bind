@@ -32,14 +32,21 @@ export { DoubleBindError, ErrorCode } from './errors';
 // Input types
 export type { CreatePageInput, CreateBlockInput, UpdateBlockInput } from './inputs';
 
-// GraphDB interface
+// Database interface (renamed from GraphDB)
 export type {
+  Database,
+  DatabaseConfig,
+  DatabaseFactory,
+  QueryResult,
+  RowArrayResult,
+  RowObjectResult,
+  MutationResult,
+  TransactionContext,
+  // Backwards compatibility
   GraphDB,
   GraphDBConfig,
   GraphDBFactory,
-  QueryResult,
-  MutationResult,
-} from './graph-db.js';
+} from './database.js';
 
 // Search types
 export type { SearchResult, SearchOptions } from './search.js';

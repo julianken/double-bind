@@ -7,7 +7,12 @@
  * @see GraphDB - TypeScript interface at packages/types/src/graph-db.ts
  * @see CozoNativeModule - Native module interface
  */
-import type { GraphDB, QueryResult, MutationResult } from '@double-bind/types';
+import type {
+  GraphDB,
+  QueryResult,
+  MutationResult,
+  TransactionContext,
+} from '@double-bind/types';
 import type { CozoNativeModule } from './CozoNativeModule';
 import { getCozoModule } from './CozoNativeModule';
 
@@ -81,6 +86,19 @@ export class MobileGraphDB implements GraphDB {
     const paramsJson = JSON.stringify(params ?? {});
     const resultJson = await this.native.run(script, paramsJson);
     return JSON.parse(resultJson) as MutationResult;
+  }
+
+  /**
+   * Execute multiple operations within a transaction.
+   *
+   * NOTE: Transactions are not yet supported in the mobile CozoDB implementation.
+   * This method will be implemented during the SQLite migration.
+   *
+   * @param _fn Function that receives a transaction context
+   * @throws Error always - transactions not yet supported
+   */
+  async transaction<T>(_fn: (tx: TransactionContext) => Promise<T>): Promise<T> {
+    throw new Error('Transactions are not yet supported in mobile CozoDB implementation');
   }
 
   /**

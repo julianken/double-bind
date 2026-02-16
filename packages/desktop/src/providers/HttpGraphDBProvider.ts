@@ -8,7 +8,12 @@
  * @module
  */
 
-import type { GraphDB, QueryResult, MutationResult } from '@double-bind/types';
+import type {
+  GraphDB,
+  QueryResult,
+  MutationResult,
+  TransactionContext,
+} from '@double-bind/types';
 import { DoubleBindError, ErrorCode } from '@double-bind/types';
 import type { GraphDBProvider } from './TauriGraphDBProvider.js';
 
@@ -63,6 +68,10 @@ const httpGraphDB: GraphDB = {
 
   async mutate(script: string, params: Record<string, unknown> = {}): Promise<MutationResult> {
     return bridgeInvoke<MutationResult>('mutate', { script, params });
+  },
+
+  async transaction<T>(_fn: (tx: TransactionContext) => Promise<T>): Promise<T> {
+    throw new Error('Transactions are not yet supported in HTTP bridge CozoDB implementation');
   },
 
   async importRelations(data: Record<string, unknown[][]>): Promise<void> {
