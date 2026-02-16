@@ -248,15 +248,17 @@ export class MockDatabase implements Database {
   async transaction<T>(fn: (tx: TransactionContext) => Promise<T>): Promise<T> {
     // Mock transactions perform immediately without isolation
     const mockTx: TransactionContext = {
-      query: async <TResult = unknown>(sql: string, params?: Record<string, unknown>) => {
-        const result = await this.query<TResult>(sql, params);
-        // TransactionContext.query returns T[] (array of objects)
-        // For mock purposes, just return rows as-is (flattened)
-        return result.rows as unknown as TResult[];
+      query: async <TResult = unknown>(script: string, params?: Record<string, unknown>) => {
+        const result = await this.query<TResult>(script, params);
+        // TransactionContext.query returns T[] (flat array of objects).
+        // MockDatabase.query returns QueryResult with rows: T[][] (array of arrays).
+        // Flatten: each inner array becomes one element in the output.
+        return result.rows.flat() as TResult[];
       },
-      execute: async (_sql: string, _params?: Record<string, unknown>) => {
-        // Mock execute - doesn't actually execute, just returns success
-        return { affectedRows: 0 };
+      execute: async (script: string, params?: Record<string, unknown>) => {
+        // Delegate to mutate so mock state is actually modified
+        const result = await this.mutate(script, params);
+        return { affectedRows: result.rows.length };
       },
     };
     return fn(mockTx);
