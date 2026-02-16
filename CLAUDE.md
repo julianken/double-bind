@@ -95,6 +95,23 @@ Use Layer 1-2 during development. Run Layer 3 before PRs. Run Layer 4 for IPC/Ru
 
 ## AI Assistant Configuration
 
+**Subagent Selection (MANDATORY):** When using the Task tool to spawn subagents, NEVER use generic agent types like `Explore`, `Plan`, `Bash`, or `general-purpose`. ALWAYS select specialized plugin agents that match the task domain:
+
+| Task Domain | Preferred Agent Types |
+|-------------|----------------------|
+| Code exploration/tracing | `feature-dev:code-explorer` |
+| Architecture design | `feature-dev:code-architect` |
+| Code review | `feature-dev:code-reviewer`, `code-refactoring:code-reviewer` |
+| React Native/Mobile | `multi-platform-apps:mobile-developer`, `multi-platform-apps:flutter-expert` |
+| React/Frontend | `frontend-excellence:react-specialist`, `frontend-excellence:state-manager` |
+| Database/Data layer | `database-design:database-architect`, `database-design:sql-pro` |
+| Backend/API | `backend-development:backend-architect`, `backend-development:graphql-architect` |
+| TypeScript | `javascript-typescript:typescript-pro` |
+| Testing | `backend-development:tdd-orchestrator` |
+| UI/Design | `ui-design:ui-designer`, `ui-design:accessibility-expert` |
+
+Use `sonnet` model for specialized agents (not `haiku`) to ensure quality analysis.
+
 **Context7 MCP:** Use Context7 for up-to-date library documentation:
 
 - **CozoDB** (v0.7) — Datalog queries, graph algorithms
