@@ -163,7 +163,7 @@ test.describe('Daily Notes', () => {
     expect(dailyNoteDateValue).toBe(today);
   });
 
-  test('daily notes view shows empty state when no blocks exist', async ({ page }) => {
+  test('daily notes auto-creates an initial empty block for immediate typing', async ({ page }) => {
     // Navigate to daily notes
     await page.goto('/');
     await expect(page.getByTestId('app-shell')).toBeVisible({ timeout: 10000 });
@@ -188,9 +188,10 @@ test.describe('Daily Notes', () => {
     const content = page.getByTestId('daily-notes-content');
     await expect(content).toBeVisible({ timeout: 5000 });
 
-    // The daily note was just auto-created with no blocks, so the empty state should show
-    const emptyState = page.getByTestId('daily-notes-empty');
-    await expect(emptyState).toBeVisible({ timeout: 5000 });
+    // Daily notes now auto-create an initial empty block for immediate typing,
+    // so the block tree should be visible (not the empty state)
+    const blockTree = page.locator('[data-testid="block-tree"]');
+    await expect(blockTree).toBeVisible({ timeout: 5000 });
   });
 
   test('pre-seeded daily note is displayed correctly', async ({ page }) => {
