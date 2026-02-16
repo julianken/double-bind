@@ -1,7 +1,7 @@
-// @double-bind/test-utils - MockGraphDB, fixtures, test factories
+// @double-bind/test-utils - MockDatabase, fixtures, test factories
 // Dependencies: @double-bind/types
 
-export { MockGraphDB, type RecordedCall } from './mock-graph-db.js';
+export { MockDatabase, MockGraphDB, type RecordedCall } from './mock-database.js';
 
 // Test factories
 export {

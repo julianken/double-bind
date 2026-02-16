@@ -8,7 +8,12 @@
  */
 
 import { invoke } from '@tauri-apps/api/core';
-import type { GraphDB, QueryResult, MutationResult } from '@double-bind/types';
+import type {
+  GraphDB,
+  QueryResult,
+  MutationResult,
+  TransactionContext,
+} from '@double-bind/types';
 import { DoubleBindError, ErrorCode } from '@double-bind/types';
 
 /**
@@ -93,6 +98,19 @@ const tauriGraphDB: GraphDB = {
    */
   async mutate(script: string, params: Record<string, unknown> = {}): Promise<MutationResult> {
     return invokeWithErrorMapping<MutationResult>('mutate', { script, params });
+  },
+
+  /**
+   * Execute multiple operations within a transaction.
+   *
+   * NOTE: Transactions are not yet supported in the CozoDB/Tauri implementation.
+   * This method will be implemented during the SQLite migration.
+   *
+   * @param _fn Function that receives a transaction context
+   * @throws Error always - transactions not yet supported
+   */
+  async transaction<T>(_fn: (tx: TransactionContext) => Promise<T>): Promise<T> {
+    throw new Error('Transactions are not yet supported in Tauri CozoDB implementation');
   },
 
   /**
