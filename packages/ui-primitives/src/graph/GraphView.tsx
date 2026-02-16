@@ -104,6 +104,12 @@ export interface GraphViewProps {
   height?: number;
 
   /**
+   * Color for node labels. Should contrast with the canvas background.
+   * Defaults to slate-800 (#1e293b) for light backgrounds.
+   */
+  labelColor?: string;
+
+  /**
    * Optional CSS class name for the container.
    */
   className?: string;
@@ -120,10 +126,10 @@ const DEFAULT_NODE_COLOR = '#6366f1'; // indigo-500
 const HIGHLIGHT_NODE_COLOR = '#f59e0b'; // amber-500
 
 /** Edge color */
-const EDGE_COLOR = '#94a3b8'; // slate-400
+const EDGE_COLOR = '#475569'; // slate-600
 
 /** Node label color */
-const LABEL_COLOR = '#1e293b'; // slate-800
+const LABEL_COLOR = '#94a3b8'; // slate-400
 
 /** Default node radius */
 const DEFAULT_NODE_RADIUS = 5;
@@ -275,6 +281,7 @@ export const GraphView = memo(
       highlightedNodeId,
       colorByCommunity = false,
       sizeByPageRank = false,
+      labelColor = LABEL_COLOR,
       width = 800,
       height = 600,
       className,
@@ -410,11 +417,11 @@ export const GraphView = memo(
           ctx.font = `${fontSize}px Sans-Serif`;
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
-          ctx.fillStyle = LABEL_COLOR;
+          ctx.fillStyle = labelColor;
           ctx.fillText(title, x, y + radius + fontSize);
         }
       },
-      [getNodeColor, getNodeRadius]
+      [getNodeColor, getNodeRadius, labelColor]
     );
 
     // Custom node pointer area (for click/hover detection)

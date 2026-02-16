@@ -252,15 +252,30 @@ export function BlockView({
   onPress,
   onLongPress,
   onToggleCollapse,
-  onWikiLinkPress: _onWikiLinkPress,
-  checkPageExists: _checkPageExists,
-  fetchBlock: _fetchBlock,
-  onBlockRefPress: _onBlockRefPress,
-  onBlockRefLongPress: _onBlockRefLongPress,
-  expandedBlockRefs: _expandedBlockRefs,
+  onWikiLinkPress,
+  checkPageExists,
+  fetchBlock,
+  onBlockRefPress,
+  onBlockRefLongPress,
+  expandedBlockRefs,
   testID,
 }: BlockViewProps): React.ReactElement {
+  // Ref-based coordination to prevent block tap when links are pressed
+  const linkPressedRef = React.useRef(false);
+
+  const handleWikiLinkPress = React.useCallback(
+    (pageTitle: string) => {
+      linkPressedRef.current = true;
+      onWikiLinkPress?.(pageTitle);
+    },
+    [onWikiLinkPress]
+  );
+
   const handlePress = React.useCallback(() => {
+    if (linkPressedRef.current) {
+      linkPressedRef.current = false;
+      return;
+    }
     onPress?.(block.blockId);
   }, [block.blockId, onPress]);
 
@@ -274,6 +289,10 @@ export function BlockView({
 
   // Set up gesture handlers
   // Use runOnJS(true) since callbacks are JS functions, not Reanimated worklets
+
+  // Native gesture for Text.onPress (wiki links)
+  const nativeTextGesture = Gesture.Native();
+
   const tapGesture = Gesture.Tap()
     .numberOfTaps(1)
     .maxDuration(250)
@@ -286,8 +305,9 @@ export function BlockView({
     .runOnJS(true)
     .onEnd(handleLongPress);
 
-  // Ensure single tap waits for long press check
+  // Ensure single tap waits for both long press and native text gesture
   tapGesture.requireExternalGestureToFail(longPressGesture);
+  tapGesture.requireExternalGestureToFail(nativeTextGesture);
 
   const composedGesture = Gesture.Exclusive(longPressGesture, tapGesture);
 
@@ -302,10 +322,17 @@ export function BlockView({
     ...(isFocused ? [styles.containerFocused] : []),
   ];
 
-  // Render content based on block type
+  // Render content with wiki links and block references
   const renderContent = () => {
-    // DEBUG: Simplify to just plain text to isolate error
-    return <Text style={styles.contentText}>{String(block.content)}</Text>;
+    return (
+      <RichText
+        content={String(block.content)}
+        checkPageExists={checkPageExists ?? (() => false)}
+        onWikiLinkPress={handleWikiLinkPress}
+        textStyle={styles.contentText}
+        testID={testID ? `${testID}-richtext` : undefined}
+      />
+    );
   };
 
   return (
@@ -345,8 +372,10 @@ export function BlockView({
           )}
         </TouchableOpacity>
 
-        {/* Block Content */}
-        <View style={styles.contentContainer}>{renderContent()}</View>
+        {/* Block Content - wrapped in native gesture for Text.onPress support */}
+        <GestureDetector gesture={nativeTextGesture}>
+          <View style={styles.contentContainer}>{renderContent()}</View>
+        </GestureDetector>
       </View>
     </GestureDetector>
   );
