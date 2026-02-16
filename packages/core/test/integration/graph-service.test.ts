@@ -378,9 +378,7 @@ describe('GraphService Integration Tests', () => {
       expect(communities.size).toBe(0);
     });
 
-    it.skip('should detect communities in clustered graph (CozoDB v0.7 algorithm)', async () => {
-      // Note: CozoDB's Louvain algorithm may require specific edge format or undirected graphs
-      // This test documents the expected behavior for future SQLite migration
+    it('should detect communities in clustered graph', async () => {
       // Create a graph with two distinct communities
       // Cluster A: p1-p5 densely connected
       // Cluster B: p6-p10 densely connected
@@ -469,7 +467,7 @@ describe('GraphService Integration Tests', () => {
       }
     });
 
-    it.skip('should handle single-community graph (CozoDB v0.7 algorithm)', async () => {
+    it('should handle single-community graph', async () => {
       // All pages connected to each other (complete graph)
       const now = Date.now() / 1000;
 

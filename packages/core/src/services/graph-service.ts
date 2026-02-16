@@ -270,9 +270,14 @@ rank[page_id, score] <~ PageRank(*links[source_id, target_id])
   async getCommunities(): Promise<Map<PageId, number>> {
     try {
       // Use CozoDB's built-in Louvain community detection algorithm
+      // CozoDB's CommunityDetectionLouvain returns (group, node).
+      // The group value is a nested array [n], so we extract the integer.
+      // Edges must be bidirectional for Louvain to detect communities.
       const script = `
-community[page_id, group] <~ CommunityDetectionLouvain(*links[source_id, target_id])
-?[page_id, group] := community[page_id, group], *pages{ page_id, is_deleted: false }
+edges[s, t] := *links{ source_id: s, target_id: t }
+edges[t, s] := *links{ source_id: s, target_id: t }
+community[grp, node] <~ CommunityDetectionLouvain(edges[s, t])
+?[page_id, grp] := community[grp, page_id], *pages{ page_id, is_deleted: false }
 `.trim();
 
       const result = await this.db.query(script);
@@ -280,7 +285,9 @@ community[page_id, group] <~ CommunityDetectionLouvain(*links[source_id, target_
       const communities = new Map<PageId, number>();
       for (const row of result.rows) {
         const pageId = row[0] as string;
-        const group = row[1] as number;
+        // CozoDB returns group as nested array [n]
+        const rawGroup = row[1];
+        const group = Array.isArray(rawGroup) ? (rawGroup[0] as number) : (rawGroup as number);
 
         if (typeof pageId !== 'string') {
           throw new DoubleBindError(
