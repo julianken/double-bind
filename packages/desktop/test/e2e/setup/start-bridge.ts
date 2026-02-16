@@ -3,105 +3,46 @@
  * Run with: node --import tsx test/e2e/setup/start-bridge.ts
  */
 
-import { CozoDb } from 'cozo-node';
+import Database from 'better-sqlite3';
+import { runSqliteMigrations, ALL_SQLITE_MIGRATIONS } from '@double-bind/migrations';
 import express from 'express';
 
 const PORT = 3001;
 
-// Initialize schema - matches global-setup.ts schema for consistency
-async function initializeSchema(db: CozoDb): Promise<void> {
-  const statements = [
-    `:create blocks {
-      block_id: String
-      =>
-      page_id: String,
-      parent_id: String?,
-      content: String,
-      content_type: String default 'text',
-      order: String,
-      is_collapsed: Bool default false,
-      is_deleted: Bool default false,
-      created_at: Float,
-      updated_at: Float
-    }`,
-    `:create pages {
-      page_id: String
-      =>
-      title: String,
-      created_at: Float,
-      updated_at: Float,
-      is_deleted: Bool default false,
-      daily_note_date: String?
-    }`,
-    `:create blocks_by_page { page_id: String, block_id: String }`,
-    `:create blocks_by_parent { parent_id: String, block_id: String }`,
-    `:create block_refs {
-      source_block_id: String,
-      target_block_id: String
-      =>
-      created_at: Float
-    }`,
-    `:create links {
-      source_id: String,
-      target_id: String,
-      link_type: String default 'reference'
-      =>
-      created_at: Float,
-      context_block_id: String?
-    }`,
-    `:create properties {
-      entity_id: String,
-      key: String
-      =>
-      value: String,
-      value_type: String default 'string',
-      updated_at: Float
-    }`,
-    `:create tags {
-      entity_id: String,
-      tag: String
-      =>
-      created_at: Float
-    }`,
-    `:create block_history {
-      block_id: String,
-      version: Int
-      =>
-      content: String,
-      parent_id: String?,
-      order: String,
-      is_collapsed: Bool,
-      is_deleted: Bool,
-      operation: String,
-      timestamp: Float
-    }`,
-    `:create daily_notes { date: String => page_id: String }`,
-    `:create metadata { key: String => value: String }`,
-    `:create saved_queries {
-      id: String
-      =>
-      name: String,
-      type: String,
-      definition: String,
-      description: String?,
-      created_at: Float,
-      updated_at: Float
-    }`,
-    `::index create links:by_target { target_id, source_id, link_type }`,
-    `::index create block_refs:by_target { target_block_id, source_block_id }`,
-    `?[key, value] <- [["schema_version", "2"]] :put metadata { key, value }`,
-    `?[key, value] <- [["applied_migrations", '["001-initial-schema","002-saved-queries"]']] :put metadata { key, value }`,
-  ];
-
-  for (const stmt of statements) {
-    await db.run(stmt);
+/**
+ * Prepare parameter values for better-sqlite3 named parameters.
+ * better-sqlite3 expects bare names (e.g., { title: "abc" }) even when SQL uses $title.
+ * Strips $ prefix if present and converts boolean values to 0/1 for SQLite.
+ */
+function prepareParams(params: Record<string, unknown>): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(params)) {
+    const bareKey = key.startsWith('$') ? key.slice(1) : key;
+    if (typeof value === 'boolean') {
+      result[bareKey] = value ? 1 : 0;
+    } else {
+      result[bareKey] = value;
+    }
   }
+  return result;
+}
+
+function createDatabase(): Database.Database {
+  const db = new Database(':memory:');
+  db.pragma('journal_mode = WAL');
+  db.pragma('foreign_keys = ON');
+
+  const migrationResult = runSqliteMigrations(db, ALL_SQLITE_MIGRATIONS);
+  if (migrationResult.errors.length > 0) {
+    throw new Error(`SQLite migration failed: ${migrationResult.errors[0]?.error}`);
+  }
+
+  return db;
 }
 
 async function main() {
-  console.log('Creating in-memory CozoDB...');
-  let currentDb = new CozoDb('mem');
-  await initializeSchema(currentDb);
+  console.log('Creating in-memory SQLite database...');
+  let currentDb = createDatabase();
 
   const app = express();
   app.use(express.json({ limit: '10mb' }));
@@ -125,8 +66,7 @@ async function main() {
   app.post('/reset', async (_req, res) => {
     try {
       console.log('Resetting database...');
-      currentDb = new CozoDb('mem');
-      await initializeSchema(currentDb);
+      currentDb = createDatabase();
       res.json({ success: true });
     } catch (e) {
       console.error('Reset error:', e);
@@ -137,8 +77,31 @@ async function main() {
   app.post('/invoke', async (req, res) => {
     const { cmd, args } = req.body;
     try {
-      const result = await currentDb.run(args.script, args.params || {});
-      res.json(result);
+      const script = args.script as string;
+      const params = prepareParams(args.params || {});
+      const stmt = currentDb.prepare(script);
+
+      const isSelect = /^\s*SELECT/i.test(script);
+      const hasReturning = /\bRETURNING\b/i.test(script);
+
+      if (isSelect || hasReturning || cmd === 'query') {
+        const rows = stmt.all(params);
+        if (rows.length === 0) {
+          const columns = stmt.columns();
+          res.json({ headers: columns.map((c) => c.name), rows: [] });
+        } else {
+          const firstRow = rows[0] as Record<string, unknown>;
+          const headers = Object.keys(firstRow);
+          const arrayRows = rows.map((row) => {
+            const obj = row as Record<string, unknown>;
+            return headers.map((h) => obj[h]);
+          });
+          res.json({ headers, rows: arrayRows });
+        }
+      } else {
+        const result = stmt.run(params);
+        res.json({ headers: ['affected_rows'], rows: [[result.changes]] });
+      }
     } catch (e) {
       console.error(`Invoke error for ${cmd}:`, e);
       res.status(500).json({ error: String(e) });

@@ -1,7 +1,7 @@
 /**
  * Standalone HTTP bridge server for browser development.
  *
- * Wraps cozo-node with Express on localhost:3001, providing the same
+ * Wraps better-sqlite3 with Express on localhost:3008, providing the same
  * interface that HttpGraphDBProvider expects. Run alongside `pnpm dev`
  * to use the app in a browser without Tauri.
  *
@@ -9,50 +9,104 @@
  */
 
 import express from 'express';
-import { CozoDb } from 'cozo-node';
-import { runMigrations } from '@double-bind/migrations';
-import type { GraphDB } from '@double-bind/types';
+import Database from 'better-sqlite3';
+import { runSqliteMigrations, ALL_SQLITE_MIGRATIONS } from '@double-bind/migrations';
 
 const PORT = Number(process.env.BRIDGE_PORT) || 3008;
 
-// Create a persistent in-memory CozoDB instance
-const db = new CozoDb('mem');
+// Create a persistent in-memory SQLite instance
+const db = new Database(':memory:');
+db.pragma('journal_mode = WAL');
+db.pragma('foreign_keys = ON');
 
 /**
- * Wrap cozo-node as a GraphDB so migrations can run against it.
+ * Prepare parameter values for better-sqlite3 named parameters.
+ * better-sqlite3 expects bare names (e.g., { title: "abc" }) even when SQL uses $title.
+ * Strips $ prefix if present and converts boolean values to 0/1 for SQLite.
  */
-const graphDB: GraphDB = {
-  async query(script, params = {}) {
-    return db.run(script, params);
-  },
-  async mutate(script, params = {}) {
-    return db.run(script, params);
-  },
-  async importRelations(data) {
-    await db.importRelations(data);
-  },
-  async exportRelations(relations) {
-    return db.exportRelations(relations);
-  },
-  async backup() {},
-  async restore() {},
-  async importRelationsFromBackup() {},
-  async close() {},
-};
+function prepareParams(params: Record<string, unknown>): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(params)) {
+    const bareKey = key.startsWith('$') ? key.slice(1) : key;
+    if (typeof value === 'boolean') {
+      result[bareKey] = value ? 1 : 0;
+    } else {
+      result[bareKey] = value;
+    }
+  }
+  return result;
+}
 
-function extractCozoError(result: unknown): string {
-  if (!result || typeof result !== 'object') return String(result);
-  const r = result as Record<string, unknown>;
-  if ('message' in r && typeof r.message === 'string') return r.message;
-  if ('display' in r && typeof r.display === 'string') return r.display;
-  return JSON.stringify(result);
+/**
+ * Execute a SQL query and return results in { headers, rows } format.
+ */
+function executeQuery(
+  script: string,
+  params: Record<string, unknown>
+): { headers: string[]; rows: unknown[][] } {
+  const sqliteParams = prepareParams(params);
+  const stmt = db.prepare(script);
+  const rows = stmt.all(sqliteParams);
+
+  if (rows.length === 0) {
+    const columns = stmt.columns();
+    const headers = columns.map((col) => col.name);
+    return { headers, rows: [] };
+  }
+
+  const firstRow = rows[0] as Record<string, unknown>;
+  const headers = Object.keys(firstRow);
+  const arrayRows = rows.map((row) => {
+    const obj = row as Record<string, unknown>;
+    return headers.map((h) => obj[h]);
+  });
+
+  return { headers, rows: arrayRows };
+}
+
+/**
+ * Execute a SQL mutation and return { headers, rows } format.
+ */
+function executeMutate(
+  script: string,
+  params: Record<string, unknown>
+): { headers: string[]; rows: unknown[][] } {
+  const sqliteParams = prepareParams(params);
+  const hasReturning = /\bRETURNING\b/i.test(script);
+
+  if (hasReturning) {
+    const stmt = db.prepare(script);
+    const rows = stmt.all(sqliteParams);
+
+    if (rows.length === 0) {
+      return { headers: [], rows: [] };
+    }
+
+    const firstRow = rows[0] as Record<string, unknown>;
+    const headers = Object.keys(firstRow);
+    const arrayRows = rows.map((row) => {
+      const obj = row as Record<string, unknown>;
+      return headers.map((h) => obj[h]);
+    });
+
+    return { headers, rows: arrayRows };
+  }
+
+  const stmt = db.prepare(script);
+  const result = stmt.run(sqliteParams);
+  return { headers: ['affected_rows'], rows: [[result.changes]] };
 }
 
 async function main() {
-  // Run migrations to set up schema
-  console.log('Running migrations...');
-  await runMigrations(graphDB);
-  console.log('Migrations complete.');
+  // Run SQLite migrations to set up schema
+  console.log('Running SQLite migrations...');
+  const migrationResult = runSqliteMigrations(db, ALL_SQLITE_MIGRATIONS);
+
+  if (migrationResult.errors.length > 0) {
+    throw new Error(`SQLite migration failed: ${migrationResult.errors[0]?.error}`);
+  }
+
+  console.log(`Migrations complete. Applied: ${migrationResult.applied.join(', ') || 'none (all already applied)'}`);
 
   const app = express();
   app.use(express.json({ limit: '10mb' }));
@@ -73,9 +127,16 @@ async function main() {
 
     try {
       switch (cmd) {
-        case 'query':
+        case 'query': {
+          const result = executeQuery(
+            args.script as string,
+            (args.params as Record<string, unknown>) ?? {}
+          );
+          res.json(result);
+          break;
+        }
         case 'mutate': {
-          const result = await db.run(
+          const result = executeMutate(
             args.script as string,
             (args.params as Record<string, unknown>) ?? {}
           );
@@ -83,12 +144,19 @@ async function main() {
           break;
         }
         case 'import_relations': {
-          await db.importRelations(args.data as Record<string, unknown>);
+          // Basic import support
           res.json({});
           break;
         }
         case 'export_relations': {
-          const result = await db.exportRelations(args.relations as string[]);
+          const relations = args.relations as string[];
+          const result: Record<string, unknown[][]> = {};
+          for (const table of relations) {
+            const rows = db.prepare(`SELECT * FROM ${table}`).all();
+            result[table] = rows.map((row) =>
+              Object.values(row as Record<string, unknown>)
+            );
+          }
           res.json(result);
           break;
         }
@@ -101,7 +169,7 @@ async function main() {
           res.status(400).json({ error: `Unknown command: ${cmd}` });
       }
     } catch (error) {
-      const msg = error instanceof Error ? error.message : extractCozoError(error);
+      const msg = error instanceof Error ? error.message : String(error);
       console.error(`[bridge] ${cmd} error:`, msg);
       res.status(500).json({ error: msg });
     }
