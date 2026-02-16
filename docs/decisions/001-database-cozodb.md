@@ -1,7 +1,7 @@
 # ADR-001: Use CozoDB as the Database
 
 ## Status
-Accepted
+Superseded by [ADR-015: Migrate from CozoDB to SQLite](015-sqlite-migration.md)
 
 ## Context
 
