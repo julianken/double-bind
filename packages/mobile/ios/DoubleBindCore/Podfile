@@ -7,8 +7,9 @@ platform :ios, '15.0'
 target 'DoubleBindCore' do
   use_frameworks!
 
-  # CozoDB native database engine
-  pod 'CozoSwiftBridge', '~> 0.7.1'
+  # React Native dependencies
+  # In a real React Native app, these would be included via the main Podfile
+  # For development/testing of this module, we can keep this minimal
 end
 
 # Post-install hook for Xcode configuration
