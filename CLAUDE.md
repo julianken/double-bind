@@ -26,9 +26,9 @@ This file provides guidance to Claude Code when working with this repository.
 
 **Double-Bind** — Local-first note-taking app with graph-native architecture (Roam Research-like).
 
-**CS Contributions:** (1) Datalog as user-facing query language, (2) graph algorithms for PKM, (3) local-first graph-native architecture, (4) terminal client. See [docs/research/](docs/research/).
+**CS Contributions:** (1) Graph algorithms for PKM, (2) local-first graph-native architecture, (3) terminal client. See [docs/research/](docs/research/).
 
-**Architecture Principle:** All business logic is TypeScript. The Rust shim is ~40 lines (IPC only). CozoDB's Rust engine handles heavy computation (graph traversal, FTS, recursive queries). TypeScript orchestration adds ~0.2ms — imperceptible. See [ADR-002](docs/decisions/002-language-typescript.md).
+**Architecture Principle:** All business logic is TypeScript. The Rust shim is ~40 lines (IPC only, wrapping rusqlite). SQLite handles data persistence; graph algorithms run in TypeScript (recursive CTEs for traversal, heuristic scoring for PageRank). See [ADR-002](docs/decisions/002-language-typescript.md), [ADR-015](docs/decisions/015-sqlite-migration.md).
 
 ---
 
@@ -41,7 +41,7 @@ This file provides guidance to Claude Code when working with this repository.
 | Desktop Shell   | Tauri                         | v2       |
 | Language        | TypeScript                    | 5.7+     |
 | Frontend        | React + ProseMirror + Zustand | React 19 |
-| Database        | CozoDB (RocksDB backend)      | 0.7      |
+| Database        | SQLite (via rusqlite/better-sqlite3) | 3.x |
 | Testing         | Vitest + Playwright           | —        |
 
 ---
@@ -84,8 +84,8 @@ pnpm clean                # Clean build artifacts
 
 | Layer          | Tool                      | What It Tests                       | Speed  |
 | -------------- | ------------------------- | ----------------------------------- | ------ |
-| 1. Unit        | Vitest + MockGraphDB      | Business logic, isolated            | Fast   |
-| 2. Integration | Vitest + cozo-node        | Datalog queries against real CozoDB | Fast   |
+| 1. Unit        | Vitest + MockDatabase     | Business logic, isolated            | Fast   |
+| 2. Integration | Vitest + better-sqlite3   | SQL queries against real SQLite     | Fast   |
 | 3. E2E Fast    | Playwright + Vite         | UI flows with mock Tauri IPC        | Medium |
 | 4. E2E Full    | Playwright + Tauri binary | Full stack including Rust shim      | Slow   |
 
@@ -114,7 +114,7 @@ Use `sonnet` model for specialized agents (not `haiku`) to ensure quality analys
 
 **Context7 MCP:** Use Context7 for up-to-date library documentation:
 
-- **CozoDB** (v0.7) — Datalog queries, graph algorithms
+- **SQLite** — SQL queries, FTS5, recursive CTEs
 - **Tauri** (v2) — IPC, capabilities, window management
 - **ProseMirror** — Editor schema, plugins, transactions
 - **React** (v19) — Hooks, Server Components, Suspense
@@ -127,7 +127,7 @@ Use `sonnet` model for specialized agents (not `haiku`) to ensure quality analys
 | Area           | Path                                         | Contents                                            |
 | -------------- | -------------------------------------------- | --------------------------------------------------- |
 | Architecture   | [docs/architecture/](docs/architecture/)     | System overview, tech stack, data flow, WASM option |
-| Decisions      | [docs/decisions/](docs/decisions/)           | ADRs 001-013 (database, language, editor, etc.)     |
+| Decisions      | [docs/decisions/](docs/decisions/)           | ADRs 001-015 (database, language, editor, etc.)     |
 | Database       | [docs/database/](docs/database/)             | Schema, queries, migrations, FTS                    |
 | Frontend       | [docs/frontend/](docs/frontend/)             | React, ProseMirror, state, graph viz                |
 | Testing        | [docs/testing/](docs/testing/)               | 4-layer strategy, E2E guides                        |
