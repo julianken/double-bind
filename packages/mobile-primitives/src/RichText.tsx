@@ -47,6 +47,8 @@ export interface RichTextProps {
 interface ContentSegment {
   type: 'text' | 'link';
   content: string;
+  /** For link segments, the clean page title without brackets */
+  title?: string;
   startIndex: number;
   endIndex: number;
 }
@@ -73,10 +75,12 @@ function parseIntoSegments(content: string): ContentSegment[] {
       });
     }
 
-    // Add link segment
+    // Add link segment - include brackets in display text
+    // Note: parseContent returns indices of the title only, so we adjust to include [[ and ]]
     segments.push({
       type: 'link',
-      content: link.title,
+      content: `[[${link.title}]]`, // "[[Page Name]]" for display
+      title: link.title, // "Page Name" for callbacks
       startIndex: link.startIndex,
       endIndex: link.endIndex,
     });
@@ -131,9 +135,9 @@ export function RichText({
       const newMap = new Map<string, boolean>();
 
       for (const segment of segments) {
-        if (segment.type === 'link') {
-          const exists = await Promise.resolve(checkPageExists(segment.content));
-          newMap.set(segment.content, exists);
+        if (segment.type === 'link' && segment.title) {
+          const exists = await Promise.resolve(checkPageExists(segment.title));
+          newMap.set(segment.title, exists);
         }
       }
 
@@ -155,11 +159,13 @@ export function RichText({
         if (segment.type === 'text') {
           return <Text key={index}>{segment.content}</Text>;
         } else {
-          const pageExists = pageExistsMap.get(segment.content) ?? false;
+          const title = segment.title ?? segment.content;
+          const pageExists = pageExistsMap.get(title) ?? false;
           return (
             <WikiLink
               key={index}
-              pageTitle={segment.content}
+              pageTitle={title}
+              displayText={segment.content}
               pageExists={pageExists}
               onPress={onWikiLinkPress}
               testID={testID ? `${testID}-link-${index}` : undefined}

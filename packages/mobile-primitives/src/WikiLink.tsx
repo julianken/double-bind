@@ -16,9 +16,14 @@ import type { TextStyle } from 'react-native';
 
 export interface WikiLinkProps {
   /**
-   * The page title being linked to (without brackets)
+   * The page title being linked to (without brackets) - used for callbacks
    */
   pageTitle: string;
+
+  /**
+   * The text to display (with brackets) - defaults to [[pageTitle]] if not provided
+   */
+  displayText?: string;
 
   /**
    * Whether the linked page exists
@@ -55,6 +60,7 @@ export interface WikiLinkProps {
  */
 export function WikiLink({
   pageTitle,
+  displayText,
   pageExists,
   onPress,
   testID,
@@ -78,7 +84,7 @@ export function WikiLink({
       suppressHighlighting={false}
       style={textStyle}
     >
-      {pageTitle}
+      {displayText ?? `[[${pageTitle}]]`}
     </Text>
   );
 }
