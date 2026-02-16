@@ -17,6 +17,10 @@
     "@double-bind/migrations": "workspace:*",
     "@double-bind/types": "workspace:*",
     "fractional-indexing": "^3.2.0",
+    "graphology": "^0.26.0",
+    "graphology-communities-louvain": "^2.0.2",
+    "graphology-metrics": "^2.4.0",
+    "graphology-types": "^0.24.8",
     "ulid": "^2.3.0",
     "zod": "^3.24.0"
   },
