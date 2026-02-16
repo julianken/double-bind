@@ -53,7 +53,7 @@ async function waitForServices(page: import('@playwright/test').Page): Promise<v
  * Helper to get the current title of a page from the database.
  */
 async function getPageTitle(pageId: string): Promise<string> {
-  const result = await executeQuery(`?[title] := *pages{ page_id, title }, page_id == $page_id`, {
+  const result = await executeQuery(`SELECT title FROM pages WHERE page_id = $page_id`, {
     page_id: pageId,
   });
   if (result.rows.length > 0 && result.rows[0]) {

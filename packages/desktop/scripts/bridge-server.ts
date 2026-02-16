@@ -10,7 +10,7 @@
 
 import express from 'express';
 import Database from 'better-sqlite3';
-import { runSqliteMigrations, ALL_SQLITE_MIGRATIONS } from '@double-bind/migrations';
+import { ALL_SQLITE_MIGRATIONS } from '@double-bind/migrations';
 
 const PORT = Number(process.env.BRIDGE_PORT) || 3008;
 
@@ -98,15 +98,17 @@ function executeMutate(
 }
 
 async function main() {
-  // Run SQLite migrations to set up schema
-  console.log('Running SQLite migrations...');
-  const migrationResult = runSqliteMigrations(db, ALL_SQLITE_MIGRATIONS);
-
-  if (migrationResult.errors.length > 0) {
-    throw new Error(`SQLite migration failed: ${migrationResult.errors[0]?.error}`);
+  // Apply migration SQL directly using better-sqlite3's Database.exec() method.
+  // This is NOT child_process.exec — it's the SQLite driver's native multi-statement
+  // SQL execution, which correctly handles triggers, FTS5 tables, etc.
+  for (const migration of ALL_SQLITE_MIGRATIONS) {
+    try {
+      db.exec(migration.up);
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      throw new Error(`SQLite migration '${migration.name}' failed: ${msg}`);
+    }
   }
-
-  console.log(`Migrations complete. Applied: ${migrationResult.applied.join(', ') || 'none (all already applied)'}`);
 
   const app = express();
   app.use(express.json({ limit: '10mb' }));
