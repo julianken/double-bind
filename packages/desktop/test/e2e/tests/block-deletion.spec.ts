@@ -93,7 +93,7 @@ async function waitForBlockStable(
     (id) => {
       const blocks = document.querySelectorAll(`[data-testid="block-node"][data-block-id="${id}"]`);
       for (const block of blocks) {
-        const content = block.querySelector('.block-content');
+        const content = block.querySelector('[data-testid="block-content"]');
         if (content) return true;
       }
       return false;
@@ -110,7 +110,7 @@ async function _focusBlock(page: import('@playwright/test').Page, blockId: strin
   await waitForBlockStable(page, blockId);
   const blockNode = page.locator(`[data-testid="block-node"][data-block-id="${blockId}"]`).first();
   await expect(blockNode).toBeVisible({ timeout: 5000 });
-  await blockNode.locator('.block-content').click();
+  await blockNode.locator('[data-testid="block-content"]').click();
   await expect(blockNode.locator('.ProseMirror')).toBeVisible({ timeout: 3000 });
 }
 

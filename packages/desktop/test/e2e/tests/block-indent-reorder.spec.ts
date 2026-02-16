@@ -34,7 +34,7 @@ async function waitForBlockStable(
       const blocks = document.querySelectorAll(`[data-testid="block-node"][data-block-id="${id}"]`);
       // Check that at least one block exists and has content
       for (const block of blocks) {
-        const content = block.querySelector('.block-content');
+        const content = block.querySelector('[data-testid="block-content"]');
         if (content && content.textContent && content.textContent.trim().length > 0) {
           return true;
         }
@@ -61,7 +61,7 @@ async function focusBlock(page: import('@playwright/test').Page, blockId: string
 
   const blockNode = page.locator(`[data-testid="block-node"][data-block-id="${blockId}"]`).first();
   await expect(blockNode).toBeVisible({ timeout: 5000 });
-  await blockNode.locator('.block-content').click();
+  await blockNode.locator('[data-testid="block-content"]').click();
   // Wait for ProseMirror editor to appear
   await expect(blockNode.locator('.ProseMirror')).toBeVisible({ timeout: 3000 });
 }
@@ -605,6 +605,23 @@ test.describe('Block Indentation and Reordering', () => {
       // Focus block 2 and indent it
       await focusBlock(page, block2Id);
       await callBlockService(page, 'indentBlock', block2Id);
+
+      // Invalidate React Query cache so the UI re-fetches fresh data.
+      // In the real app, keyboard handlers do this automatically.
+      // The QueryClient has staleTime: 30s, so without invalidation
+      // the cache would serve stale data when navigating back.
+      await page.evaluate(() => {
+        const invalidate = (
+          window as unknown as {
+            __INVALIDATE_QUERIES__?: (prefix: string[]) => void;
+          }
+        ).__INVALIDATE_QUERIES__;
+        if (invalidate) {
+          invalidate(['page', 'withBlocks']);
+          invalidate(['blocks']);
+          invalidate(['block']);
+        }
+      });
       await page.waitForTimeout(500);
 
       // Verify block 2 is now child of block 1
@@ -656,7 +673,7 @@ test.describe('Block Indentation and Reordering', () => {
       const block1Children = page.locator(
         `[data-testid="block-node"][data-block-id="${block1Id}"] [data-testid="block-children"]`
       );
-      await expect(block1Children).toBeVisible();
+      await expect(block1Children).toBeVisible({ timeout: 10000 });
     });
 
     test('reordering persists after page reload', async ({ page }) => {

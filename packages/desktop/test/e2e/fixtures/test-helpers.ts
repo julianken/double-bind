@@ -90,6 +90,18 @@ export async function seedPage(data: {
     daily_note_date: data.dailyNoteDate ?? null,
     now,
   });
+
+  // Also populate the daily_notes lookup table if this is a daily note
+  if (data.dailyNoteDate) {
+    const dailyNotesScript = `
+      ?[date, page_id] <- [[$date, $page_id]]
+      :put daily_notes { date, page_id }
+    `;
+    await executeMutation(dailyNotesScript, {
+      date: data.dailyNoteDate,
+      page_id: data.pageId,
+    });
+  }
 }
 
 /**

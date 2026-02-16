@@ -1101,7 +1101,7 @@ function BlockNodeComponent({ blockId, depth = 0, previousBlockId, nextBlockId }
           onToggleCollapse={handleToggleCollapse}
           dragHandleProps={{ ...attributes, ...listeners }}
         />
-        <div className={styles.content}>
+        <div className={styles.content} data-testid="block-content">
           {isEditing ? (
             <RealBlockEditor
               blockId={blockId}
