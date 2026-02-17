@@ -246,10 +246,7 @@ function SidebarGraphSection({ onNavigate }: SidebarGraphSectionProps) {
 
     if (isLoading) {
       return (
-        <div
-          className={styles.graphLoading}
-          data-testid="sidebar-graph-loading"
-        >
+        <div className={styles.graphLoading} data-testid="sidebar-graph-loading">
           Loading graph...
         </div>
       );
@@ -291,7 +288,11 @@ function SidebarGraphSection({ onNavigate }: SidebarGraphSectionProps) {
         </span>
       </button>
       {!isCollapsed && (
-        <div id="sidebar-graph-content" data-testid="sidebar-graph-content" style={{ display: 'flex', flex: 1, minHeight: 0 }}>
+        <div
+          id="sidebar-graph-content"
+          data-testid="sidebar-graph-content"
+          style={{ display: 'flex', flex: 1, minHeight: 0 }}
+        >
           {renderContent()}
         </div>
       )}
@@ -416,7 +417,9 @@ function SidebarContent({ onNewPage }: SidebarProps) {
           Graph View
         </button>
 
-        <PageList />
+        <div className={styles.pageListWrapper}>
+          <PageList />
+        </div>
         <SidebarGraphSection onNavigate={handleGraphNavigate} />
         <SidebarFooter />
       </div>
