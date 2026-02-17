@@ -6,10 +6,10 @@ import { renderHook } from '@testing-library/react-hooks';
 import type { ReactNode } from 'react';
 import { useCreatePage } from '../../../src/hooks/useCreatePage';
 import { DatabaseContext } from '../../../src/providers/DatabaseProvider';
-import type { GraphDB, Page } from '@double-bind/types';
+import type { Database, Page } from '@double-bind/types';
 
 describe('useCreatePage', () => {
-  let mockDb: GraphDB;
+  let mockDb: Database;
 
   const mockServices = {
     pageService: {
@@ -30,7 +30,7 @@ describe('useCreatePage', () => {
       close: vi.fn(),
       export: vi.fn(),
       importRelations: vi.fn(),
-    } as unknown as GraphDB;
+    } as unknown as Database;
   });
 
   function createWrapper() {

@@ -14,7 +14,7 @@
  * better debugging information at higher layers.
  */
 
-import type { GraphDB, Page, Link, PageId } from '@double-bind/types';
+import type { Database, Page, Link, PageId } from '@double-bind/types';
 import { DoubleBindError, ErrorCode } from '@double-bind/types';
 import { z } from 'zod';
 import { buildGraph, computePageRank as runPageRank, computeCommunities as runCommunities } from './graph-algorithms.js';
@@ -71,7 +71,7 @@ const LinkTypeSchema = z.enum(['reference', 'embed', 'tag']);
  * specific neighborhoods for visualization and traversal.
  */
 export class GraphService {
-  constructor(private readonly db: GraphDB) {}
+  constructor(private readonly db: Database) {}
 
   /**
    * Get the full graph with all non-deleted pages and their links.

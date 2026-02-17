@@ -2,12 +2,12 @@
 // Verifies that SQLite adapter, migrations, and data seeding work correctly
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import type { GraphDB } from '@double-bind/types';
+import type { Database } from '@double-bind/types';
 import { createTestDatabase } from './setup.js';
 import { seedTestData } from './helpers.js';
 
 describe('Integration Test Infrastructure Smoke Test', () => {
-  let db: GraphDB;
+  let db: Database;
 
   beforeEach(async () => {
     // Create fresh database with migrations applied

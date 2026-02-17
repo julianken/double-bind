@@ -5,7 +5,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, cleanup, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import type { GraphDB, QueryResult } from '@double-bind/types';
+import type { Database, QueryResult } from '@double-bind/types';
 import type { Services } from '../../../src/providers/ServiceProvider.js';
 import { ServiceProvider } from '../../../src/providers/ServiceProvider.js';
 import { clearQueryCache } from '../../../src/hooks/useCozoQuery.js';
@@ -22,8 +22,8 @@ const createTestQueryClient = () =>
     },
   });
 
-// Mock GraphDB
-function createMockGraphDB(): GraphDB {
+// Mock Database
+function createMockDatabase(): Database {
   return {
     query: vi.fn().mockResolvedValue({
       headers: ['page_id', 'title'],
@@ -40,7 +40,7 @@ function createMockGraphDB(): GraphDB {
 }
 
 // Mock services
-function createMockServices(graphDB: GraphDB): Services {
+function createMockServices(database: Database): Services {
   return {
     pageService: {
       createPage: vi.fn(),
@@ -76,12 +76,12 @@ function createMockServices(graphDB: GraphDB): Services {
       getByName: vi.fn(),
       nameExists: vi.fn(),
     } as unknown as Services['savedQueryService'],
-    graphDB,
+    database,
   };
 }
 
 describe('QueryViewScreen', () => {
-  let mockGraphDB: GraphDB;
+  let mockDatabase: Database;
   let mockServices: Services;
 
   beforeEach(() => {
@@ -103,8 +103,8 @@ describe('QueryViewScreen', () => {
       entries: [],
     });
 
-    mockGraphDB = createMockGraphDB();
-    mockServices = createMockServices(mockGraphDB);
+    mockDatabase = createMockDatabase();
+    mockServices = createMockServices(mockDatabase);
   });
 
   afterEach(() => {
@@ -292,7 +292,7 @@ describe('QueryViewScreen', () => {
       fireEvent.click(screen.getByTestId('execute-query'));
 
       await waitFor(() => {
-        expect(mockGraphDB.query).toHaveBeenCalled();
+        expect(mockDatabase.query).toHaveBeenCalled();
       });
     });
 
@@ -317,12 +317,12 @@ describe('QueryViewScreen', () => {
     });
 
     it('displays error when query fails', async () => {
-      const errorGraphDB = createMockGraphDB();
-      (errorGraphDB.query as ReturnType<typeof vi.fn>).mockRejectedValue(
+      const errorDatabase = createMockDatabase();
+      (errorDatabase.query as ReturnType<typeof vi.fn>).mockRejectedValue(
         new Error('Query syntax error')
       );
 
-      const errorServices = createMockServices(errorGraphDB);
+      const errorServices = createMockServices(errorDatabase);
 
       render(
         <QueryClientProvider client={createTestQueryClient()}>

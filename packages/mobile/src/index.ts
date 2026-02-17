@@ -10,4 +10,4 @@ export { getDatabaseModule } from './DatabaseNativeModule';
 export type { DatabaseNativeModule } from './DatabaseNativeModule';
 
 /** @deprecated Use MobileDatabaseProvider instead */
-export { MobileDatabaseProvider as MobileGraphDB } from './providers/MobileDatabaseProvider';
+export { MobileDatabaseProvider as MobileDatabase } from './providers/MobileDatabaseProvider';

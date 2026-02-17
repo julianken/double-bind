@@ -1,23 +1,23 @@
 /**
- * Unit tests for GraphDBProvider interface contract
+ * Unit tests for DatabaseProvider interface contract
  *
- * These tests verify that implementations of GraphDBProvider follow the
+ * These tests verify that implementations of DatabaseProvider follow the
  * expected lifecycle and behavior. We use a mock implementation to test
  * the interface contract without depending on any specific platform.
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import type { GraphDB, QueryResult, MutationResult } from '@double-bind/types';
+import type { Database, QueryResult, MutationResult } from '@double-bind/types';
 import type {
-  GraphDBProvider,
-  GraphDBProviderConfig,
-  GraphDBProviderInitResult,
-} from '../../../src/providers/graph-db-provider.js';
+  DatabaseProvider,
+  DatabaseProviderConfig,
+  DatabaseProviderInitResult,
+} from '../../../src/providers/database-provider.js';
 
 /**
- * Mock GraphDB implementation for testing provider behavior.
+ * Mock Database implementation for testing provider behavior.
  */
-class MockGraphDB implements GraphDB {
+class MockDatabase implements Database {
   async query<T = unknown>(
     _script: string,
     _params?: Record<string, unknown>
@@ -43,12 +43,12 @@ class MockGraphDB implements GraphDB {
 }
 
 /**
- * Mock implementation of GraphDBProvider for testing interface contract.
+ * Mock implementation of DatabaseProvider for testing interface contract.
  *
  * This demonstrates how a platform-specific implementation would work.
  */
-class MockGraphDBProvider implements GraphDBProvider {
-  private _db: GraphDB | null = null;
+class MockDatabaseProvider implements DatabaseProvider {
+  private _db: Database | null = null;
   private _initialized = false;
   private _closed = false;
   private _schemaVersion: number | undefined;
@@ -63,7 +63,7 @@ class MockGraphDBProvider implements GraphDBProvider {
     this._initError = error;
   }
 
-  async initialize(config?: GraphDBProviderConfig): Promise<GraphDBProviderInitResult> {
+  async initialize(config?: DatabaseProviderConfig): Promise<DatabaseProviderInitResult> {
     // Check if closed first - cannot reinitialize after close
     if (this._closed) {
       return {
@@ -90,7 +90,7 @@ class MockGraphDBProvider implements GraphDBProvider {
     }
 
     // Create the mock database
-    this._db = new MockGraphDB();
+    this._db = new MockDatabase();
     this._initialized = true;
     this._schemaVersion = config?.runMigrations !== false ? 1 : 0;
 
@@ -101,7 +101,7 @@ class MockGraphDBProvider implements GraphDBProvider {
     };
   }
 
-  getDatabase(): GraphDB {
+  getDatabase(): Database {
     if (!this._initialized) {
       throw new Error('Provider not initialized. Call initialize() first.');
     }
@@ -130,11 +130,11 @@ class MockGraphDBProvider implements GraphDBProvider {
   }
 }
 
-describe('GraphDBProvider', () => {
-  let provider: MockGraphDBProvider;
+describe('DatabaseProvider', () => {
+  let provider: MockDatabaseProvider;
 
   beforeEach(() => {
-    provider = new MockGraphDBProvider();
+    provider = new MockDatabaseProvider();
   });
 
   describe('lifecycle', () => {
@@ -188,7 +188,7 @@ describe('GraphDBProvider', () => {
       expect(() => provider.getDatabase()).toThrow('not initialized');
     });
 
-    it('should return GraphDB after initialize()', async () => {
+    it('should return Database after initialize()', async () => {
       await provider.initialize();
       const db = provider.getDatabase();
 
@@ -204,7 +204,7 @@ describe('GraphDBProvider', () => {
       expect(() => provider.getDatabase()).toThrow('closed');
     });
 
-    it('should return the same GraphDB instance on multiple calls', async () => {
+    it('should return the same Database instance on multiple calls', async () => {
       await provider.initialize();
       const db1 = provider.getDatabase();
       const db2 = provider.getDatabase();
@@ -305,8 +305,8 @@ describe('GraphDBProvider', () => {
     });
   });
 
-  describe('GraphDB interface compliance', () => {
-    it('should provide GraphDB with query method', async () => {
+  describe('Database interface compliance', () => {
+    it('should provide Database with query method', async () => {
       await provider.initialize();
       const db = provider.getDatabase();
       const result = await db.query('?[x] := x = 1');
@@ -317,7 +317,7 @@ describe('GraphDBProvider', () => {
       expect(Array.isArray(result.rows)).toBe(true);
     });
 
-    it('should provide GraphDB with mutate method', async () => {
+    it('should provide Database with mutate method', async () => {
       await provider.initialize();
       const db = provider.getDatabase();
       const result = await db.mutate(':create test {}');
@@ -326,14 +326,14 @@ describe('GraphDBProvider', () => {
       expect(result).toHaveProperty('rows');
     });
 
-    it('should provide GraphDB with importRelations method', async () => {
+    it('should provide Database with importRelations method', async () => {
       await provider.initialize();
       const db = provider.getDatabase();
 
       await expect(db.importRelations({ test: [[1, 2]] })).resolves.toBeUndefined();
     });
 
-    it('should provide GraphDB with exportRelations method', async () => {
+    it('should provide Database with exportRelations method', async () => {
       await provider.initialize();
       const db = provider.getDatabase();
       const result = await db.exportRelations(['test']);
@@ -341,7 +341,7 @@ describe('GraphDBProvider', () => {
       expect(typeof result).toBe('object');
     });
 
-    it('should provide GraphDB with backup method', async () => {
+    it('should provide Database with backup method', async () => {
       await provider.initialize();
       const db = provider.getDatabase();
 

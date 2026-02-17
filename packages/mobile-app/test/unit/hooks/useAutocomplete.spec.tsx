@@ -20,7 +20,7 @@ import {
   DatabaseContext,
   type DatabaseContextValue,
 } from '../../../src/providers/DatabaseProvider';
-import type { GraphDB } from '@double-bind/types';
+import type { Database } from '@double-bind/types';
 import type { Page } from '@double-bind/types';
 
 // ============================================================================
@@ -39,10 +39,10 @@ vi.mock('@double-bind/core', () => ({
 }));
 
 // Mock database
-const mockDb: GraphDB = {
+const mockDb: Database = {
   query: vi.fn(),
   close: vi.fn(),
-} as unknown as GraphDB;
+} as unknown as Database;
 
 // ============================================================================
 // Test Utilities

@@ -4,12 +4,12 @@
 // Migrated to SQLite SQL queries and graphology algorithms.
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import type { GraphDB } from '@double-bind/types';
+import type { Database } from '@double-bind/types';
 import { GraphService } from '../../src/services/graph-service.js';
 import { createTestDatabase } from './setup.js';
 
 describe('GraphService Integration Tests', () => {
-  let db: GraphDB;
+  let db: Database;
   let service: GraphService;
 
   beforeEach(async () => {

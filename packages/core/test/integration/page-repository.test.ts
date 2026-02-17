@@ -2,13 +2,13 @@
 // Validates baseline behavior for SQLite-based page operations
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import type { GraphDB } from '@double-bind/types';
+import type { Database } from '@double-bind/types';
 import { DoubleBindError, ErrorCode } from '@double-bind/types';
 import { createTestDatabase } from './setup.js';
 import { PageRepository } from '../../src/repositories/page-repository.js';
 
 describe('PageRepository Integration Tests', () => {
-  let db: GraphDB;
+  let db: Database;
   let pageRepo: PageRepository;
 
   beforeEach(async () => {

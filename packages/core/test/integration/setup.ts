@@ -1,7 +1,7 @@
 // Integration test setup utilities for real SQLite testing
 // Provides createTestDatabase() with better-sqlite3 adapter and SQLite migrations
 
-import type { GraphDB } from '@double-bind/types';
+import type { Database } from '@double-bind/types';
 import Database from 'better-sqlite3';
 import { SqliteNodeAdapter } from '../../src/adapters/sqlite-node-adapter.js';
 import { ALL_SQLITE_MIGRATIONS } from '@double-bind/migrations';
@@ -17,7 +17,7 @@ import { ALL_SQLITE_MIGRATIONS } from '@double-bind/migrations';
  * Direct execution avoids the conflict since better-sqlite3 handles
  * multiple statements and trigger bodies natively.
  *
- * @returns GraphDB instance ready for testing with full schema applied
+ * @returns Database instance ready for testing with full schema applied
  *
  * @example
  * ```typescript
@@ -25,7 +25,7 @@ import { ALL_SQLITE_MIGRATIONS } from '@double-bind/migrations';
  * const result = await db.query('SELECT page_id, title FROM pages');
  * ```
  */
-export async function createTestDatabase(): Promise<GraphDB> {
+export async function createTestDatabase(): Promise<Database> {
   // Create in-memory SQLite instance
   const sqliteDb = new Database(':memory:');
 

@@ -11,7 +11,7 @@
  * a unified CozoDB tags relation. Queries use UNION ALL to check both.
  */
 
-import type { GraphDB, Tag } from '@double-bind/types';
+import type { Database, Tag } from '@double-bind/types';
 import { parseTagRow } from './tag-repository.schemas.js';
 
 /**
@@ -27,7 +27,7 @@ export interface TagWithCount {
  * All methods use parameterized SQL queries for security.
  */
 export class TagRepository {
-  constructor(private readonly db: GraphDB) {}
+  constructor(private readonly db: Database) {}
 
   /**
    * Get all tags for a specific entity (page or block).

@@ -31,7 +31,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { AppState, type AppStateStatus } from 'react-native';
 import NetInfo, { type NetInfoState } from '@react-native-community/netinfo';
-import type { MobileGraphDB } from '@double-bind/mobile';
+import type { MobileDatabase } from '@double-bind/mobile';
 
 /**
  * Sync status states.
@@ -46,7 +46,7 @@ export interface UseSyncManagerOptions {
    * Database instance to use for sync operations.
    * Sync will be disabled if null.
    */
-  db: MobileGraphDB | null;
+  db: MobileDatabase | null;
 
   /**
    * Interval (ms) for background sync.

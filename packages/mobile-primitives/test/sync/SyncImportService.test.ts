@@ -9,13 +9,13 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { SyncImportService } from '../../src/sync/SyncImportService';
 import { InMemoryConflictStore } from '../../src/sync/InMemoryConflictStore';
 import type {
-  GraphDB,
+  Database,
   SyncData,
   ImportOptions,
 } from '@double-bind/types';
 
-// Mock GraphDB implementation
-class MockGraphDB implements GraphDB {
+// Mock Database implementation
+class MockDatabase implements Database {
   private pages = new Map<string, unknown[]>();
   private blocks = new Map<string, unknown[]>();
   private links: unknown[] = [];
@@ -163,12 +163,12 @@ class MockGraphDB implements GraphDB {
 }
 
 describe('SyncImportService', () => {
-  let db: MockGraphDB;
+  let db: MockDatabase;
   let conflictStore: InMemoryConflictStore;
   let service: SyncImportService;
 
   beforeEach(() => {
-    db = new MockGraphDB();
+    db = new MockDatabase();
     conflictStore = new InMemoryConflictStore();
     service = new SyncImportService(db, conflictStore);
   });
@@ -962,7 +962,7 @@ describe('SyncImportService', () => {
   describe('rollback on failure', () => {
     it('should return error result when mutation fails', async () => {
       // Create a mock that throws
-      const failingDb = new MockGraphDB();
+      const failingDb = new MockDatabase();
       failingDb.mutate = vi.fn().mockRejectedValue(new Error('Database error'));
 
       const failingService = new SyncImportService(failingDb, conflictStore);

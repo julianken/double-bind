@@ -13,7 +13,7 @@
  */
 
 import { ulid } from 'ulid';
-import type { GraphDB, Page, PageId, CreatePageInput } from '@double-bind/types';
+import type { Database, Page, PageId, CreatePageInput } from '@double-bind/types';
 import { DoubleBindError, ErrorCode } from '@double-bind/types';
 
 /** Database row type for pages relation (SQLite returns 0/1 for booleans) */
@@ -33,7 +33,7 @@ export interface GetAllOptions {
  * All methods use parameterized SQL queries for security.
  */
 export class PageRepository {
-  constructor(private readonly db: GraphDB) {}
+  constructor(private readonly db: Database) {}
 
   /**
    * Get a page by its ID.

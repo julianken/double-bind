@@ -27,7 +27,7 @@ vi.mock('react-native', async (importOriginal) => {
 
 // Mock @double-bind/mobile
 vi.mock('@double-bind/mobile', () => ({
-  MobileGraphDB: vi.fn().mockImplementation(() => ({
+  MobileDatabase: vi.fn().mockImplementation(() => ({
     query: vi.fn(),
     mutate: vi.fn(),
     close: vi.fn(),

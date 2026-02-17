@@ -7,7 +7,7 @@
 
 import { createContext, useContext, type ReactNode } from 'react';
 import type { PageService, BlockService, GraphService, SavedQueryService } from '@double-bind/core';
-import type { GraphDB } from '@double-bind/types';
+import type { Database } from '@double-bind/types';
 
 /**
  * Services container - holds all service instances.
@@ -17,8 +17,8 @@ export interface Services {
   blockService: BlockService;
   graphService: GraphService;
   savedQueryService: SavedQueryService;
-  /** GraphDB instance for raw query execution */
-  graphDB?: GraphDB;
+  /** Database instance for raw query execution */
+  database?: Database;
 }
 
 /**

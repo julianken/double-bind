@@ -2,7 +2,7 @@
  * Standalone HTTP bridge server for browser development.
  *
  * Wraps better-sqlite3 with Express on localhost:3008, providing the same
- * interface that HttpGraphDBProvider expects. Run alongside `pnpm dev`
+ * interface that HttpDatabaseProvider expects. Run alongside `pnpm dev`
  * to use the app in a browser without Tauri.
  *
  * Also exposes service-layer commands (service:createPage, service:createBlock,

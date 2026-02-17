@@ -6,14 +6,14 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { MockGraphDB } from '@double-bind/test-utils';
+import { MockDatabase } from '@double-bind/test-utils';
 import { DoubleBindError, ErrorCode, SavedQueryType } from '@double-bind/types';
 import type { SavedQuery } from '@double-bind/types';
 import { SavedQueryRepository } from '../../../src/repositories/saved-query-repository.js';
 import { SavedQueryService } from '../../../src/services/saved-query-service.js';
 
 describe('SavedQueryService', () => {
-  let db: MockGraphDB;
+  let db: MockDatabase;
   let repo: SavedQueryRepository;
   let service: SavedQueryService;
 
@@ -30,7 +30,7 @@ describe('SavedQueryService', () => {
   };
 
   beforeEach(() => {
-    db = new MockGraphDB();
+    db = new MockDatabase();
     repo = new SavedQueryRepository(db);
     service = new SavedQueryService(repo);
   });

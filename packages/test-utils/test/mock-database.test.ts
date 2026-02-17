@@ -1,11 +1,11 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { MockGraphDB } from '../src/mock-graph-db.js';
+import { MockDatabase } from '../src/mock-database.js';
 
-describe('MockGraphDB', () => {
-  let db: MockGraphDB;
+describe('MockDatabase', () => {
+  let db: MockDatabase;
 
   beforeEach(() => {
-    db = new MockGraphDB();
+    db = new MockDatabase();
   });
 
   describe('seed()', () => {

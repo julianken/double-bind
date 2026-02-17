@@ -1,7 +1,7 @@
 /**
  * useDatabase hook - Access the database context from any component.
  *
- * This hook provides access to the MobileGraphDB instance and its
+ * This hook provides access to the MobileDatabase instance and its
  * initialization state. It must be used within a DatabaseProvider.
  *
  * @example

@@ -1,11 +1,11 @@
 /**
- * Unit tests for GraphDB interface and result types
- * Tests QueryResult, MutationResult, and GraphDB interface structure
+ * Unit tests for Database interface and result types
+ * Tests QueryResult, MutationResult, and Database interface structure
  */
 
-import type { QueryResult, MutationResult, GraphDB } from '../../src/graph-db';
+import type { QueryResult, MutationResult, Database } from '../../src/database';
 
-describe('GraphDB Types', () => {
+describe('Database Types', () => {
   describe('QueryResult', () => {
     it('should create result with string headers and rows', () => {
       const result: QueryResult<string> = {
@@ -209,9 +209,9 @@ describe('GraphDB Types', () => {
     });
   });
 
-  describe('GraphDB Interface', () => {
+  describe('Database Interface', () => {
     it('should define query method signature', () => {
-      const mockDB: GraphDB = {
+      const mockDB: Database = {
         query: async <T = unknown>(
           _script: string,
           _params?: Record<string, unknown>
@@ -230,7 +230,7 @@ describe('GraphDB Types', () => {
     });
 
     it('should define mutate method signature', () => {
-      const mockDB: GraphDB = {
+      const mockDB: Database = {
         query: async (): Promise<QueryResult> => ({ headers: [], rows: [] }),
         mutate: async (
           _script: string,
@@ -249,7 +249,7 @@ describe('GraphDB Types', () => {
     });
 
     it('should define importRelations method signature', () => {
-      const mockDB: GraphDB = {
+      const mockDB: Database = {
         query: async (): Promise<QueryResult> => ({ headers: [], rows: [] }),
         mutate: async (): Promise<MutationResult> => ({ headers: [], rows: [] }),
         importRelations: async (_data: Record<string, unknown[][]>): Promise<void> => {},
@@ -262,7 +262,7 @@ describe('GraphDB Types', () => {
     });
 
     it('should define exportRelations method signature', () => {
-      const mockDB: GraphDB = {
+      const mockDB: Database = {
         query: async (): Promise<QueryResult> => ({ headers: [], rows: [] }),
         mutate: async (): Promise<MutationResult> => ({ headers: [], rows: [] }),
         importRelations: async (): Promise<void> => {},
@@ -275,7 +275,7 @@ describe('GraphDB Types', () => {
     });
 
     it('should define backup method signature', () => {
-      const mockDB: GraphDB = {
+      const mockDB: Database = {
         query: async (): Promise<QueryResult> => ({ headers: [], rows: [] }),
         mutate: async (): Promise<MutationResult> => ({ headers: [], rows: [] }),
         importRelations: async (): Promise<void> => {},
@@ -288,7 +288,7 @@ describe('GraphDB Types', () => {
     });
 
     it('should support query with parameters', async () => {
-      const mockDB: GraphDB = {
+      const mockDB: Database = {
         query: async <T = unknown>(
           script: string,
           params?: Record<string, unknown>
@@ -310,7 +310,7 @@ describe('GraphDB Types', () => {
     });
 
     it('should support mutate with parameters', async () => {
-      const mockDB: GraphDB = {
+      const mockDB: Database = {
         query: async (): Promise<QueryResult> => ({ headers: [], rows: [] }),
         mutate: async (
           script: string,
@@ -332,7 +332,7 @@ describe('GraphDB Types', () => {
     it('should support importRelations with data', async () => {
       let importedData: Record<string, unknown[][]> = {};
 
-      const mockDB: GraphDB = {
+      const mockDB: Database = {
         query: async (): Promise<QueryResult> => ({ headers: [], rows: [] }),
         mutate: async (): Promise<MutationResult> => ({ headers: [], rows: [] }),
         importRelations: async (data: Record<string, unknown[][]>): Promise<void> => {
@@ -354,7 +354,7 @@ describe('GraphDB Types', () => {
     });
 
     it('should support exportRelations with relation names', async () => {
-      const mockDB: GraphDB = {
+      const mockDB: Database = {
         query: async (): Promise<QueryResult> => ({ headers: [], rows: [] }),
         mutate: async (): Promise<MutationResult> => ({ headers: [], rows: [] }),
         importRelations: async (): Promise<void> => {},
@@ -377,7 +377,7 @@ describe('GraphDB Types', () => {
     it('should support backup with path', async () => {
       let backupPath = '';
 
-      const mockDB: GraphDB = {
+      const mockDB: Database = {
         query: async (): Promise<QueryResult> => ({ headers: [], rows: [] }),
         mutate: async (): Promise<MutationResult> => ({ headers: [], rows: [] }),
         importRelations: async (): Promise<void> => {},

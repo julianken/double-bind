@@ -10,12 +10,12 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { MockGraphDB } from '@double-bind/test-utils';
+import { MockDatabase } from '@double-bind/test-utils';
 import { DoubleBindError, ErrorCode } from '@double-bind/types';
 import { GraphService } from '../../../src/services/graph-service.js';
 
 describe.skip('GraphService', () => {
-  let db: MockGraphDB;
+  let db: MockDatabase;
   let service: GraphService;
 
   // Test data timestamps
@@ -36,7 +36,7 @@ describe.skip('GraphService', () => {
   const link1to3 = ['page-1', 'page-3', 'tag', now, null];
 
   beforeEach(() => {
-    db = new MockGraphDB();
+    db = new MockDatabase();
     service = new GraphService(db);
   });
 

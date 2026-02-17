@@ -9,7 +9,7 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { MockGraphDB } from '@double-bind/test-utils';
+import { MockDatabase } from '@double-bind/test-utils';
 import { createServices, type Services } from '../../../src/services/index.js';
 import { PageService } from '../../../src/services/page-service.js';
 import { BlockService } from '../../../src/services/block-service.js';
@@ -17,11 +17,11 @@ import { GraphService } from '../../../src/services/graph-service.js';
 import { SearchService } from '../../../src/services/search-service.js';
 
 describe('createServices', () => {
-  let db: MockGraphDB;
+  let db: MockDatabase;
   let services: Services;
 
   beforeEach(() => {
-    db = new MockGraphDB();
+    db = new MockDatabase();
     services = createServices(db);
   });
 
@@ -50,7 +50,7 @@ describe('createServices', () => {
       expect(services.searchService).toBeInstanceOf(SearchService);
     });
 
-    it('should create services that share the same GraphDB instance', async () => {
+    it('should create services that share the same Database instance', async () => {
       // Both services should interact with the same database
       // We verify this by seeding data and checking if both services can access it
       const pageId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
@@ -94,7 +94,7 @@ describe('createServices', () => {
     });
 
     it('should allow services to interact via shared repositories', () => {
-      // Both services should share the same GraphDB instance through their repositories
+      // Both services should share the same Database instance through their repositories
       // This ensures data consistency across the service layer
 
       // Create separate Services instances from the same DB
@@ -137,7 +137,7 @@ describe('createServices', () => {
       expect(typeof services.graphService.getFullGraph).toBe('function');
       expect(typeof services.graphService.getNeighborhood).toBe('function');
 
-      // The service is properly initialized with GraphDB
+      // The service is properly initialized with Database
       // Integration tests verify actual execution
     });
 
@@ -169,7 +169,7 @@ describe('createServices', () => {
       expect(services1.searchService).not.toBe(services2.searchService);
     });
 
-    it('should share the GraphDB instance across all created repositories', async () => {
+    it('should share the Database instance across all created repositories', async () => {
       // Multiple calls to createServices with the same DB should work
       const services1 = createServices(db);
       const services2 = createServices(db);
@@ -274,9 +274,9 @@ describe('createServices', () => {
       expect(_searchService).toBeDefined();
     });
 
-    it('should accept any GraphDB implementation', () => {
-      // createServices should work with any GraphDB implementation
-      const mockDb = new MockGraphDB();
+    it('should accept any Database implementation', () => {
+      // createServices should work with any Database implementation
+      const mockDb = new MockDatabase();
 
       // Should compile and run without errors
       const result = createServices(mockDb);
@@ -286,8 +286,8 @@ describe('createServices', () => {
   });
 
   describe('Search operations', () => {
-    it('should wire SearchService with GraphDB for FTS queries', () => {
-      // SearchService needs direct access to GraphDB for FTS queries
+    it('should wire SearchService with Database for FTS queries', () => {
+      // SearchService needs direct access to Database for FTS queries
       expect(services.searchService).toBeInstanceOf(SearchService);
 
       // Verify the service has the expected methods
@@ -299,14 +299,14 @@ describe('createServices', () => {
       expect(services.searchService).toBeDefined();
       expect(typeof services.searchService.search).toBe('function');
 
-      // The service is properly initialized with GraphDB
+      // The service is properly initialized with Database
       // Integration tests verify actual execution
     });
   });
 
   describe('Graph operations', () => {
-    it('should wire GraphService with GraphDB for graph traversal', () => {
-      // GraphService needs direct access to GraphDB for graph-level queries
+    it('should wire GraphService with Database for graph traversal', () => {
+      // GraphService needs direct access to Database for graph-level queries
       expect(services.graphService).toBeInstanceOf(GraphService);
 
       // Verify the service has the expected methods
@@ -318,7 +318,7 @@ describe('createServices', () => {
       // GraphService should be able to query the entire graph
       expect(typeof services.graphService.getFullGraph).toBe('function');
 
-      // The factory properly wires GraphDB which handles graph queries
+      // The factory properly wires Database which handles graph queries
       expect(services.graphService).toBeInstanceOf(GraphService);
     });
 
@@ -326,7 +326,7 @@ describe('createServices', () => {
       // GraphService should be able to query neighborhoods
       expect(typeof services.graphService.getNeighborhood).toBe('function');
 
-      // The factory properly wires GraphDB which handles neighborhood traversal
+      // The factory properly wires Database which handles neighborhood traversal
       expect(services.graphService).toBeInstanceOf(GraphService);
     });
   });

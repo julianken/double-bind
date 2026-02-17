@@ -18,7 +18,7 @@
 
 import { ulid } from 'ulid';
 import type {
-  GraphDB,
+  Database,
   Block,
   BlockId,
   PageId,
@@ -60,7 +60,7 @@ export function computeParentKey(parentId: BlockId | null, pageId: PageId): stri
  * All methods use parameterized SQL queries for security.
  */
 export class BlockRepository {
-  constructor(private readonly db: GraphDB) {}
+  constructor(private readonly db: Database) {}
 
   /**
    * Get a block by its ID.

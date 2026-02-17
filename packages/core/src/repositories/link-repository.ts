@@ -11,7 +11,7 @@
  * - All queries use parameterized variables ($name)
  */
 
-import type { GraphDB, Link, BlockRef, PageId, BlockId } from '@double-bind/types';
+import type { Database, Link, BlockRef, PageId, BlockId } from '@double-bind/types';
 import { parseLinkRow, parseBlockRefRow } from './link-repository.schemas.js';
 
 /**
@@ -59,7 +59,7 @@ export interface BlockBacklink extends BlockRef {
  * All methods use parameterized SQL queries for security.
  */
 export class LinkRepository {
-  constructor(private readonly db: GraphDB) {}
+  constructor(private readonly db: Database) {}
 
   /**
    * Get outgoing links from a page, joined with target page titles.

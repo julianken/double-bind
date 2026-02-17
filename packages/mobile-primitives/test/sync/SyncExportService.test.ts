@@ -4,13 +4,13 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { SyncExportService } from '../../src/sync/SyncExportService';
-import type { GraphDB, Page, Block, Link, QueryResult } from '@double-bind/types';
+import type { Database, Page, Block, Link, QueryResult } from '@double-bind/types';
 
 // ============================================================================
-// Mock GraphDB
+// Mock Database
 // ============================================================================
 
-class MockGraphDB implements GraphDB {
+class MockDatabase implements Database {
   private pages: Page[] = [];
   private blocks: Block[] = [];
   private links: Link[] = [];
@@ -295,12 +295,12 @@ function createTestLinks(): Link[] {
 // ============================================================================
 
 describe('SyncExportService', () => {
-  let db: MockGraphDB;
+  let db: MockDatabase;
   let service: SyncExportService;
   const deviceId = 'test-device-1';
 
   beforeEach(() => {
-    db = new MockGraphDB();
+    db = new MockDatabase();
     service = new SyncExportService(db);
   });
 
