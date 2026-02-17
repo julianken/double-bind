@@ -1,8 +1,10 @@
 # System Overview
 
+<!-- last-verified: 2026-02-16 -->
+
 ## Architecture Summary
 
-Double-Bind is a 10-package TypeScript monorepo with a Tauri desktop shell. The core insight: CozoDB's Rust engine handles all heavy computation (graph algorithms, full-text search, recursive queries), so TypeScript handles 100% of business logic with no perceptible performance penalty.
+Double-Bind is a TypeScript monorepo with a Tauri desktop shell and React Native mobile app. SQLite handles data persistence; graph algorithms and business logic run in TypeScript. The Rust layer is a thin IPC shim wrapping rusqlite.
 
 ```
 ┌─────────────────────────────────────────────────┐
@@ -13,7 +15,7 @@ Double-Bind is a 10-package TypeScript monorepo with a Tauri desktop shell. The 
 │  └──────────────┬───────────────────────────┘   │
 │                  │                               │
 │  ┌──────────────┴───────────────────────────┐   │
-│  │     Zustand + useCozoQuery (state)         │   │
+│  │       Zustand + Query Hooks (state)       │   │
 │  └──────────────┬───────────────────────────┘   │
 │                  │                               │
 │  ┌──────────────┴───────────────────────────┐   │
@@ -21,21 +23,21 @@ Double-Bind is a 10-package TypeScript monorepo with a Tauri desktop shell. The 
 │  └──────────────┬───────────────────────────┘   │
 │                  │                               │
 │  ┌──────────────┴───────────────────────────┐   │
-│  │  Repositories (parameterized Datalog)     │   │
+│  │     Repositories (parameterized SQL)      │   │
 │  └──────────────┬───────────────────────────┘   │
 │                  │                               │
 │  ┌──────────────┴───────────────────────────┐   │
-│  │     GraphDB Interface (DI boundary)       │   │
+│  │      Database Interface (DI boundary)     │   │
 │  └──────────────┬───────────────────────────┘   │
 │                  │ invoke()                      │
 │  ════════════════╪══════════════════════════════ │
 │                  │ Tauri IPC                     │
 │  ┌──────────────┴───────────────────────────┐   │
-│  │      Rust Shim (5 commands, ~40 LOC)      │   │
+│  │        Rust Shim (IPC → rusqlite)         │   │
 │  └──────────────┬───────────────────────────┘   │
 │                  │                               │
 │  ┌──────────────┴───────────────────────────┐   │
-│  │         CozoDB Engine (RocksDB)           │   │
+│  │            SQLite (WAL mode)              │   │
 │  └──────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────┘
 ```
@@ -43,19 +45,20 @@ Double-Bind is a 10-package TypeScript monorepo with a Tauri desktop shell. The 
 ## Key Properties
 
 - **Local-first**: All data on the user's machine. No cloud dependency.
-- **Graph-native**: CozoDB stores relations with Datalog queries. Not a graph bolted onto SQL.
-- **Blocks are first-class**: Every block has a unique ID. References survive moves. Blocks are more fundamental than pages.
-- **Minimal Rust**: The Rust shim is infrastructure. It forwards queries to CozoDB and enforces read/write separation. It never changes when the data model changes.
+- **Graph-native**: Recursive CTEs for graph traversal, FTS5 for search, TypeScript for graph algorithms. Graph operations are first-class, not bolted on.
+- **Blocks are first-class**: Every block has a unique ULID. References survive moves. Blocks are more fundamental than pages.
+- **Minimal Rust**: The Rust shim forwards SQL to rusqlite and returns results. It never changes when the data model changes.
 - **Plugin-extensible**: Extension points for commands, importers, exporters, graph algorithms from day 1.
 
 ## Shared Core
 
-The `core` package contains all business logic and is consumed by three clients:
+The `core` package contains all business logic and is consumed by multiple clients:
 
-| Client | Package | Runtime |
-|--------|---------|---------|
-| Desktop | `desktop` | Tauri webview (React) |
-| Terminal | `tui` | Node.js (Ink/React) |
-| CLI | `cli` | Node.js |
+| Client               | Package      | Database Adapter                                          |
+| -------------------- | ------------ | --------------------------------------------------------- |
+| Desktop (production) | `desktop`    | `TauriDatabaseProvider` → rusqlite via IPC                |
+| Desktop (dev/test)   | `desktop`    | `HttpDatabaseProvider` → better-sqlite3 via bridge server |
+| Mobile               | `mobile-app` | `MobileDatabaseProvider` → op-sqlite                      |
+| Integration tests    | `core`       | `SqliteNodeAdapter` → better-sqlite3 directly             |
 
-All three share the same GraphDB interface. The desktop app uses Tauri IPC to reach CozoDB. The TUI and CLI use `cozo-node` NAPI bindings directly.
+All share the same `Database` interface (defined in `packages/types/src/database.ts`). The adapter is the only thing that differs per platform.
