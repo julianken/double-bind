@@ -9,6 +9,7 @@
     {
       "identifier": "core:window:allow-set-title",
       "allow": [{ "label": "main" }]
-    }
+    },
+    "core:window:allow-start-dragging"
   ]
 }

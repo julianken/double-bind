@@ -162,7 +162,8 @@ export function AppShell({
   return (
     <div className={styles.container} data-testid="app-shell">
       {/* Navigation toolbar */}
-      <nav className={styles.navToolbar} data-testid="navigation-bar" aria-label="Navigation">
+      {/* data-tauri-drag-region makes this toolbar the window drag handle */}
+      <nav className={styles.navToolbar} data-testid="navigation-bar" aria-label="Navigation" data-tauri-drag-region>
         <button
           type="button"
           className={styles.navButton}
