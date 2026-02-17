@@ -1,71 +1,58 @@
-# Datalog Injection Prevention
+# SQL Injection Prevention
 
-## Parameterized Queries: Strong but Partial Protection
+<!-- last-verified: 2026-02-16 -->
 
-CozoDB's `$param` syntax prevents value-level injection:
+## Parameterized Queries: The Primary Defense
 
-```datalog
--- Safe: $id is bound as a data value, never parsed as query structure
-?[title] := *pages{ page_id: $id, title }
-```
+All database queries use parameterized SQL. User-supplied values are bound as parameters, never interpolated into SQL strings:
 
-An attacker cannot break out of the value context to inject operators.
-
-## What Parameters CANNOT Protect
-
-Parameters can only appear where expressions (data values) are expected. These structural elements cannot be parameterized:
-
-| Element | Example | Parameterizable? |
-|---------|---------|:---:|
-| Data values | `age > $min_age` | Yes |
-| Relation names | `*my_relation{...}` | **No** |
-| Column names | `name, age` | **No** |
-| System commands | `::remove`, `::create` | **No** |
-| Mutation operators | `:put`, `:rm` | **No** |
-| Algorithm names | `<~ PageRank(...)` | **No** |
-
-## The Rule
-
-**All CozoScript strings are hardcoded templates in the repository layer.** No structural element of a query is ever derived from user input. Relation names, column names, and operators are literals in the TypeScript source code.
-
-The only dynamic parts are parameter values:
 ```typescript
-// In BlockRepository — the template is a compile-time constant
-const QUERY = '?[block_id, content] := *blocks{ block_id: $id, content, is_deleted: false }';
+// In BlockRepository — the SQL template is a compile-time constant
+const QUERY = 'SELECT block_id, content FROM blocks WHERE block_id = $id AND is_deleted = 0';
 
 async getById(id: string): Promise<Block | null> {
   return this.db.query(QUERY, { id });
 }
 ```
 
-## Edge Case: Dynamic Relation Selection
+The `$param` syntax ensures values are bound as data, never parsed as SQL structure.
 
-If the app ever needs to query different relations based on user input (e.g., a plugin system), use a whitelist:
+## What Parameters Cannot Protect
+
+Parameters can only appear where data values are expected. These structural elements cannot be parameterized:
+
+| Element        | Example                 |     Parameterizable?     |
+| -------------- | ----------------------- | :----------------------: |
+| Data values    | `WHERE age > $min_age`  |           Yes            |
+| Table names    | `FROM blocks`           |          **No**          |
+| Column names   | `SELECT title, content` |          **No**          |
+| SQL keywords   | `ORDER BY`, `GROUP BY`  |          **No**          |
+| FTS5 operators | `MATCH $query`          | Values yes, operators no |
+
+## The Rule
+
+**All SQL strings are hardcoded templates in the repository layer.** No structural element of a query is ever derived from user input. Table names, column names, and operators are literals in the TypeScript source code.
+
+The only dynamic parts are parameter values (`$id`, `$title`, `$query`).
+
+## Edge Case: Dynamic Table Selection
+
+If the app ever needs to query different tables based on user input (e.g., a plugin system), use a whitelist:
 
 ```typescript
-const ALLOWED_RELATIONS = new Set(['pages', 'blocks', 'tags', 'links']);
+const ALLOWED_TABLES = new Set(['pages', 'blocks', 'tags', 'links']);
 
-function queryRelation(relation: string, params: Record<string, unknown>) {
-  if (!ALLOWED_RELATIONS.has(relation)) {
-    throw new Error(`Unknown relation: ${relation}`);
+function queryTable(table: string, params: Record<string, unknown>) {
+  if (!ALLOWED_TABLES.has(table)) {
+    throw new Error(`Unknown table: ${table}`);
   }
-  // Now safe to interpolate because it's from a known-good set
-  return db.query(`?[...] := *${relation}{...}`, params);
+  // Safe to interpolate because it's from a known-good set
+  return db.query(`SELECT * FROM ${table} WHERE id = $id`, params);
 }
 ```
 
 This is a last resort. Prefer hardcoded query templates.
 
-## CozoDB's Dangerous Surface
+## FTS5-Specific Considerations
 
-If an attacker could inject arbitrary CozoScript:
-
-| Operation | Danger Level |
-|-----------|:---:|
-| `::remove pages` | Drops the entire relation |
-| `::set_triggers pages on put { ... }` | Installs persistent malicious code |
-| `:replace pages { ... }` | Drops and recreates relation |
-| `%loop ... :rm pages { ... } %end` | Iterative deletion |
-| `::rename pages -> pwned` | Renames relation |
-
-`ScriptMutability::Immutable` on the `query` command blocks all of these at the engine level.
+FTS5 MATCH queries accept a query string that supports operators (`AND`, `OR`, `NOT`, `*`, `"phrase"`). The `SearchService` sanitizes FTS query input to prevent malformed queries. See `packages/core/src/services/search-service.ts` for the sanitization logic.

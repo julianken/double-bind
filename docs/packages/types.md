@@ -1,162 +1,40 @@
 # @double-bind/types
 
+<!-- last-verified: 2026-02-16 -->
+
 ## Purpose
 
-Shared TypeScript types, interfaces, and error types used by all other packages. Zero runtime dependencies.
+Shared TypeScript types, interfaces, and error types used by all other packages. Zero runtime dependencies. This is Layer 0 — every other package depends on it.
 
 ## Public API
 
-### Domain Types
+See `packages/types/src/index.ts` for the complete export list.
 
-```typescript
-// Identifiers
-type PageId = string;   // ULID
-type BlockId = string;  // ULID
+### Core Categories
 
-// Core entities
-interface Page {
-  pageId: PageId;
-  title: string;
-  createdAt: number;    // Unix timestamp (float)
-  updatedAt: number;
-  isDeleted: boolean;
-  dailyNoteDate: string | null; // YYYY-MM-DD or null
-}
+| Category            | Key Exports                                                            | Source File                       |
+| ------------------- | ---------------------------------------------------------------------- | --------------------------------- |
+| Domain types        | `Page`, `Block`, `Link`, `BlockRef`, `Tag`, `Property`, `BlockVersion` | `src/domain.ts`                   |
+| Database interface  | `Database`, `QueryResult`, `MutationResult`, `TransactionContext`      | `src/database.ts`                 |
+| Error types         | `DoubleBindError`, `ErrorCode`                                         | `src/errors.ts`                   |
+| Input types         | `CreatePageInput`, `CreateBlockInput`, `UpdateBlockInput`              | `src/inputs.ts`                   |
+| Saved queries       | `SavedQuery`, `SavedQueryId`, `SavedQueryType`                         | `src/saved-query.ts`              |
+| Search              | `SearchResult`, `SearchOptions`                                        | `src/search.ts`                   |
+| Sync protocol       | `SyncEnvelope`, `SyncPayload`, `SyncChange`, etc.                      | `src/sync.ts`                     |
+| Conflict resolution | `HybridLogicalClock`, `VersionVector`, `ConflictState`, etc.           | `src/conflict.ts`                 |
+| Pagination          | `PaginatedResult`, `PaginationOptions`, `PaginatedQuery`               | `src/pagination.ts`               |
+| Mobile lifecycle    | `BatteryState`, `MemoryState`, `CacheConfig`                           | `src/battery.ts`, `src/memory.ts` |
 
-interface Block {
-  blockId: BlockId;
-  pageId: PageId;
-  parentId: BlockId | null; // null = root block of page
-  content: string;
-  contentType: 'text' | 'heading' | 'code' | 'todo' | 'query';
-  order: string;            // String-based fractional indexing (rocicorp/fractional-indexing)
-  isCollapsed: boolean;
-  isDeleted: boolean;
-  createdAt: number;
-  updatedAt: number;
-}
+### Database Interface
 
-interface BlockRef {
-  sourceBlockId: BlockId;
-  targetBlockId: BlockId;
-  createdAt: number;
-}
+The `Database` interface (in `src/database.ts`) is the dependency injection boundary for the entire application. It abstracts over:
 
-interface Link {
-  sourceId: PageId;
-  targetId: PageId;
-  linkType: 'reference' | 'embed' | 'tag';
-  createdAt: number;
-  contextBlockId: BlockId | null;
-}
+- **rusqlite** via Tauri IPC (desktop production)
+- **better-sqlite3** via HTTP bridge or direct adapter (dev, test, CLI)
+- **op-sqlite** (mobile)
+- **MockDatabase** (unit tests)
 
-interface Property {
-  entityId: string;       // PageId or BlockId
-  key: string;
-  value: string;
-  valueType: 'string' | 'number' | 'boolean' | 'date';
-  updatedAt: number;
-}
-
-interface Tag {
-  entityId: string;
-  tag: string;
-  createdAt: number;
-}
-
-interface BlockVersion {
-  blockId: BlockId;
-  version: number;
-  content: string;
-  parentId: BlockId | null;
-  order: string;
-  isCollapsed: boolean;
-  isDeleted: boolean;
-  operation: 'create' | 'update' | 'delete' | 'move' | 'restore';
-  timestamp: number;
-}
-```
-
-### GraphDB Interface
-
-```typescript
-interface QueryResult<T = unknown> {
-  headers: string[];
-  rows: T[][];
-}
-
-interface MutationResult {
-  headers: string[];
-  rows: unknown[][];
-}
-
-interface GraphDB {
-  query<T = unknown>(script: string, params?: Record<string, unknown>): Promise<QueryResult<T>>;
-  mutate(script: string, params?: Record<string, unknown>): Promise<MutationResult>;
-  importRelations(data: Record<string, unknown[][]>): Promise<void>;
-  exportRelations(relations: string[]): Promise<Record<string, unknown[][]>>;
-  backup(path: string): Promise<void>;
-}
-```
-
-### Error Types
-
-```typescript
-class DoubleBindError extends Error {
-  constructor(
-    message: string,
-    public readonly code: ErrorCode,
-    public readonly cause?: Error,
-  ) {
-    super(message);
-    this.name = 'DoubleBindError';
-  }
-}
-
-enum ErrorCode {
-  // Database
-  DB_CONNECTION_FAILED = 'DB_CONNECTION_FAILED',
-  DB_QUERY_FAILED = 'DB_QUERY_FAILED',
-  DB_MUTATION_FAILED = 'DB_MUTATION_FAILED',
-
-  // Domain
-  PAGE_NOT_FOUND = 'PAGE_NOT_FOUND',
-  BLOCK_NOT_FOUND = 'BLOCK_NOT_FOUND',
-  INVALID_CONTENT = 'INVALID_CONTENT',
-  CIRCULAR_REFERENCE = 'CIRCULAR_REFERENCE',
-
-  // Import/Export
-  IMPORT_PARSE_ERROR = 'IMPORT_PARSE_ERROR',
-  EXPORT_WRITE_ERROR = 'EXPORT_WRITE_ERROR',
-
-  // Security
-  BLOCKED_OPERATION = 'BLOCKED_OPERATION',
-}
-```
-
-### Input Types (for create/update operations)
-
-```typescript
-interface CreatePageInput {
-  title: string;
-  dailyNoteDate?: string;
-}
-
-interface CreateBlockInput {
-  pageId: PageId;
-  parentId?: BlockId;
-  content: string;
-  contentType?: Block['contentType'];
-  order?: string;
-}
-
-interface UpdateBlockInput {
-  content?: string;
-  parentId?: BlockId | null;
-  order?: string;
-  isCollapsed?: boolean;
-}
-```
+Key design: the `script` parameter name (not `sql`) is intentionally engine-agnostic.
 
 ## Internal Structure
 
@@ -164,23 +42,24 @@ interface UpdateBlockInput {
 packages/types/src/
 ├── index.ts          # Barrel export
 ├── domain.ts         # Page, Block, Link, etc.
-├── graph-db.ts       # GraphDB interface, QueryResult
+├── database.ts       # Database interface, QueryResult, TransactionContext
 ├── errors.ts         # DoubleBindError, ErrorCode
 ├── inputs.ts         # CreatePageInput, etc.
-└── utils.ts          # Type utilities (DeepPartial, etc.)
+├── saved-query.ts    # SavedQuery types
+├── search.ts         # SearchResult, SearchOptions
+├── sync.ts           # Sync protocol types
+├── conflict.ts       # Conflict resolution types
+├── pagination.ts     # Pagination types
+├── streaming.ts      # Streaming types
+├── battery.ts        # Battery optimization types
+├── memory.ts         # Memory management types
+└── utils.ts          # Type utilities (DeepPartial)
 ```
 
 ## Dependencies
 
-None. This package has zero dependencies, including zero devDependencies beyond TypeScript itself.
+None. Zero dependencies including zero devDependencies beyond TypeScript.
 
 ## Testing
 
-Minimal — types are validated by the TypeScript compiler. Test only:
-- Error class construction
-- Type guard functions (if any)
-
-<!-- TODO: Define type guard functions (isPage, isBlock, etc.) -->
-<!-- TODO: Define serialization types (for CozoDB row → domain type mapping) -->
-<!-- TODO: Define plugin-related types (PluginManifest, PluginAPI) -->
-<!-- TODO: Define event types (for future event bus / pub-sub) -->
+Minimal — types are validated by the TypeScript compiler. Test only error class construction and type guard functions.
