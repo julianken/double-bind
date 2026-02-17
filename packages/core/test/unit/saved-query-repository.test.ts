@@ -2,21 +2,21 @@
  * Unit tests for SavedQueryRepository
  *
  * These tests verify correct Datalog query construction and parameter passing
- * using MockGraphDB. They do NOT execute real Datalog queries - that's for
+ * using MockDatabase. They do NOT execute real Datalog queries - that's for
  * Layer 2 integration tests.
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { MockGraphDB } from '@double-bind/test-utils';
+import { MockDatabase } from '@double-bind/test-utils';
 import { DoubleBindError, ErrorCode, SavedQueryType } from '@double-bind/types';
 import { SavedQueryRepository } from '../../src/repositories/saved-query-repository.js';
 
 describe('SavedQueryRepository', () => {
-  let db: MockGraphDB;
+  let db: MockDatabase;
   let repo: SavedQueryRepository;
 
   beforeEach(() => {
-    db = new MockGraphDB();
+    db = new MockDatabase();
     repo = new SavedQueryRepository(db);
   });
 

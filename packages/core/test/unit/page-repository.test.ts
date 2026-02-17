@@ -2,21 +2,21 @@
  * Unit tests for PageRepository
  *
  * These tests verify correct Datalog query construction and parameter passing
- * using MockGraphDB. They do NOT execute real Datalog queries - that's for
+ * using MockDatabase. They do NOT execute real Datalog queries - that's for
  * Layer 2 integration tests.
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { MockGraphDB } from '@double-bind/test-utils';
+import { MockDatabase } from '@double-bind/test-utils';
 import { DoubleBindError, ErrorCode } from '@double-bind/types';
 import { PageRepository } from '../../src/repositories/page-repository.js';
 
 describe('PageRepository', () => {
-  let db: MockGraphDB;
+  let db: MockDatabase;
   let repo: PageRepository;
 
   beforeEach(() => {
-    db = new MockGraphDB();
+    db = new MockDatabase();
     repo = new PageRepository(db);
   });
 
@@ -310,7 +310,7 @@ describe('PageRepository', () => {
     it('should create page and register in daily_notes when not exists', async () => {
       db.seed('daily_notes', []);
       // After creation, the getById call needs data
-      // MockGraphDB doesn't actually persist mutations, so we need to pre-seed
+      // MockDatabase doesn't actually persist mutations, so we need to pre-seed
       // In real tests, we'd use integration tests for this behavior
 
       // For unit test, we verify the mutations are called correctly
@@ -338,7 +338,7 @@ describe('PageRepository', () => {
   });
 
   describe('rowToPage type validation', () => {
-    // Note: These tests use getAll() since MockGraphDB's filtering mechanism
+    // Note: These tests use getAll() since MockDatabase's filtering mechanism
     // may skip rows that don't match the query parameter type exactly.
     // Using getAll() ensures the invalid row is returned and validated.
 
@@ -415,9 +415,9 @@ describe('PageRepository', () => {
 
       await repo.getByTitle('Deleted Page');
 
-      // MockGraphDB doesn't filter by is_deleted, but the query should have the filter
+      // MockDatabase doesn't filter by is_deleted, but the query should have the filter
       expect(db.lastQuery.script).toContain('is_deleted == false');
-      // In real DB this would return null, but MockGraphDB returns the seeded row
+      // In real DB this would return null, but MockDatabase returns the seeded row
       // This test verifies the query structure is correct
     });
 
@@ -475,7 +475,7 @@ describe('PageRepository', () => {
 
       await repo.getByTitleCaseInsensitive('MY PAGE');
 
-      // MockGraphDB doesn't implement case-insensitive matching, but we verify query structure
+      // MockDatabase doesn't implement case-insensitive matching, but we verify query structure
       expect(db.lastQuery.script).toContain('lowercase(title) == lowercase($title)');
     });
 
@@ -678,7 +678,7 @@ describe('PageRepository', () => {
       // getById should filter out deleted pages
       await repo.getById(pageId);
 
-      // MockGraphDB returns the row, but the query should have is_deleted filter
+      // MockDatabase returns the row, but the query should have is_deleted filter
       expect(db.lastQuery.script).toContain('is_deleted == false');
       // In a real DB with deleted page, this would be null
     });

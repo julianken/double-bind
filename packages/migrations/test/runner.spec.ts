@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { MockGraphDB } from '@double-bind/test-utils';
+import { MockDatabase } from '@double-bind/test-utils';
 import {
   runMigrations,
   getAppliedMigrations,
@@ -18,10 +18,10 @@ vi.mock('../src/registry.js', () => ({
 import { ALL_MIGRATIONS } from '../src/registry.js';
 
 describe('getAppliedMigrations', () => {
-  let db: MockGraphDB;
+  let db: MockDatabase;
 
   beforeEach(() => {
-    db = new MockGraphDB();
+    db = new MockDatabase();
   });
 
   it('returns empty array when metadata relation does not exist', async () => {
@@ -62,10 +62,10 @@ describe('getAppliedMigrations', () => {
 });
 
 describe('getSchemaVersion', () => {
-  let db: MockGraphDB;
+  let db: MockDatabase;
 
   beforeEach(() => {
-    db = new MockGraphDB();
+    db = new MockDatabase();
   });
 
   it('returns 0 when metadata relation does not exist', async () => {
@@ -97,10 +97,10 @@ describe('getSchemaVersion', () => {
 });
 
 describe('runMigrations', () => {
-  let db: MockGraphDB;
+  let db: MockDatabase;
 
   beforeEach(() => {
-    db = new MockGraphDB();
+    db = new MockDatabase();
     // Clear the mocked registry
     ALL_MIGRATIONS.length = 0;
   });
@@ -171,7 +171,7 @@ describe('runMigrations', () => {
     // Create a mock that throws when the second migration's UP script runs
     // Each migration does: 1) db.mutate(up), 2) db.mutate(updateAppliedMigrations)
     // So call 1 = migration 1 up, call 2 = update metadata, call 3 = migration 2 up
-    const failingDb = new MockGraphDB();
+    const failingDb = new MockDatabase();
     let callCount = 0;
     const originalMutate = failingDb.mutate.bind(failingDb);
     failingDb.mutate = async (script: string, params?: Record<string, unknown>) => {
@@ -237,10 +237,10 @@ describe('runMigrations', () => {
 });
 
 describe('runSingleMigration', () => {
-  let db: MockGraphDB;
+  let db: MockDatabase;
 
   beforeEach(() => {
-    db = new MockGraphDB();
+    db = new MockDatabase();
   });
 
   it('executes the migration up script', async () => {
@@ -258,7 +258,7 @@ describe('runSingleMigration', () => {
   });
 
   it('throws if migration fails', async () => {
-    const failingDb = new MockGraphDB();
+    const failingDb = new MockDatabase();
     failingDb.mutate = async () => {
       throw new Error('Syntax error');
     };
@@ -275,10 +275,10 @@ describe('runSingleMigration', () => {
 });
 
 describe('rollbackMigration', () => {
-  let db: MockGraphDB;
+  let db: MockDatabase;
 
   beforeEach(() => {
-    db = new MockGraphDB();
+    db = new MockDatabase();
   });
 
   it('executes the migration down script', async () => {

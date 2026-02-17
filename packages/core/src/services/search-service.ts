@@ -13,7 +13,7 @@
  * better debugging information at higher layers.
  */
 
-import type { GraphDB, SearchResult, SearchOptions, PageId, BlockId } from '@double-bind/types';
+import type { Database, SearchResult, SearchOptions, PageId, BlockId } from '@double-bind/types';
 import { DoubleBindError, ErrorCode } from '@double-bind/types';
 import { z } from 'zod';
 
@@ -61,7 +61,7 @@ const DEFAULT_MIN_SCORE = 0;
  * merging results into a single ranked list.
  */
 export class SearchService {
-  constructor(private readonly db: GraphDB) {}
+  constructor(private readonly db: Database) {}
 
   /**
    * Search across both page titles and block content.

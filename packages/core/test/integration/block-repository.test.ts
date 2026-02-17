@@ -2,7 +2,7 @@
 // Verifies all public methods and edge cases with real database queries
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import type { GraphDB, Block, BlockId, PageId } from '@double-bind/types';
+import type { Database, Block, BlockId, PageId } from '@double-bind/types';
 import { createTestDatabase } from './setup.js';
 import { cleanupDatabase } from './helpers.js';
 import { BlockRepository } from '../../src/repositories/block-repository.js';
@@ -10,7 +10,7 @@ import { PageRepository } from '../../src/repositories/page-repository.js';
 import { DEFAULT_ORDER } from '../../src/utils/ordering.js';
 
 describe('BlockRepository Integration Tests', () => {
-  let db: GraphDB;
+  let db: Database;
   let blockRepo: BlockRepository;
   let pageRepo: PageRepository;
   let testPageId: PageId;

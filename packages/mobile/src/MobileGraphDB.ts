@@ -1,14 +1,14 @@
 /**
- * Mobile GraphDB implementation using React Native native modules.
+ * Mobile Database implementation using React Native native modules.
  *
- * This class bridges the TypeScript GraphDB interface to the native
+ * This class bridges the TypeScript Database interface to the native
  * Android/iOS CozoDB implementations via React Native's NativeModules.
  *
- * @see GraphDB - TypeScript interface at packages/types/src/graph-db.ts
+ * @see Database - TypeScript interface at packages/types/src/graph-db.ts
  * @see CozoNativeModule - Native module interface
  */
 import type {
-  GraphDB,
+  Database,
   QueryResult,
   MutationResult,
   TransactionContext,
@@ -17,7 +17,7 @@ import type { CozoNativeModule } from './CozoNativeModule';
 import { getCozoModule } from './CozoNativeModule';
 
 /**
- * Mobile implementation of GraphDB using React Native native modules.
+ * Mobile implementation of Database using React Native native modules.
  *
  * All operations are delegated to the native CozoDB implementation via
  * JSON serialization. The native module handles threading and resource
@@ -25,33 +25,33 @@ import { getCozoModule } from './CozoNativeModule';
  *
  * Usage:
  * ```typescript
- * const db = await MobileGraphDB.create('/path/to/database');
+ * const db = await MobileDatabase.create('/path/to/database');
  * const result = await db.query('?[x] := x = 1');
  * await db.close();
  * ```
  */
-export class MobileGraphDB implements GraphDB {
+export class MobileDatabase implements Database {
   private readonly native: CozoNativeModule;
   private closed = false;
 
   /**
-   * Private constructor - use MobileGraphDB.create() instead.
+   * Private constructor - use MobileDatabase.create() instead.
    */
   private constructor(native: CozoNativeModule) {
     this.native = native;
   }
 
   /**
-   * Create and initialize a new MobileGraphDB instance.
+   * Create and initialize a new MobileDatabase instance.
    *
    * @param path Absolute path to the database file
-   * @returns Initialized MobileGraphDB instance
+   * @returns Initialized MobileDatabase instance
    * @throws Error if initialization fails
    */
-  static async create(path: string): Promise<MobileGraphDB> {
+  static async create(path: string): Promise<MobileDatabase> {
     const native = getCozoModule();
     await native.initialize(path);
-    return new MobileGraphDB(native);
+    return new MobileDatabase(native);
   }
 
   /**

@@ -1,5 +1,5 @@
 // Database interface and result types
-// Renamed from GraphDB to be database-engine agnostic (supports both CozoDB Datalog and SQLite SQL)
+// Renamed from Database to be database-engine agnostic (supports both CozoDB Datalog and SQLite SQL)
 
 /**
  * Result from a read-only query operation.
@@ -226,13 +226,3 @@ export interface Database {
  */
 export type DatabaseFactory = (config: DatabaseConfig) => Promise<Database>;
 
-// ─────────────────────────────────────────────────────────────────
-// Backwards compatibility aliases
-// These will be removed after the SQLite migration is complete
-// ─────────────────────────────────────────────────────────────────
-/** @deprecated Use Database instead */
-export type GraphDB = Database;
-/** @deprecated Use DatabaseConfig instead */
-export type GraphDBConfig = DatabaseConfig;
-/** @deprecated Use DatabaseFactory instead */
-export type GraphDBFactory = DatabaseFactory;

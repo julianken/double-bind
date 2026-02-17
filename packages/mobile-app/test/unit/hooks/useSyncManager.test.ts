@@ -7,7 +7,7 @@ import { renderHook, waitFor, act } from '@testing-library/react';
 import { AppState } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
 import { useSyncManager, type UseSyncManagerOptions } from '../../../src/hooks/useSyncManager';
-import type { MobileGraphDB } from '@double-bind/mobile';
+import type { MobileDatabase } from '@double-bind/mobile';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Mocks
@@ -41,9 +41,9 @@ vi.mock('@react-native-community/netinfo', () => ({
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Create a mock MobileGraphDB instance.
+ * Create a mock MobileDatabase instance.
  */
-function createMockDB(): MobileGraphDB {
+function createMockDB(): MobileDatabase {
   return {
     backup: vi.fn().mockResolvedValue(undefined),
     restore: vi.fn().mockResolvedValue(undefined),
@@ -56,7 +56,7 @@ function createMockDB(): MobileGraphDB {
     resume: vi.fn().mockResolvedValue(undefined),
     onLowMemory: vi.fn().mockResolvedValue(undefined),
     close: vi.fn().mockResolvedValue(undefined),
-  } as unknown as MobileGraphDB;
+  } as unknown as MobileDatabase;
 }
 
 /**

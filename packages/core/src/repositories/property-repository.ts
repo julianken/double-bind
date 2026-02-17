@@ -12,7 +12,7 @@
  * of a unified CozoDB properties relation. Queries use UNION ALL to check both.
  */
 
-import type { GraphDB, Property } from '@double-bind/types';
+import type { Database, Property } from '@double-bind/types';
 import { parsePropertyRow } from './property-repository.schemas.js';
 
 /**
@@ -25,7 +25,7 @@ export type PropertyValueType = 'string' | 'number' | 'boolean' | 'date';
  * All methods use parameterized SQL queries for security.
  */
 export class PropertyRepository {
-  constructor(private readonly db: GraphDB) {}
+  constructor(private readonly db: Database) {}
 
   /**
    * Get all properties for a specific entity (page or block).

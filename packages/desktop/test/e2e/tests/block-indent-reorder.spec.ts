@@ -165,7 +165,7 @@ async function getSiblingBlockIds(pageId: string, parentId: string | null): Prom
 
 test.describe('Block Indentation and Reordering', () => {
   // Reset database before each test for isolation
-  // Note: mockIPC is NOT needed because httpGraphDB auto-detects when not in Tauri
+  // Note: mockIPC is NOT needed because httpDatabase auto-detects when not in Tauri
   test.beforeEach(async () => {
     await resetDatabase();
   });

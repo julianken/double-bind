@@ -11,7 +11,7 @@
  *
  * Each test is a complete scenario that exercises multiple repositories and services.
  *
- * NOTE: These tests use vi.spyOn to mock repository methods since MockGraphDB
+ * NOTE: These tests use vi.spyOn to mock repository methods since MockDatabase
  * doesn't persist data. For true integration tests with real CozoDB, use cozo-node
  * with the wrapCozoDb adapter (see docs/testing/integration-tests.md).
  *
@@ -23,7 +23,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { MockGraphDB } from '@double-bind/test-utils';
+import { MockDatabase } from '@double-bind/test-utils';
 import type { Services } from '../../src/services/index.js';
 import { PageService } from '../../src/services/page-service.js';
 import { BlockService } from '../../src/services/block-service.js';
@@ -35,7 +35,7 @@ import { TagRepository } from '../../src/repositories/tag-repository.js';
 import { PropertyRepository } from '../../src/repositories/property-repository.js';
 
 describe('E2E Integration Tests', () => {
-  let db: MockGraphDB;
+  let db: MockDatabase;
   let services: Services;
   let pageRepo: PageRepository;
   let blockRepo: BlockRepository;
@@ -46,7 +46,7 @@ describe('E2E Integration Tests', () => {
   const now = Date.now();
 
   beforeEach(() => {
-    db = new MockGraphDB();
+    db = new MockDatabase();
 
     // Create repositories that will be used by services
     pageRepo = new PageRepository(db);

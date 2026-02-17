@@ -8,7 +8,7 @@
 
 import { ulid } from 'ulid';
 import type {
-  GraphDB,
+  Database,
   SavedQuery,
   SavedQueryId,
   CreateSavedQueryInput,
@@ -34,7 +34,7 @@ export interface GetAllSavedQueriesOptions {
  * All methods use parameterized SQL queries for security.
  */
 export class SavedQueryRepository {
-  constructor(private readonly db: GraphDB) {}
+  constructor(private readonly db: Database) {}
 
   /**
    * Get a saved query by its ID.

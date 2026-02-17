@@ -2,13 +2,13 @@
 // Validates SQL-based link operations
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import type { GraphDB } from '@double-bind/types';
+import type { Database } from '@double-bind/types';
 import { createTestDatabase } from './setup.js';
 import { LinkRepository } from '../../src/repositories/link-repository.js';
 import { ulid } from 'ulid';
 
 describe('LinkRepository Integration Tests', () => {
-  let db: GraphDB;
+  let db: Database;
   let linkRepo: LinkRepository;
 
   beforeEach(async () => {

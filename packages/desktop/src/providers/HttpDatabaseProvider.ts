@@ -1,7 +1,7 @@
 /**
- * HttpGraphDBProvider - GraphDB provider for browser-based E2E testing.
+ * HttpDatabaseProvider - Database provider for browser-based E2E testing.
  *
- * This provider routes GraphDB calls through an HTTP bridge server (localhost:3001)
+ * This provider routes Database calls through an HTTP bridge server (localhost:3001)
  * which wraps cozo-node. Used when running outside of Tauri for development
  * and E2E testing in a browser context.
  *
@@ -9,13 +9,13 @@
  */
 
 import type {
-  GraphDB,
+  Database,
   QueryResult,
   MutationResult,
   TransactionContext,
 } from '@double-bind/types';
 import { DoubleBindError, ErrorCode } from '@double-bind/types';
-import type { GraphDBProvider } from './TauriGraphDBProvider.js';
+import type { DatabaseProvider } from './TauriDatabaseProvider.js';
 
 const BRIDGE_URL = `http://localhost:${import.meta.env.VITE_BRIDGE_PORT ?? '3008'}`;
 
@@ -55,10 +55,10 @@ async function bridgeInvoke<T>(cmd: string, args: Record<string, unknown>): Prom
 }
 
 /**
- * HTTP Bridge GraphDB implementation for browser-only testing.
+ * HTTP Bridge Database implementation for browser-only testing.
  * All methods delegate to the HTTP bridge server.
  */
-const httpGraphDB: GraphDB = {
+const httpDatabase: Database = {
   async query<T = unknown>(
     script: string,
     params: Record<string, unknown> = {}
@@ -101,7 +101,7 @@ const httpGraphDB: GraphDB = {
 };
 
 /**
- * HttpGraphDBProvider - GraphDB provider for browser-based E2E testing.
+ * HttpDatabaseProvider - Database provider for browser-based E2E testing.
  *
  * This provider is used when running outside of Tauri (in a browser) for
  * development and E2E testing. It communicates with the HTTP bridge server
@@ -109,21 +109,21 @@ const httpGraphDB: GraphDB = {
  *
  * @example
  * ```typescript
- * const provider = new HttpGraphDBProvider();
+ * const provider = new HttpDatabaseProvider();
  * await provider.initialize();
- * const graphDB = provider.getGraphDB();
- * const result = await graphDB.query('?[x] <- [[1], [2], [3]]');
+ * const database = provider.getDatabase();
+ * const result = await database.query('?[x] <- [[1], [2], [3]]');
  * ```
  */
-export class HttpGraphDBProvider implements GraphDBProvider {
+export class HttpDatabaseProvider implements DatabaseProvider {
   private initialized = false;
 
   /**
-   * Get the GraphDB instance for HTTP bridge.
-   * Returns the singleton httpGraphDB that communicates via HTTP.
+   * Get the Database instance for HTTP bridge.
+   * Returns the singleton httpDatabase that communicates via HTTP.
    */
-  getGraphDB(): GraphDB {
-    return httpGraphDB;
+  getDatabase(): Database {
+    return httpDatabase;
   }
 
   /**
@@ -132,7 +132,7 @@ export class HttpGraphDBProvider implements GraphDBProvider {
    */
   async initialize(): Promise<void> {
     // Optionally verify bridge is running:
-    // await httpGraphDB.query('?[x] <- [[1]]');
+    // await httpDatabase.query('?[x] <- [[1]]');
     this.initialized = true;
   }
 

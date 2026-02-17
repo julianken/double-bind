@@ -12,9 +12,9 @@ export {
 } from './ServiceProvider.js';
 
 export {
-  TauriGraphDBProvider,
+  TauriDatabaseProvider,
   isInTauri,
-  type GraphDBProvider,
-} from './TauriGraphDBProvider.js';
+  type DatabaseProvider,
+} from './TauriDatabaseProvider.js';
 
-export { HttpGraphDBProvider } from './HttpGraphDBProvider.js';
+export { HttpDatabaseProvider } from './HttpDatabaseProvider.js';

@@ -2,14 +2,14 @@
  * Unit tests for PageService
  *
  * These tests verify correct orchestration of repositories and error handling.
- * Uses MockGraphDB to verify:
+ * Uses MockDatabase to verify:
  * - Correct delegation to repositories
  * - Cascading delete behavior
  * - Error wrapping with context
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { MockGraphDB } from '@double-bind/test-utils';
+import { MockDatabase } from '@double-bind/test-utils';
 import { DoubleBindError, ErrorCode } from '@double-bind/types';
 import { PageService } from '../../../src/services/page-service.js';
 import { PageRepository } from '../../../src/repositories/page-repository.js';
@@ -17,14 +17,14 @@ import { BlockRepository } from '../../../src/repositories/block-repository.js';
 import { LinkRepository } from '../../../src/repositories/link-repository.js';
 
 describe('PageService', () => {
-  let db: MockGraphDB;
+  let db: MockDatabase;
   let pageRepo: PageRepository;
   let blockRepo: BlockRepository;
   let linkRepo: LinkRepository;
   let service: PageService;
 
   beforeEach(() => {
-    db = new MockGraphDB();
+    db = new MockDatabase();
     pageRepo = new PageRepository(db);
     blockRepo = new BlockRepository(db);
     linkRepo = new LinkRepository(db);
@@ -39,7 +39,7 @@ describe('PageService', () => {
       // First, attempt to create - this will generate a ULID
       const createPromise = service.createPage('My New Page');
 
-      // Since MockGraphDB doesn't persist, the getById after create will fail
+      // Since MockDatabase doesn't persist, the getById after create will fail
       // We need a different approach - mock the repository methods
       await expect(createPromise).rejects.toThrow(DoubleBindError);
 
@@ -111,7 +111,7 @@ describe('PageService', () => {
       const blockId = '01ARZ3NDEKTSV4RRFFQ69G5FAW';
       const now = Date.now();
 
-      // Mock repository methods directly since MockGraphDB doesn't handle multi-relation joins
+      // Mock repository methods directly since MockDatabase doesn't handle multi-relation joins
       const getByIdSpy = vi.spyOn(pageRepo, 'getById');
       const getByPageSpy = vi.spyOn(blockRepo, 'getByPage');
 

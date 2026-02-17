@@ -499,8 +499,3 @@ export class MockDatabase implements Database {
   }
 }
 
-/**
- * @deprecated Use MockDatabase instead
- * Backwards compatibility alias - exports both the class (value) and type
- */
-export { MockDatabase as MockGraphDB };

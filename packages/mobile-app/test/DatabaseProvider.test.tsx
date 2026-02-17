@@ -4,7 +4,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor, act, renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { MockGraphDB } from '@double-bind/test-utils';
+import { MockDatabase } from '@double-bind/test-utils';
 import { DatabaseProvider, useDatabase, useDatabaseReady } from '../src/index';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -25,21 +25,21 @@ vi.mock('react-native', () => ({
 }));
 
 // Track mock db instances
-let mockDbInstance: MockGraphDB | null = null;
+let mockDbInstance: MockDatabase | null = null;
 let createCallCount = 0;
 let createShouldFail = false;
 let createFailError = 'Database initialization failed';
 
-// Mock MobileGraphDB
+// Mock MobileDatabase
 vi.mock('@double-bind/mobile', () => ({
-  MobileGraphDB: {
+  MobileDatabase: {
     create: vi.fn(async (_path: string) => {
       createCallCount++;
       if (createShouldFail) {
         throw new Error(createFailError);
       }
-      mockDbInstance = new MockGraphDB();
-      // Add mobile-specific methods that MobileGraphDB has
+      mockDbInstance = new MockDatabase();
+      // Add mobile-specific methods that MobileDatabase has
       (mockDbInstance as unknown as Record<string, unknown>).suspend = vi.fn(async () => {});
       (mockDbInstance as unknown as Record<string, unknown>).resume = vi.fn(async () => {});
       return mockDbInstance;
@@ -122,8 +122,8 @@ describe('DatabaseProvider', () => {
       });
     });
 
-    it('should call MobileGraphDB.create with provided path', async () => {
-      const { MobileGraphDB } = await import('@double-bind/mobile');
+    it('should call MobileDatabase.create with provided path', async () => {
+      const { MobileDatabase } = await import('@double-bind/mobile');
 
       render(
         <DatabaseProvider databasePath="/custom/path/db.sqlite">
@@ -135,7 +135,7 @@ describe('DatabaseProvider', () => {
         expect(screen.getByTestId('status').textContent).toBe('ready');
       });
 
-      expect(MobileGraphDB.create).toHaveBeenCalledWith('/custom/path/db.sqlite');
+      expect(MobileDatabase.create).toHaveBeenCalledWith('/custom/path/db.sqlite');
     });
 
     it('should call onReady callback when initialization succeeds', async () => {

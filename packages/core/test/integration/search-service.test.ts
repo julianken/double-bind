@@ -2,12 +2,12 @@
 // Tests full-text search, ranking, phrase queries, and special characters
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import type { GraphDB } from '@double-bind/types';
+import type { Database } from '@double-bind/types';
 import { SearchService } from '../../src/services/search-service.js';
 import { createTestDatabase } from './setup.js';
 
 describe('SearchService Integration Tests', () => {
-  let db: GraphDB;
+  let db: Database;
   let service: SearchService;
 
   beforeEach(async () => {

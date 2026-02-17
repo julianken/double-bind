@@ -1,6 +1,6 @@
 // Integration test helpers for seeding realistic test data (SQLite)
 
-import type { GraphDB } from '@double-bind/types';
+import type { Database } from '@double-bind/types';
 
 /**
  * Test fixtures returned by seedTestData().
@@ -50,10 +50,10 @@ export interface TestFixtures {
  * - Tags on pages and blocks
  * - Properties on pages
  *
- * @param db - GraphDB instance to seed
+ * @param db - Database instance to seed
  * @returns TestFixtures with all created entity IDs and metadata
  */
-export async function seedTestData(db: GraphDB): Promise<TestFixtures> {
+export async function seedTestData(db: Database): Promise<TestFixtures> {
   const now = Date.now();
   const fixtures: TestFixtures = {
     pages: [],
@@ -339,8 +339,8 @@ export async function seedTestData(db: GraphDB): Promise<TestFixtures> {
  * collected when no references remain. This function calls close() to
  * explicitly release resources.
  *
- * @param db - GraphDB instance to clean up
+ * @param db - Database instance to clean up
  */
-export async function cleanupDatabase(db: GraphDB): Promise<void> {
+export async function cleanupDatabase(db: Database): Promise<void> {
   await db.close();
 }

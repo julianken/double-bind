@@ -1,7 +1,7 @@
 /**
- * TauriGraphDBProvider - GraphDB provider implementation for Tauri desktop app.
+ * TauriDatabaseProvider - Database provider implementation for Tauri desktop app.
  *
- * Implements the GraphDBProvider interface using Tauri IPC to communicate
+ * Implements the DatabaseProvider interface using Tauri IPC to communicate
  * with the Rust shim. This keeps all Tauri-specific code in the desktop package.
  *
  * @module
@@ -9,7 +9,7 @@
 
 import { invoke } from '@tauri-apps/api/core';
 import type {
-  GraphDB,
+  Database,
   QueryResult,
   MutationResult,
   TransactionContext,
@@ -17,21 +17,21 @@ import type {
 import { DoubleBindError, ErrorCode } from '@double-bind/types';
 
 /**
- * GraphDBProvider interface - abstraction for creating GraphDB instances.
+ * DatabaseProvider interface - abstraction for creating Database instances.
  *
  * This interface allows different platforms (desktop, mobile, web) to provide
- * their own GraphDB implementations while keeping the core business logic
+ * their own Database implementations while keeping the core business logic
  * platform-agnostic.
  *
  * NOTE: This is a minimal local definition. It will be replaced by the
  * interface from @double-bind/core when DBB-363 merges.
  */
-export interface GraphDBProvider {
+export interface DatabaseProvider {
   /**
-   * Get the GraphDB instance for this provider.
+   * Get the Database instance for this provider.
    * The instance may be lazily initialized on first call.
    */
-  getGraphDB(): GraphDB;
+  getDatabase(): Database;
 
   /**
    * Initialize the provider. Called once at app startup.
@@ -79,10 +79,10 @@ async function invokeWithErrorMapping<T>(cmd: string, args: Record<string, unkno
 }
 
 /**
- * GraphDB implementation for Tauri desktop app.
+ * Database implementation for Tauri desktop app.
  * All methods delegate to Rust shim commands via Tauri IPC.
  */
-const tauriGraphDB: GraphDB = {
+const tauriDatabase: Database = {
   /**
    * Execute a read-only Datalog query via Tauri IPC.
    */
@@ -161,29 +161,29 @@ const tauriGraphDB: GraphDB = {
 };
 
 /**
- * TauriGraphDBProvider - Production GraphDB provider for Tauri desktop app.
+ * TauriDatabaseProvider - Production Database provider for Tauri desktop app.
  *
- * This provider wraps the Tauri IPC-based GraphDB implementation and provides
- * it through the GraphDBProvider interface. The Rust backend is always available
+ * This provider wraps the Tauri IPC-based Database implementation and provides
+ * it through the DatabaseProvider interface. The Rust backend is always available
  * once the Tauri app starts, so initialization is essentially a no-op.
  *
  * @example
  * ```typescript
- * const provider = new TauriGraphDBProvider();
+ * const provider = new TauriDatabaseProvider();
  * await provider.initialize();
- * const graphDB = provider.getGraphDB();
- * const result = await graphDB.query('?[x] <- [[1], [2], [3]]');
+ * const database = provider.getDatabase();
+ * const result = await database.query('?[x] <- [[1], [2], [3]]');
  * ```
  */
-export class TauriGraphDBProvider implements GraphDBProvider {
+export class TauriDatabaseProvider implements DatabaseProvider {
   private initialized = false;
 
   /**
-   * Get the GraphDB instance for Tauri.
-   * Returns the singleton tauriGraphDB that communicates via IPC.
+   * Get the Database instance for Tauri.
+   * Returns the singleton tauriDatabase that communicates via IPC.
    */
-  getGraphDB(): GraphDB {
-    return tauriGraphDB;
+  getDatabase(): Database {
+    return tauriDatabase;
   }
 
   /**
@@ -194,7 +194,7 @@ export class TauriGraphDBProvider implements GraphDBProvider {
   async initialize(): Promise<void> {
     // Tauri backend is always available once the app starts.
     // We could optionally perform a health check here:
-    // await tauriGraphDB.query('?[x] <- [[1]]');
+    // await tauriDatabase.query('?[x] <- [[1]]');
     this.initialized = true;
   }
 

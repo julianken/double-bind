@@ -7,7 +7,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react-nativ
 import type { ReactNode } from 'react';
 import { GraphScreen } from '../../../src/screens/GraphScreen';
 import { DatabaseContext, type DatabaseContextValue } from '../../../src/providers/DatabaseProvider';
-import type { MobileGraphDB } from '@double-bind/mobile';
+import type { MobileDatabase } from '@double-bind/mobile';
 
 // Mock navigation
 const mockNavigate = vi.fn();
@@ -19,9 +19,9 @@ const mockNavigation = {
 
 // Mock database
 const mockQuery = vi.fn();
-const mockDb: MobileGraphDB = {
+const mockDb: MobileDatabase = {
   query: mockQuery,
-} as unknown as MobileGraphDB;
+} as unknown as MobileDatabase;
 
 // Mock route
 const mockRoute = {

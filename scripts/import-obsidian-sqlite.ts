@@ -175,12 +175,26 @@ async function main() {
   // Import pages and their blocks via the service layer.
   // service:createPage creates the page (with an initial empty block).
   // service:createBlock creates each block and auto-resolves [[wiki links]].
+  // A page may already exist as a stub (auto-created by a wiki link in an earlier block),
+  // so we fall back to querying for the existing page.
   let totalBlocks = 0;
   for (let i = 0; i < pages.length; i++) {
     const page = pages[i];
-    const { pageId } = await invoke<{ pageId: string }>('service:createPage', {
-      title: page.title,
-    });
+    let pageId: string;
+
+    try {
+      const result = await invoke<{ pageId: string }>('service:createPage', {
+        title: page.title,
+      });
+      pageId = result.pageId;
+    } catch {
+      // Page already exists (stub created by a wiki link) — look it up
+      const result = await invoke<{ headers: string[]; rows: string[][] }>('query', {
+        script: 'SELECT page_id FROM pages WHERE title = $title AND is_deleted = 0',
+        params: { title: page.title },
+      });
+      pageId = result.rows[0][0];
+    }
 
     const blockCount = await createBlocksRecursive(pageId, null, page.blocks);
     totalBlocks += blockCount;

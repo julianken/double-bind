@@ -2,12 +2,12 @@
  * Unit tests for BlockRepository
  *
  * These tests verify correct Datalog query construction and parameter passing
- * using MockGraphDB. They do NOT execute real Datalog queries - that's for
+ * using MockDatabase. They do NOT execute real Datalog queries - that's for
  * Layer 2 integration tests.
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { MockGraphDB } from '@double-bind/test-utils';
+import { MockDatabase } from '@double-bind/test-utils';
 import { DoubleBindError, ErrorCode } from '@double-bind/types';
 import { BlockRepository, computeParentKey } from '../../src/repositories/block-repository.js';
 
@@ -43,11 +43,11 @@ function createBlockRow(overrides: Partial<Record<string, unknown>> = {}): unkno
 }
 
 describe('BlockRepository', () => {
-  let db: MockGraphDB;
+  let db: MockDatabase;
   let repo: BlockRepository;
 
   beforeEach(() => {
-    db = new MockGraphDB();
+    db = new MockDatabase();
     repo = new BlockRepository(db);
   });
 
@@ -153,7 +153,7 @@ describe('BlockRepository', () => {
 
     it('should return empty array when no blocks exist', async () => {
       const pageId = '01ARZ3NDEKTSV4RRFFQ69G5PAG';
-      // Note: MockGraphDB doesn't evaluate joins, it returns first relation matched
+      // Note: MockDatabase doesn't evaluate joins, it returns first relation matched
       // Seed blocks_by_page with empty array to simulate no blocks
       db.seed('blocks_by_page', []);
 
@@ -162,7 +162,7 @@ describe('BlockRepository', () => {
       expect(result).toHaveLength(0);
     });
 
-    // Note: MockGraphDB cannot properly test join semantics.
+    // Note: MockDatabase cannot properly test join semantics.
     // It returns rows from the first matched relation (*blocks_by_page),
     // not the joined result. Join behavior is tested in Layer 2 integration tests.
   });
@@ -596,7 +596,7 @@ describe('BlockRepository', () => {
   });
 
   describe('parseBlockRow type validation', () => {
-    // Note: These tests use getById() with matching ID since MockGraphDB
+    // Note: These tests use getById() with matching ID since MockDatabase
     // filters on parameterized columns. For rows to be returned and validated,
     // the block_id must match the query parameter.
 
@@ -606,9 +606,9 @@ describe('BlockRepository', () => {
         [123, 'page', null, 'content', 'text', 'a', false, false, 1700000000, 1700000000],
       ]);
 
-      // MockGraphDB filters by block_id == $id - numeric 123 won't match string 'block-1'
+      // MockDatabase filters by block_id == $id - numeric 123 won't match string 'block-1'
       // Instead, test parseBlockRow directly via getById with valid ID but seed invalid row
-      // This won't match because MockGraphDB compares strictly
+      // This won't match because MockDatabase compares strictly
       const result = await repo.getById('123');
       expect(result).toBeNull(); // Won't match due to type mismatch in mock
     });
@@ -976,7 +976,7 @@ describe('BlockRepository', () => {
 
     it('should construct correct fetch query with parent_key parameter', async () => {
       // The fetch query joins blocks_by_parent with blocks
-      // MockGraphDB can't handle this join, but we can verify the query structure
+      // MockDatabase can't handle this join, but we can verify the query structure
 
       const newOrders = new Map<string, string>([['block1', 'a0']]);
 

@@ -7,7 +7,7 @@
  */
 
 export type {
-  GraphDBProvider,
-  GraphDBProviderConfig,
-  GraphDBProviderInitResult,
-} from './graph-db-provider.js';
+  DatabaseProvider,
+  DatabaseProviderConfig,
+  DatabaseProviderInitResult,
+} from './database-provider.js';
