@@ -1,7 +1,7 @@
 // Integration tests for migrations with real CozoDB
 //
-// NOTE: These tests use MockGraphDB as a placeholder for real CozoDB integration.
-// To run against real CozoDB, install cozo-node and replace MockGraphDB with:
+// NOTE: These tests use MockDatabase as a placeholder for real CozoDB integration.
+// To run against real CozoDB, install cozo-node and replace MockDatabase with:
 //
 // import { CozoDb } from 'cozo-node';
 // const db = new CozoDb('mem');
@@ -16,7 +16,7 @@
 // - Data operations work after migration
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { MockGraphDB } from '@double-bind/test-utils';
+import { MockDatabase } from '@double-bind/test-utils';
 import { migration as initialSchema } from '../../src/migrations/001-initial-schema.js';
 import {
   runMigrations,
@@ -24,13 +24,13 @@ import {
   getAppliedMigrations,
   getSchemaVersion,
 } from '../../src/runner.js';
-import type { GraphDB } from '@double-bind/types';
+import type { Database } from '@double-bind/types';
 
 describe('Migration Integration Tests', () => {
-  let db: GraphDB;
+  let db: Database;
 
   beforeEach(() => {
-    db = new MockGraphDB();
+    db = new MockDatabase();
   });
 
   describe('001-initial-schema migration', () => {
@@ -41,7 +41,7 @@ describe('Migration Integration Tests', () => {
     it('records the migration script execution', async () => {
       await runSingleMigration(db, initialSchema);
 
-      const mockDb = db as MockGraphDB;
+      const mockDb = db as MockDatabase;
       expect(mockDb.mutations).toHaveLength(1);
       expect(mockDb.mutations[0]!.script).toBe(initialSchema.up);
     });
@@ -97,7 +97,7 @@ describe('Migration Integration Tests', () => {
     });
 
     it('records migration in applied migrations list', async () => {
-      const mockDb = db as MockGraphDB;
+      const mockDb = db as MockDatabase;
       await runMigrations(db);
 
       // Check that mutation to update applied_migrations was called
@@ -108,7 +108,7 @@ describe('Migration Integration Tests', () => {
     });
 
     it('skips already applied migrations on second run', async () => {
-      const mockDb = db as MockGraphDB;
+      const mockDb = db as MockDatabase;
 
       // Seed that all migrations are already applied
       mockDb.seed('metadata', [
@@ -171,7 +171,7 @@ describe('Migration Integration Tests', () => {
     it('records migration name in applied migrations metadata', async () => {
       await runMigrations(db);
 
-      const mockDb = db as MockGraphDB;
+      const mockDb = db as MockDatabase;
       const metadataUpdates = mockDb.mutations.filter(
         (m) => m.params && m.params.key === 'applied_migrations'
       );
@@ -183,7 +183,7 @@ describe('Migration Integration Tests', () => {
     });
 
     it('increments schema version after migration', async () => {
-      const mockDb = db as MockGraphDB;
+      const mockDb = db as MockDatabase;
 
       // Seed with version 0
       mockDb.seed('metadata', [['schema_version', '0']]);
@@ -197,7 +197,7 @@ describe('Migration Integration Tests', () => {
 
   describe('Error handling', () => {
     it('continues tracking migrations even if later migrations fail', async () => {
-      const mockDb = db as MockGraphDB;
+      const mockDb = db as MockDatabase;
 
       // Run successful migration
       await runSingleMigration(db, initialSchema);
@@ -207,7 +207,7 @@ describe('Migration Integration Tests', () => {
     });
 
     it('migration runner reports errors with migration name', async () => {
-      const failingDb = new MockGraphDB();
+      const failingDb = new MockDatabase();
       let callCount = 0;
       const originalMutate = failingDb.mutate.bind(failingDb);
 
@@ -227,7 +227,7 @@ describe('Migration Integration Tests', () => {
     });
 
     it('stops migration execution on first error', async () => {
-      const failingDb = new MockGraphDB();
+      const failingDb = new MockDatabase();
       failingDb.mutate = async () => {
         throw new Error('Migration failed');
       };

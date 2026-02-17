@@ -4,7 +4,7 @@
  * Features:
  * - Mode toggle between Visual Builder and Raw Datalog
  * - Split pane layout (editor on left, results on right)
- * - Execute button that runs queries through GraphDB
+ * - Execute button that runs queries through Database
  * - Save/Load functionality for queries
  * - Query history panel
  *
@@ -418,7 +418,7 @@ export function QueryViewScreen(_props: QueryViewScreenProps): React.ReactElemen
 
   // Handle query execution
   const executeQuery = useCallback(async () => {
-    if (!services?.graphDB || !currentQueryScript.trim()) {
+    if (!services?.database || !currentQueryScript.trim()) {
       return;
     }
 
@@ -429,7 +429,7 @@ export function QueryViewScreen(_props: QueryViewScreenProps): React.ReactElemen
     const startTime = performance.now();
 
     try {
-      const result = await services.graphDB.query(currentQueryScript);
+      const result = await services.database.query(currentQueryScript);
       const duration = performance.now() - startTime;
       setExecutionTime(duration);
       setResults(result);
@@ -453,7 +453,7 @@ export function QueryViewScreen(_props: QueryViewScreenProps): React.ReactElemen
     } finally {
       setIsExecuting(false);
     }
-  }, [services?.graphDB, currentQueryScript, addQueryToHistory]);
+  }, [services?.database, currentQueryScript, addQueryToHistory]);
 
   // Handle visual builder changes
   const handleVisualBuilderChange = useCallback(

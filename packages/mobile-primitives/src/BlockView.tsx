@@ -10,9 +10,9 @@
  */
 
 import * as React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import type { ViewStyle, TextStyle } from 'react-native';
-import { Pressable, Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import type { Block, BlockId } from '@double-bind/types';
 import { RichText } from './RichText';
 import { BlockReference } from './BlockReference';
@@ -124,7 +124,8 @@ interface RenderContentOptions {
  * Splits text by ((block-id)) patterns, renders BlockReference components,
  * and passes remaining text through RichText for wiki link parsing.
  */
-function renderContentWithBlockRefsAndWikiLinks({
+// TODO: Re-enable rich content rendering once FlatList bug is resolved
+function _renderContentWithBlockRefsAndWikiLinks({
   content,
   textStyle,
   fetchBlock,
@@ -259,7 +260,22 @@ export function BlockView({
   expandedBlockRefs,
   testID,
 }: BlockViewProps): React.ReactElement {
+  // Ref-based coordination to prevent block tap when links are pressed
+  const linkPressedRef = React.useRef(false);
+
+  const handleWikiLinkPress = React.useCallback(
+    (pageTitle: string) => {
+      linkPressedRef.current = true;
+      onWikiLinkPress?.(pageTitle);
+    },
+    [onWikiLinkPress]
+  );
+
   const handlePress = React.useCallback(() => {
+    if (linkPressedRef.current) {
+      linkPressedRef.current = false;
+      return;
+    }
     onPress?.(block.blockId);
   }, [block.blockId, onPress]);
 
@@ -272,15 +288,26 @@ export function BlockView({
   }, [block.blockId, onToggleCollapse]);
 
   // Set up gesture handlers
-  const tapGesture = Gesture.Tap().numberOfTaps(1).maxDuration(250).onEnd(handlePress);
+  // Use runOnJS(true) since callbacks are JS functions, not Reanimated worklets
+
+  // Native gesture for Text.onPress (wiki links)
+  const nativeTextGesture = Gesture.Native();
+
+  const tapGesture = Gesture.Tap()
+    .numberOfTaps(1)
+    .maxDuration(250)
+    .runOnJS(true)
+    .onEnd(handlePress);
 
   const longPressGesture = Gesture.LongPress()
     .minDuration(500)
     .maxDistance(10)
+    .runOnJS(true)
     .onEnd(handleLongPress);
 
-  // Ensure single tap waits for long press check
+  // Ensure single tap waits for both long press and native text gesture
   tapGesture.requireExternalGestureToFail(longPressGesture);
+  tapGesture.requireExternalGestureToFail(nativeTextGesture);
 
   const composedGesture = Gesture.Exclusive(longPressGesture, tapGesture);
 
@@ -295,59 +322,17 @@ export function BlockView({
     ...(isFocused ? [styles.containerFocused] : []),
   ];
 
-  // Render content based on block type
+  // Render content with wiki links and block references
   const renderContent = () => {
-    // Common options for content rendering
-    const baseOptions = {
-      fetchBlock,
-      onBlockRefPress,
-      onBlockRefLongPress,
-      expandedBlockRefs,
-      checkPageExists,
-      onWikiLinkPress,
-      testID,
-    };
-
-    switch (block.contentType) {
-      case 'heading':
-        return renderContentWithBlockRefsAndWikiLinks({
-          content: block.content,
-          textStyle: styles.headingText,
-          ...baseOptions,
-        });
-      case 'code':
-        // Code blocks don't parse wiki links or block refs
-        return (
-          <View style={styles.codeContainer}>
-            <Text style={styles.codeText}>{block.content}</Text>
-          </View>
-        );
-      case 'todo':
-        return (
-          <View style={styles.todoContainer}>
-            <View style={styles.todoCheckbox} />
-            {renderContentWithBlockRefsAndWikiLinks({
-              content: block.content,
-              textStyle: styles.contentText,
-              ...baseOptions,
-            })}
-          </View>
-        );
-      case 'query':
-        // Query blocks don't parse wiki links or block refs
-        return (
-          <View style={styles.queryContainer}>
-            <Text style={styles.queryLabel}>Query</Text>
-            <Text style={styles.codeText}>{block.content}</Text>
-          </View>
-        );
-      default:
-        return renderContentWithBlockRefsAndWikiLinks({
-          content: block.content,
-          textStyle: styles.contentText,
-          ...baseOptions,
-        });
-    }
+    return (
+      <RichText
+        content={String(block.content)}
+        checkPageExists={checkPageExists ?? (() => false)}
+        onWikiLinkPress={handleWikiLinkPress}
+        textStyle={styles.contentText}
+        testID={testID ? `${testID}-richtext` : undefined}
+      />
+    );
   };
 
   return (
@@ -356,7 +341,7 @@ export function BlockView({
         style={containerStyle}
         testID={testID}
         accessible={true}
-        accessibilityLabel={`Block: ${block.content.slice(0, 50)}${block.content.length > 50 ? '...' : ''}`}
+        accessibilityLabel={`Block: ${String(block.content).slice(0, 50)}${String(block.content).length > 50 ? '...' : ''}`}
         accessibilityHint="Double tap to edit. Long press for more options."
         accessibilityRole="button"
         accessibilityState={{
@@ -365,7 +350,7 @@ export function BlockView({
         }}
       >
         {/* Bullet/Collapse Toggle */}
-        <Pressable
+        <TouchableOpacity
           style={styles.bulletContainer}
           onPress={handleToggleCollapse}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -385,10 +370,12 @@ export function BlockView({
           ) : (
             <View style={styles.bullet} />
           )}
-        </Pressable>
+        </TouchableOpacity>
 
-        {/* Block Content */}
-        <View style={styles.contentContainer}>{renderContent()}</View>
+        {/* Block Content - wrapped in native gesture for Text.onPress support */}
+        <GestureDetector gesture={nativeTextGesture}>
+          <View style={styles.contentContainer}>{renderContent()}</View>
+        </GestureDetector>
       </View>
     </GestureDetector>
   );

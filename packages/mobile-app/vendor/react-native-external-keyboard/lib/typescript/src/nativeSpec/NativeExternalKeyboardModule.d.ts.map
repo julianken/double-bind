@@ -1,0 +1,1 @@
+{"version":3,"file":"NativeExternalKeyboardModule.d.ts","sourceRoot":"","sources":["../../../../src/nativeSpec/NativeExternalKeyboardModule.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,WAAW,EAAE,MAAM,cAAc,CAAC;AAGhD,MAAM,WAAW,IAAK,SAAQ,WAAW;IACvC,eAAe,EAAE,MAAM,OAAO,CAAC,OAAO,CAAC,CAAC;CACzC;;AAED,wBAAuE"}

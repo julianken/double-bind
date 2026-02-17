@@ -1,7 +1,7 @@
 /**
  * Zod validation schemas for TagRepository
  *
- * Validates CozoDB query results at the boundary between raw rows and domain types.
+ * Validates SQLite query results at the boundary between raw rows and domain types.
  * Throws DoubleBindError(DB_QUERY_FAILED) with Zod error as cause on validation failure.
  */
 
@@ -10,7 +10,7 @@ import { DoubleBindError, ErrorCode } from '@double-bind/types';
 import type { Tag } from '@double-bind/types';
 
 /**
- * Schema for validating raw CozoDB row tuple from tags relation.
+ * Schema for validating raw SQLite row tuple from block_tags/page_tags tables.
  * Order matches: entity_id, tag, created_at
  */
 export const TagRowSchema = z.tuple([
@@ -32,9 +32,9 @@ export const TagSchema = z.object({
 });
 
 /**
- * Parses a raw CozoDB row into a Tag domain object.
+ * Parses a raw SQLite row into a Tag domain object.
  *
- * @param row - Raw row from CozoDB query result
+ * @param row - Raw row from SQLite query result
  * @returns Tag domain object
  * @throws DoubleBindError with DB_QUERY_FAILED code if validation fails
  */

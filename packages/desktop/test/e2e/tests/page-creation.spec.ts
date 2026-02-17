@@ -59,7 +59,7 @@ async function clickOnBlock(page: import('@playwright/test').Page, index: number
     await staticContent.click();
   } else {
     // Block may already have an editor (empty block) - click on the block content area
-    const blockContent = blockNode.locator('.block-content');
+    const blockContent = blockNode.locator('[data-testid="block-content"]');
     await blockContent.click();
   }
 }
@@ -178,11 +178,10 @@ test.describe('Page Creation Flow', () => {
     const pageList = page.getByTestId('page-list');
     await expect(pageList).toBeVisible({ timeout: 5000 });
 
-    // Find the page item
-    const pageItem = pageList
-      .locator('.page-list-item__title')
-      .filter({ hasText: 'Sidebar Test Page' });
-    await expect(pageItem).toBeVisible();
+    // Find the page item by its data-testid (contains the page ID)
+    const pageItem = page.getByTestId(`page-list-item-${pageId}`);
+    await expect(pageItem).toBeVisible({ timeout: 5000 });
+    await expect(pageItem).toContainText('Sidebar Test Page');
   });
 
   test('can click on a block to activate the editor', async ({ page }) => {

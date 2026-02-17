@@ -1,7 +1,6 @@
 plugins {
     id("com.android.library")
     id("org.jetbrains.kotlin.android")
-    id("org.jetbrains.kotlin.plugin.serialization")
 }
 
 android {
@@ -43,15 +42,12 @@ android {
 }
 
 dependencies {
-    // CozoDB Android binding
-    implementation("io.github.cozodb:cozo_android:0.7.6")
+    // React Native
+    implementation("com.facebook.react:react-native:+")
 
-    // Kotlin Coroutines
+    // Kotlin Coroutines (kept for async operations)
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
-
-    // Kotlin Serialization
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
 
     // Unit Testing
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.0")

@@ -1,15 +1,19 @@
 /**
  * SearchService - Combines full-text search across pages and blocks.
  *
- * This service provides unified search functionality using CozoDB's built-in
- * FTS indexes on both `pages:fts` and `blocks:fts`. Results are merged into
+ * This service provides unified search functionality using SQLite FTS5
+ * indexes on both `pages_fts` and `blocks_fts`. Results are merged into
  * a single array with relevance scores for ranking.
+ *
+ * FTS5 rank values are negative (closer to 0 = better match).
+ * We negate the rank to produce positive scores for the domain layer:
+ * score = -rank (higher is better).
  *
  * All errors are wrapped with context before re-throwing to provide
  * better debugging information at higher layers.
  */
 
-import type { GraphDB, SearchResult, SearchOptions, PageId, BlockId } from '@double-bind/types';
+import type { Database, SearchResult, SearchOptions, PageId, BlockId } from '@double-bind/types';
 import { DoubleBindError, ErrorCode } from '@double-bind/types';
 import { z } from 'zod';
 
@@ -24,7 +28,7 @@ import { z } from 'zod';
 const PageFtsResultSchema = z.tuple([
   z.string(), // page_id
   z.string(), // title
-  z.number(), // score
+  z.number(), // score (negated rank, positive)
 ]);
 
 /**
@@ -36,7 +40,7 @@ const BlockFtsResultSchema = z.tuple([
   z.string(), // content
   z.string(), // page_id
   z.string(), // page_title
-  z.number(), // score
+  z.number(), // score (negated rank, positive)
 ]);
 
 // ============================================================================
@@ -53,16 +57,16 @@ const DEFAULT_MIN_SCORE = 0;
 /**
  * Service for unified full-text search across pages and blocks.
  *
- * Uses CozoDB's FTS indexes to search both page titles and block content,
+ * Uses SQLite FTS5 indexes to search both page titles and block content,
  * merging results into a single ranked list.
  */
 export class SearchService {
-  constructor(private readonly db: GraphDB) {}
+  constructor(private readonly db: Database) {}
 
   /**
    * Search across both page titles and block content.
    *
-   * Executes FTS queries in parallel against `pages:fts` and `blocks:fts`,
+   * Executes FTS5 queries in parallel against `pages_fts` and `blocks_fts`,
    * then merges and sorts results by relevance score.
    *
    * @param query - The search query string
@@ -76,10 +80,16 @@ export class SearchService {
       const minScore = options?.minScore ?? DEFAULT_MIN_SCORE;
       const includeTypes = options?.includeTypes ?? ['page', 'block'];
 
+      // Sanitize query for FTS5 MATCH syntax
+      const sanitizedQuery = this.sanitizeFtsQuery(query);
+      if (!sanitizedQuery) {
+        return [];
+      }
+
       // Execute searches in parallel
       const [pageResults, blockResults] = await Promise.all([
-        includeTypes.includes('page') ? this.searchPages(query, limit) : [],
-        includeTypes.includes('block') ? this.searchBlocks(query, limit) : [],
+        includeTypes.includes('page') ? this.searchPages(sanitizedQuery, limit) : [],
+        includeTypes.includes('block') ? this.searchBlocks(sanitizedQuery, limit) : [],
       ]);
 
       // Merge results
@@ -105,28 +115,24 @@ export class SearchService {
   }
 
   /**
-   * Search page titles using FTS.
+   * Search page titles using FTS5.
    *
-   * @param query - The search query string
+   * @param query - The sanitized FTS5 query string
    * @param limit - Maximum number of results
    * @returns Array of page search results
    */
   private async searchPages(query: string, limit: number): Promise<SearchResult[]> {
-    // FTS query for page titles
-    // Note: We use explicit equality for filtering: `is_deleted == $is_deleted`
     const script = `
-?[page_id, title, score] :=
-    ~pages:fts{ page_id, title | query: $query, k: $limit, bind_score: score },
-    *pages{ page_id, is_deleted },
-    is_deleted == false
-:order -score
-`.trim();
+      SELECT pf.page_id, p.title, -pf.rank AS score
+      FROM pages_fts pf
+      JOIN pages p ON pf.page_id = p.page_id
+      WHERE pages_fts MATCH $query
+        AND p.is_deleted = 0
+      ORDER BY pf.rank
+      LIMIT $limit
+    `;
 
-    const result = await this.db.query(script, {
-      query,
-      limit,
-      is_deleted: false,
-    });
+    const result = await this.db.query(script, { query, limit });
 
     return result.rows.map((row) => {
       const parsed = PageFtsResultSchema.safeParse(row);
@@ -143,29 +149,26 @@ export class SearchService {
   }
 
   /**
-   * Search block content using FTS.
+   * Search block content using FTS5.
    *
-   * @param query - The search query string
+   * @param query - The sanitized FTS5 query string
    * @param limit - Maximum number of results
    * @returns Array of block search results
    */
   private async searchBlocks(query: string, limit: number): Promise<SearchResult[]> {
-    // FTS query for block content, joining with pages to get page title
-    // Note: We use explicit equality for filtering
     const script = `
-?[block_id, content, page_id, page_title, score] :=
-    ~blocks:fts{ block_id, content | query: $query, k: $limit, bind_score: score },
-    *blocks{ block_id, page_id, is_deleted: block_deleted },
-    block_deleted == false,
-    *pages{ page_id, title: page_title, is_deleted: page_deleted },
-    page_deleted == false
-:order -score
-`.trim();
+      SELECT bf.block_id, b.content, b.page_id, p.title AS page_title, -bf.rank AS score
+      FROM blocks_fts bf
+      JOIN blocks b ON bf.block_id = b.block_id
+      JOIN pages p ON b.page_id = p.page_id
+      WHERE blocks_fts MATCH $query
+        AND b.is_deleted = 0
+        AND p.is_deleted = 0
+      ORDER BY bf.rank
+      LIMIT $limit
+    `;
 
-    const result = await this.db.query(script, {
-      query,
-      limit,
-    });
+    const result = await this.db.query(script, { query, limit });
 
     return result.rows.map((row) => {
       const parsed = BlockFtsResultSchema.safeParse(row);
@@ -179,6 +182,47 @@ export class SearchService {
       const [blockId, content, pageId, pageTitle, score] = parsed.data;
       return this.createBlockResult(blockId, content, pageId, pageTitle, score);
     });
+  }
+
+  /**
+   * Sanitize a user query for FTS5 MATCH syntax.
+   *
+   * FTS5 has special syntax characters that can cause parse errors.
+   * This method escapes or removes problematic characters while
+   * preserving meaningful search terms.
+   *
+   * @param query - Raw user query string
+   * @returns Sanitized query suitable for FTS5 MATCH, or empty string if invalid
+   */
+  private sanitizeFtsQuery(query: string): string {
+    // Trim whitespace
+    const sanitized = query.trim();
+
+    if (!sanitized) {
+      return '';
+    }
+
+    // Remove FTS5 special operators that could cause parse errors
+    // Keep alphanumeric, spaces, and basic punctuation
+    // Quote each term to prevent FTS5 syntax interpretation
+    const terms = sanitized.split(/\s+/).filter((t) => t.length > 0);
+    if (terms.length === 0) {
+      return '';
+    }
+
+    // Escape double quotes within terms and wrap each in double quotes
+    const escapedTerms = terms.map((term) => {
+      // Remove characters that are problematic in FTS5
+      const cleaned = term.replace(/['"(){}[\]*:^~]/g, '');
+      return cleaned || '';
+    }).filter((t) => t.length > 0);
+
+    if (escapedTerms.length === 0) {
+      return '';
+    }
+
+    // Join terms with spaces (FTS5 implicit AND)
+    return escapedTerms.join(' ');
   }
 
   /**

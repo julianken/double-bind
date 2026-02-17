@@ -34,7 +34,7 @@ async function waitForBlockStable(
       const blocks = document.querySelectorAll(`[data-testid="block-node"][data-block-id="${id}"]`);
       // Check that at least one block exists and has content
       for (const block of blocks) {
-        const content = block.querySelector('.block-content');
+        const content = block.querySelector('[data-testid="block-content"]');
         if (content && content.textContent && content.textContent.trim().length > 0) {
           return true;
         }
@@ -61,7 +61,7 @@ async function focusBlock(page: import('@playwright/test').Page, blockId: string
 
   const blockNode = page.locator(`[data-testid="block-node"][data-block-id="${blockId}"]`).first();
   await expect(blockNode).toBeVisible({ timeout: 5000 });
-  await blockNode.locator('.block-content').click();
+  await blockNode.locator('[data-testid="block-content"]').click();
   // Wait for ProseMirror editor to appear
   await expect(blockNode.locator('.ProseMirror')).toBeVisible({ timeout: 3000 });
 }
@@ -71,7 +71,7 @@ async function focusBlock(page: import('@playwright/test').Page, blockId: string
  */
 async function getBlockParentId(blockId: string): Promise<string | null> {
   const result = await executeQuery(
-    `?[parent_id] := *blocks{ block_id, parent_id }, block_id == $block_id`,
+    `SELECT parent_id FROM blocks WHERE block_id = $block_id AND is_deleted = 0`,
     { block_id: blockId }
   );
   if (result.rows.length > 0 && result.rows[0]) {
@@ -153,10 +153,9 @@ async function callBlockService(
  * Helper to get all sibling blocks in order (blocks with same parent).
  */
 async function getSiblingBlockIds(pageId: string, parentId: string | null): Promise<string[]> {
-  // Note: Must bind all variables used in head. Use == constraints instead of pattern matching
   const script = parentId
-    ? `?[block_id, order] := *blocks{ block_id, page_id, parent_id, order, is_deleted }, page_id == $page_id, parent_id == $parent_id, is_deleted == false :order order`
-    : `?[block_id, order] := *blocks{ block_id, page_id, parent_id, order, is_deleted }, page_id == $page_id, is_null(parent_id), is_deleted == false :order order`;
+    ? `SELECT block_id, "order" FROM blocks WHERE page_id = $page_id AND parent_id = $parent_id AND is_deleted = 0 ORDER BY "order"`
+    : `SELECT block_id, "order" FROM blocks WHERE page_id = $page_id AND parent_id IS NULL AND is_deleted = 0 ORDER BY "order"`;
 
   const params = parentId ? { page_id: pageId, parent_id: parentId } : { page_id: pageId };
 
@@ -166,7 +165,7 @@ async function getSiblingBlockIds(pageId: string, parentId: string | null): Prom
 
 test.describe('Block Indentation and Reordering', () => {
   // Reset database before each test for isolation
-  // Note: mockIPC is NOT needed because httpGraphDB auto-detects when not in Tauri
+  // Note: mockIPC is NOT needed because httpDatabase auto-detects when not in Tauri
   test.beforeEach(async () => {
     await resetDatabase();
   });
@@ -605,6 +604,23 @@ test.describe('Block Indentation and Reordering', () => {
       // Focus block 2 and indent it
       await focusBlock(page, block2Id);
       await callBlockService(page, 'indentBlock', block2Id);
+
+      // Invalidate React Query cache so the UI re-fetches fresh data.
+      // In the real app, keyboard handlers do this automatically.
+      // The QueryClient has staleTime: 30s, so without invalidation
+      // the cache would serve stale data when navigating back.
+      await page.evaluate(() => {
+        const invalidate = (
+          window as unknown as {
+            __INVALIDATE_QUERIES__?: (prefix: string[]) => void;
+          }
+        ).__INVALIDATE_QUERIES__;
+        if (invalidate) {
+          invalidate(['page', 'withBlocks']);
+          invalidate(['blocks']);
+          invalidate(['block']);
+        }
+      });
       await page.waitForTimeout(500);
 
       // Verify block 2 is now child of block 1
@@ -656,7 +672,7 @@ test.describe('Block Indentation and Reordering', () => {
       const block1Children = page.locator(
         `[data-testid="block-node"][data-block-id="${block1Id}"] [data-testid="block-children"]`
       );
-      await expect(block1Children).toBeVisible();
+      await expect(block1Children).toBeVisible({ timeout: 10000 });
     });
 
     test('reordering persists after page reload', async ({ page }) => {

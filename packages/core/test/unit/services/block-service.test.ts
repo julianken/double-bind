@@ -17,13 +17,13 @@ import { LinkRepository } from '../../../src/repositories/link-repository.js';
 import { PageRepository } from '../../../src/repositories/page-repository.js';
 import { TagRepository } from '../../../src/repositories/tag-repository.js';
 import { PropertyRepository } from '../../../src/repositories/property-repository.js';
-import { MockGraphDB } from '@double-bind/test-utils';
+import { MockDatabase } from '@double-bind/test-utils';
 import { DoubleBindError, ErrorCode } from '@double-bind/types';
 import type { Block, Page } from '@double-bind/types';
 import { MAX_KEY_LENGTH } from '../../../src/utils/ordering.js';
 
 describe('BlockService', () => {
-  let mockDb: MockGraphDB;
+  let mockDb: MockDatabase;
   let blockRepo: BlockRepository;
   let linkRepo: LinkRepository;
   let pageRepo: PageRepository;
@@ -58,7 +58,7 @@ describe('BlockService', () => {
   };
 
   beforeEach(() => {
-    mockDb = new MockGraphDB();
+    mockDb = new MockDatabase();
     blockRepo = new BlockRepository(mockDb);
     linkRepo = new LinkRepository(mockDb);
     pageRepo = new PageRepository(mockDb);

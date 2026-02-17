@@ -11,14 +11,19 @@
  */
 
 import * as React from 'react';
-import { Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { Text, StyleSheet } from 'react-native';
 import type { TextStyle } from 'react-native';
 
 export interface WikiLinkProps {
   /**
-   * The page title being linked to (without brackets)
+   * The page title being linked to (without brackets) - used for callbacks
    */
   pageTitle: string;
+
+  /**
+   * The text to display (with brackets) - defaults to [[pageTitle]] if not provided
+   */
+  displayText?: string;
 
   /**
    * Whether the linked page exists
@@ -55,6 +60,7 @@ export interface WikiLinkProps {
  */
 export function WikiLink({
   pageTitle,
+  displayText,
   pageExists,
   onPress,
   testID,
@@ -69,30 +75,21 @@ export function WikiLink({
   ];
 
   return (
-    <TouchableOpacity
+    <Text
       onPress={handlePress}
       testID={testID}
       accessibilityRole="link"
       accessibilityLabel={`Link to ${pageTitle}${!pageExists ? ' (page does not exist)' : ''}`}
       accessibilityHint={pageExists ? 'Navigate to page' : 'Create and navigate to page'}
-      activeOpacity={0.6}
-      style={styles.container}
+      suppressHighlighting={false}
+      style={textStyle}
     >
-      <Text style={textStyle}>{pageTitle}</Text>
-    </TouchableOpacity>
+      {displayText ?? `[[${pageTitle}]]`}
+    </Text>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    // Inline display equivalent
-    flexDirection: 'row',
-    alignItems: 'center',
-    // Minimum touch target size per iOS HIG
-    minHeight: 44,
-    minWidth: 44,
-  },
-
   baseText: {
     fontSize: 17,
     lineHeight: 22,

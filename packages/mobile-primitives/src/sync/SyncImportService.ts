@@ -13,7 +13,7 @@
  */
 
 import type {
-  GraphDB,
+  Database,
   SyncData,
   ImportOptions,
   ImportResult,
@@ -38,7 +38,7 @@ import { compareHLCStrings } from './hlc';
  */
 export class SyncImportService {
   constructor(
-    private readonly db: GraphDB,
+    private readonly db: Database,
     private readonly conflictStore: ConflictStore
   ) {}
 

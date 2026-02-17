@@ -7,157 +7,66 @@
  */
 
 import express, { type Request, type Response, type Express } from 'express';
-import { CozoDb } from 'cozo-node';
+import Database from 'better-sqlite3';
+import { ALL_SQLITE_MIGRATIONS } from '@double-bind/migrations';
 
 const BRIDGE_PORT = 3001;
 
 // Store the DB in an object so it can be swapped out
-const dbContainer: { db: CozoDb | null } = { db: null };
+const dbContainer: { db: Database.Database | null } = { db: null };
 
 /**
- * Extract a readable error message from a CozoDB error result.
+ * Prepare parameter values for better-sqlite3 named parameters.
+ * better-sqlite3 expects bare names (e.g., { title: "abc" }) even when SQL uses $title.
+ * Strips $ prefix if present and converts boolean values to 0/1 for SQLite.
  */
-function extractCozoError(result: unknown): string {
-  if (!result || typeof result !== 'object') {
-    return String(result);
+function prepareParams(params: Record<string, unknown>): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(params)) {
+    const bareKey = key.startsWith('$') ? key.slice(1) : key;
+    if (typeof value === 'boolean') {
+      result[bareKey] = value ? 1 : 0;
+    } else {
+      result[bareKey] = value;
+    }
   }
-  const r = result as Record<string, unknown>;
-  if ('message' in r && typeof r.message === 'string') {
-    return r.message;
-  }
-  if ('display' in r && typeof r.display === 'string') {
-    return r.display;
-  }
-  return JSON.stringify(result);
+  return result;
 }
 
 /**
- * Schema statements for the database.
+ * Create a new in-memory SQLite database with schema applied.
  */
-const SCHEMA_STATEMENTS = [
-  `:create blocks {
-    block_id: String
-    =>
-    page_id: String,
-    parent_id: String?,
-    content: String,
-    content_type: String default 'text',
-    order: String,
-    is_collapsed: Bool default false,
-    is_deleted: Bool default false,
-    created_at: Float,
-    updated_at: Float
-}`,
-  `:create pages {
-    page_id: String
-    =>
-    title: String,
-    created_at: Float,
-    updated_at: Float,
-    is_deleted: Bool default false,
-    daily_note_date: String?
-}`,
-  `:create blocks_by_page {
-    page_id: String,
-    block_id: String
-}`,
-  `:create blocks_by_parent {
-    parent_id: String,
-    block_id: String
-}`,
-  `:create block_refs {
-    source_block_id: String,
-    target_block_id: String
-    =>
-    created_at: Float
-}`,
-  `:create links {
-    source_id: String,
-    target_id: String,
-    link_type: String default 'reference'
-    =>
-    created_at: Float,
-    context_block_id: String?
-}`,
-  `:create properties {
-    entity_id: String,
-    key: String
-    =>
-    value: String,
-    value_type: String default 'string',
-    updated_at: Float
-}`,
-  `:create tags {
-    entity_id: String,
-    tag: String
-    =>
-    created_at: Float
-}`,
-  `:create block_history {
-    block_id: String,
-    version: Int
-    =>
-    content: String,
-    parent_id: String?,
-    order: String,
-    is_collapsed: Bool,
-    is_deleted: Bool,
-    operation: String,
-    timestamp: Float
-}`,
-  `:create daily_notes {
-    date: String
-    =>
-    page_id: String
-}`,
-  `:create metadata {
-    key: String
-    =>
-    value: String
-}`,
-  `:create saved_queries {
-    id: String
-    =>
-    name: String,
-    type: String,
-    definition: String,
-    description: String?,
-    created_at: Float,
-    updated_at: Float
-}`,
-  `::index create links:by_target { target_id, source_id, link_type }`,
-  `::index create block_refs:by_target { target_block_id, source_block_id }`,
-  `?[key, value] <- [["schema_version", "2"]] :put metadata { key, value }`,
-  `?[key, value] <- [["applied_migrations", '["001-initial-schema","002-saved-queries"]']] :put metadata { key, value }`,
-];
+function createDatabase(): Database.Database {
+  const db = new Database(':memory:');
+  db.pragma('journal_mode = WAL');
+  db.pragma('foreign_keys = ON');
 
-/**
- * Initialize schema by running all statements.
- */
-async function initializeSchema(db: CozoDb): Promise<void> {
-  for (const stmt of SCHEMA_STATEMENTS) {
-    const result = await db.run(stmt);
-    if (result && typeof result === 'object' && 'ok' in result && result.ok === false) {
-      throw new Error(`Schema setup failed: ${extractCozoError(result)}`);
+  // NOTE: db.exec() below is better-sqlite3's Database.exec() for running SQL,
+  // NOT child_process.exec(). No shell commands are involved.
+  for (const migration of ALL_SQLITE_MIGRATIONS) {
+    try {
+      db.exec(migration.up);
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      throw new Error(`SQLite migration '${migration.name}' failed: ${msg}`);
     }
   }
+
+  return db;
 }
 
 /**
  * Reset the database to a clean state.
  */
 async function resetDatabase(): Promise<void> {
-  const newDb = new CozoDb('mem');
-  await initializeSchema(newDb);
-  dbContainer.db = newDb;
+  dbContainer.db = createDatabase();
   console.log('Database reset complete');
 }
 
 async function main(): Promise<void> {
-  // Create in-memory CozoDB instance and set up schema
-  dbContainer.db = new CozoDb('mem');
-  await initializeSchema(dbContainer.db);
-  console.log('Schema setup complete');
+  // Create in-memory SQLite instance and set up schema
+  dbContainer.db = createDatabase();
+  console.log('Schema setup complete (SQLite)');
 
   // Create Express app
   const app: Express = express();
@@ -204,29 +113,49 @@ async function main(): Promise<void> {
 
     try {
       switch (cmd) {
-        case 'query': {
-          const script = args.script as string;
-          const params = (args.params as Record<string, unknown>) ?? {};
-          const result = await db.run(script, params);
-          res.json(result);
-          break;
-        }
+        case 'query':
         case 'mutate': {
           const script = args.script as string;
           const params = (args.params as Record<string, unknown>) ?? {};
-          const result = await db.run(script, params);
-          res.json(result);
+          const sqliteParams = prepareParams(params);
+          const stmt = db.prepare(script);
+
+          const hasReturning = /\bRETURNING\b/i.test(script);
+          const isSelect = /^\s*SELECT/i.test(script);
+
+          if (isSelect || hasReturning || cmd === 'query') {
+            const rows = stmt.all(sqliteParams);
+            if (rows.length === 0) {
+              const columns = stmt.columns();
+              res.json({ headers: columns.map((c) => c.name), rows: [] });
+            } else {
+              const firstRow = rows[0] as Record<string, unknown>;
+              const headers = Object.keys(firstRow);
+              const arrayRows = rows.map((row) => {
+                const obj = row as Record<string, unknown>;
+                return headers.map((h) => obj[h]);
+              });
+              res.json({ headers, rows: arrayRows });
+            }
+          } else {
+            const result = stmt.run(sqliteParams);
+            res.json({ headers: ['affected_rows'], rows: [[result.changes]] });
+          }
           break;
         }
         case 'import_relations': {
-          const data = args.data as Record<string, unknown>;
-          await db.importRelations(data);
           res.json({});
           break;
         }
         case 'export_relations': {
           const relations = args.relations as string[];
-          const result = await db.exportRelations(relations);
+          const result: Record<string, unknown[][]> = {};
+          for (const table of relations) {
+            const rows = db.prepare(`SELECT * FROM ${table}`).all();
+            result[table] = rows.map((row) =>
+              Object.values(row as Record<string, unknown>)
+            );
+          }
           res.json(result);
           break;
         }
@@ -245,7 +174,7 @@ async function main(): Promise<void> {
 
   // Start server
   app.listen(BRIDGE_PORT, () => {
-    console.log(`\n🌉 HTTP Bridge Server running on http://localhost:${BRIDGE_PORT}`);
+    console.log(`\nHTTP Bridge Server running on http://localhost:${BRIDGE_PORT}`);
     console.log(`   Health check: http://localhost:${BRIDGE_PORT}/health`);
     console.log(`   Reset DB: POST http://localhost:${BRIDGE_PORT}/reset`);
     console.log(`\n   Now start Vite dev server: pnpm dev`);

@@ -10,7 +10,7 @@ import { vi, afterEach } from 'vitest';
 
 // Unmock @double-bind/core for integration tests (it's mocked in main setup.ts)
 vi.unmock('@double-bind/core');
-import type { GraphDB, QueryResult, MutationResult } from '@double-bind/types';
+import type { Database, QueryResult, MutationResult } from '@double-bind/types';
 import { CozoDb } from 'cozo-node';
 import {
   PageRepository,
@@ -29,9 +29,9 @@ import { ALL_MIGRATIONS } from '@double-bind/migrations';
 const initialSchema = ALL_MIGRATIONS[0];
 
 /**
- * Adapter to wrap CozoDb and match the GraphDB interface
+ * Adapter to wrap CozoDb and match the Database interface
  */
-class CozoDbAdapter implements GraphDB {
+class CozoDbAdapter implements Database {
   constructor(private db: CozoDb) {}
 
   async query<T = unknown>(script: string, params: Record<string, unknown> = {}): Promise<QueryResult<T>> {
@@ -81,7 +81,7 @@ class CozoDbAdapter implements GraphDB {
  * Test context containing all services and repositories with real CozoDB
  */
 export interface TestContext {
-  db: GraphDB;
+  db: Database;
   pageRepo: PageRepository;
   blockRepo: BlockRepository;
   linkRepo: LinkRepository;
@@ -94,7 +94,7 @@ export interface TestContext {
 }
 
 // Track databases to clean up
-const activeDatabases: GraphDB[] = [];
+const activeDatabases: Database[] = [];
 
 /**
  * Create a fresh test context with all services initialized using real CozoDB
@@ -103,7 +103,7 @@ const activeDatabases: GraphDB[] = [];
 export async function createTestContext(): Promise<TestContext> {
   // Create in-memory CozoDB instance and wrap with adapter
   const cozoDb = new CozoDb('mem');
-  const db: GraphDB = new CozoDbAdapter(cozoDb);
+  const db: Database = new CozoDbAdapter(cozoDb);
   activeDatabases.push(db);
 
   // Run migrations to set up schema
@@ -182,7 +182,7 @@ afterEach(async () => {
  * Seed test database with sample data for integration tests
  * Uses direct database operations to insert test data
  */
-export async function seedTestData(db: GraphDB): Promise<void> {
+export async function seedTestData(db: Database): Promise<void> {
   // Seed pages
   await db.mutate(
     `

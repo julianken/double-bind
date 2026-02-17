@@ -144,7 +144,7 @@ export const GRAPH_CONSTANTS = {
   /** Edge stroke width */
   EDGE_WIDTH: 1.5,
   /** Arrow size for directed edges */
-  ARROW_SIZE: 6,
+  ARROW_SIZE: 9,
   /** Font size for labels */
   LABEL_FONT_SIZE: 14,
   /** Distance from node to label */

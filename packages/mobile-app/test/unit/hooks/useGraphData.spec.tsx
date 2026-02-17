@@ -7,13 +7,13 @@ import { renderHook, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { useGraphData } from '../../../src/hooks/useGraphData';
 import { DatabaseContext, type DatabaseContextValue } from '../../../src/providers/DatabaseProvider';
-import type { MobileGraphDB } from '@double-bind/mobile';
+import type { MobileDatabase } from '@double-bind/mobile';
 
 // Mock database
 const mockQuery = vi.fn();
-const mockDb: MobileGraphDB = {
+const mockDb: MobileDatabase = {
   query: mockQuery,
-} as unknown as MobileGraphDB;
+} as unknown as MobileDatabase;
 
 // Test wrapper that provides database context
 function createWrapper(dbStatus: 'initializing' | 'ready' | 'error' = 'ready') {

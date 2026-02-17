@@ -6,7 +6,7 @@
  * strings for data transfer.
  *
  * @see CozoModule.kt - Android implementation
- * @see GraphDB - TypeScript interface at packages/types/src/graph-db.ts
+ * @see Database - TypeScript interface at packages/types/src/graph-db.ts
  */
 import { NativeModules, Platform } from 'react-native';
 

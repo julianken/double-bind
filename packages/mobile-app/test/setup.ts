@@ -27,7 +27,7 @@ vi.mock('react-native', async (importOriginal) => {
 
 // Mock @double-bind/mobile
 vi.mock('@double-bind/mobile', () => ({
-  MobileGraphDB: vi.fn().mockImplementation(() => ({
+  MobileDatabase: vi.fn().mockImplementation(() => ({
     query: vi.fn(),
     mutate: vi.fn(),
     close: vi.fn(),
@@ -111,31 +111,4 @@ vi.mock('react-native-svg', () => ({
   Defs: 'Defs',
   Marker: 'Marker',
   Path: 'Path',
-}));
-
-// Mock @double-bind/mobile-primitives components
-vi.mock('@double-bind/mobile-primitives', () => ({
-  FloatingActionButton: 'FloatingActionButton',
-  NewPageModal: 'NewPageModal',
-  BlockList: 'BlockList',
-  BlockView: 'BlockView',
-  EditableBlockView: 'EditableBlockView',
-  DraggableBlockList: 'DraggableBlockList',
-  BlockReference: 'BlockReference',
-  WikiLink: 'WikiLink',
-  RichText: 'RichText',
-  useBlockOperations: vi.fn(() => ({
-    createBlock: vi.fn(),
-    updateBlock: vi.fn(),
-    deleteBlock: vi.fn(),
-    moveBlock: vi.fn(),
-    indentBlock: vi.fn(),
-    outdentBlock: vi.fn(),
-    undo: vi.fn(),
-    redo: vi.fn(),
-    canUndo: false,
-    canRedo: false,
-    isOperating: false,
-    error: null,
-  })),
 }));

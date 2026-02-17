@@ -1,6 +1,6 @@
 // Migration runner - executes pending migrations in order
 
-import type { GraphDB } from '@double-bind/types';
+import type { Database } from '@double-bind/types';
 import type { Migration, MigrationResult } from './types.js';
 import { ALL_MIGRATIONS } from './registry.js';
 
@@ -94,7 +94,7 @@ const METADATA_QUERY = `?[value] := *metadata{ key: $key, value }`;
  * @param db - Database connection
  * @returns Array of applied migration names
  */
-export async function getAppliedMigrations(db: GraphDB): Promise<string[]> {
+export async function getAppliedMigrations(db: Database): Promise<string[]> {
   try {
     const result = await db.query<string>(METADATA_QUERY, { key: MIGRATIONS_KEY });
 
@@ -129,7 +129,7 @@ export async function getAppliedMigrations(db: GraphDB): Promise<string[]> {
  * @param db - Database connection
  * @returns Current schema version number
  */
-export async function getSchemaVersion(db: GraphDB): Promise<number> {
+export async function getSchemaVersion(db: Database): Promise<number> {
   try {
     const result = await db.query<string>(METADATA_QUERY, { key: SCHEMA_VERSION_KEY });
 
@@ -174,7 +174,7 @@ export async function getSchemaVersion(db: GraphDB): Promise<number> {
  * // result.alreadyApplied contains previously applied migrations
  * ```
  */
-export async function runMigrations(db: GraphDB): Promise<MigrationResult> {
+export async function runMigrations(db: Database): Promise<MigrationResult> {
   const applied = await getAppliedMigrations(db);
   const appliedSet = new Set(applied);
 
@@ -236,7 +236,7 @@ export async function runMigrations(db: GraphDB): Promise<MigrationResult> {
  * @param db - Database connection
  * @param migrations - Complete list of applied migration names
  */
-async function updateAppliedMigrations(db: GraphDB, migrations: string[]): Promise<void> {
+async function updateAppliedMigrations(db: Database, migrations: string[]): Promise<void> {
   const value = JSON.stringify(migrations);
   await db.mutate(`?[key, value] <- [[$key, $value]] :put metadata {key => value}`, {
     key: MIGRATIONS_KEY,
@@ -254,7 +254,7 @@ async function updateAppliedMigrations(db: GraphDB, migrations: string[]): Promi
  * @param migration - The migration to run
  * @throws If the migration fails
  */
-export async function runSingleMigration(db: GraphDB, migration: Migration): Promise<void> {
+export async function runSingleMigration(db: Database, migration: Migration): Promise<void> {
   await db.mutate(migration.up);
 }
 
@@ -268,6 +268,6 @@ export async function runSingleMigration(db: GraphDB, migration: Migration): Pro
  * @param migration - The migration to roll back
  * @throws If the rollback fails
  */
-export async function rollbackMigration(db: GraphDB, migration: Migration): Promise<void> {
+export async function rollbackMigration(db: Database, migration: Migration): Promise<void> {
   await db.mutate(migration.down);
 }

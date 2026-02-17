@@ -1,21 +1,101 @@
 /**
  * PageListScreen - Displays all pages in the database.
  *
- * Features:
- * - Full list of all pages sorted by last updated
- * - Pull to refresh
- * - Navigation to individual pages
- * - FAB for creating new pages
+ * Uses NewPageModal from mobile-primitives for creating new pages.
+ * The modal uses ModalOverlay (workaround for RN Modal rendering bug).
+ *
+ * Phase 1 Redesign:
+ * - FlatList virtualization for performance
+ * - PageCard component with shadow and metadata
+ * - Memoized components to prevent re-renders
+ * - Brand indigo (#5856D6) FAB color
  */
 
-import { useEffect, useState, useCallback, type ReactElement } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl } from 'react-native';
-import type { Page } from '@double-bind/types';
+import React, { useEffect, useState, useCallback, type ReactElement, memo } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  RefreshControl,
+  type ListRenderItemInfo,
+} from 'react-native';
+import type { Page, PageId } from '@double-bind/types';
 import type { PagesStackScreenProps } from '../navigation/types';
 import { useDatabase } from '../hooks/useDatabase';
 import { useCreatePage } from '../hooks/useCreatePage';
 import { FloatingActionButton, NewPageModal } from '@double-bind/mobile-primitives';
-import { LoadingSpinner, ErrorMessage, EmptyState } from '../components';
+import { ErrorMessage, EmptyState, PageListSkeleton } from '../components';
+
+// ============================================================================
+// Constants
+// ============================================================================
+
+/** Brand indigo color for primary actions */
+const BRAND_INDIGO = '#5856D6';
+
+/** iOS system gray background */
+const BACKGROUND_COLOR = '#F2F2F7';
+
+/** Minimum touch target per iOS HIG */
+const MIN_TOUCH_TARGET = 44;
+
+// ============================================================================
+// PageCard Component
+// ============================================================================
+
+interface PageCardProps {
+  page: Page;
+  onPress: (pageId: PageId) => void;
+}
+
+/**
+ * Memoized page card with shadow and metadata.
+ * Prevents re-renders when parent list updates.
+ */
+const PageCard = memo(function PageCard({ page, onPress }: PageCardProps) {
+  const handlePress = useCallback(() => {
+    onPress(page.pageId);
+  }, [onPress, page.pageId]);
+
+  // Format date for display
+  const formattedDate = new Date(page.updatedAt).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+  });
+
+  const isDailyNote = Boolean(page.dailyNoteDate);
+
+  return (
+    <TouchableOpacity
+      style={styles.card}
+      onPress={handlePress}
+      activeOpacity={0.7}
+      accessibilityRole="button"
+      accessibilityLabel={`Navigate to ${page.title || 'Untitled'}${isDailyNote ? ', daily note' : ''}`}
+    >
+      <View style={styles.cardContent}>
+        <Text style={styles.cardTitle} numberOfLines={1}>
+          {page.title || 'Untitled'}
+        </Text>
+        <View style={styles.cardMeta}>
+          {isDailyNote && (
+            <View style={styles.dailyNoteBadge}>
+              <Text style={styles.dailyNoteBadgeText}>Daily</Text>
+            </View>
+          )}
+          <Text style={styles.cardDate}>{formattedDate}</Text>
+        </View>
+      </View>
+      <Text style={styles.cardChevron}>›</Text>
+    </TouchableOpacity>
+  );
+});
+
+// ============================================================================
+// PageListScreen Component
+// ============================================================================
 
 type Props = PagesStackScreenProps<'PageList'>;
 
@@ -25,8 +105,8 @@ export function PageListScreen({ navigation }: Props): ReactElement {
 
   const [pages, setPages] = useState<Page[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [showNewPageModal, setShowNewPageModal] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
 
@@ -38,7 +118,8 @@ export function PageListScreen({ navigation }: Props): ReactElement {
       const allPages = await services.pageService.getAllPages();
       setPages(allPages);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load pages');
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      setError(typeof errorMessage === 'string' ? errorMessage : 'Failed to load pages');
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -55,41 +136,64 @@ export function PageListScreen({ navigation }: Props): ReactElement {
     loadPages();
   }, [loadPages]);
 
+  const handleNavigateToPage = useCallback(
+    (pageId: PageId) => {
+      navigation.navigate('Page', { pageId });
+    },
+    [navigation]
+  );
+
   const handleCreatePage = useCallback(
     async (title: string) => {
-      // Don't clear error here - let user see it until operation succeeds
       const result = await createPage(title);
 
       if (result.error) {
         setCreateError(result.error.message);
-        return; // Keep modal open
+        return;
       }
 
       if (result.page) {
-        setCreateError(null); // Clear only on success
+        setCreateError(null);
         setShowNewPageModal(false);
-        // Navigate to the new page
         navigation.navigate('Page', { pageId: result.page.pageId });
-        // Refresh the list
         await loadPages();
       }
     },
     [createPage, navigation, loadPages]
   );
 
-  // Show database loading state
+  const handleOpenModal = useCallback(() => {
+    setShowNewPageModal(true);
+  }, []);
+
+  const handleCloseModal = useCallback(() => {
+    setShowNewPageModal(false);
+    setCreateError(null);
+  }, []);
+
+  // Render individual page item
+  const renderItem = useCallback(
+    ({ item }: ListRenderItemInfo<Page>) => <PageCard page={item} onPress={handleNavigateToPage} />,
+    [handleNavigateToPage]
+  );
+
+  // Key extractor for FlatList
+  const keyExtractor = useCallback((item: Page) => item.pageId, []);
+
+  // Show database loading state with skeleton
   if (dbLoading) {
-    return <LoadingSpinner message="Initializing database..." />;
+    return <PageListSkeleton count={6} />;
   }
 
   // Show database error state
   if (dbError) {
-    return <ErrorMessage message={dbError} />;
+    const errorMsg = typeof dbError === 'string' ? dbError : String(dbError);
+    return <ErrorMessage message={errorMsg} />;
   }
 
-  // Show content loading state
+  // Show content loading state with skeleton
   if (isLoading) {
-    return <LoadingSpinner message="Loading pages..." />;
+    return <PageListSkeleton count={6} />;
   }
 
   // Show error state
@@ -97,88 +201,57 @@ export function PageListScreen({ navigation }: Props): ReactElement {
     return <ErrorMessage message={error} onRetry={loadPages} />;
   }
 
-  // Show empty state
-  if (pages.length === 0) {
-    return (
-      <View style={styles.container}>
+  // Main content (empty or list)
+  return (
+    <View style={styles.container}>
+      {pages.length === 0 ? (
         <EmptyState
           title="No pages yet"
           description="Create your first page to start taking notes"
           actionLabel="Create Page"
-          onAction={() => setShowNewPageModal(true)}
+          onAction={handleOpenModal}
         />
-        <NewPageModal
-          visible={showNewPageModal}
-          onClose={() => {
-            setShowNewPageModal(false);
-            setCreateError(null); // Clear error when modal closes
-          }}
-          onSubmit={handleCreatePage}
-          isLoading={isCreating}
-          error={createError}
+      ) : (
+        <FlatList
+          data={pages}
+          renderItem={renderItem}
+          keyExtractor={keyExtractor}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={handleRefresh}
+              tintColor={BRAND_INDIGO}
+            />
+          }
+          // Performance optimizations
+          removeClippedSubviews={true}
+          maxToRenderPerBatch={10}
+          windowSize={5}
+          initialNumToRender={10}
+          // Accessibility
+          accessibilityRole="list"
+          ListHeaderComponent={
+            <Text style={styles.listHeader}>
+              {pages.length} {pages.length === 1 ? 'page' : 'pages'}
+            </Text>
+          }
         />
-      </View>
-    );
-  }
+      )}
 
-  const formatDate = (timestamp: number): string => {
-    const date = new Date(timestamp);
-    return date.toLocaleDateString(undefined, {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
-  };
-
-  const renderPageItem = ({ item }: { item: Page }) => {
-    const isDailyNote = item.dailyNoteDate !== null;
-    const pageTitle = item.title || 'Untitled';
-
-    return (
-      <TouchableOpacity
-        style={styles.pageItem}
-        onPress={() => navigation.navigate('Page', { pageId: item.pageId })}
-        accessibilityRole="button"
-        accessibilityLabel={`Open page ${pageTitle}${isDailyNote ? ', daily note' : ''}`}
-      >
-        <View style={styles.pageInfo}>
-          <Text style={styles.pageTitle} numberOfLines={1}>
-            {pageTitle}
-          </Text>
-          <Text style={styles.pageDate}>Updated {formatDate(item.updatedAt)}</Text>
-        </View>
-        {isDailyNote && (
-          <View style={styles.dailyNoteBadge}>
-            <Text style={styles.dailyNoteBadgeText}>Daily</Text>
-          </View>
-        )}
-      </TouchableOpacity>
-    );
-  };
-
-  return (
-    <View style={styles.container}>
-      <FlatList
-        data={pages}
-        keyExtractor={(item) => item.pageId}
-        renderItem={renderPageItem}
-        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />}
-        contentContainerStyle={styles.listContent}
-        ListHeaderComponent={<Text style={styles.headerText}>{pages.length} pages</Text>}
-      />
-
+      {/* FAB with brand indigo color */}
       <FloatingActionButton
         icon="+"
-        onPress={() => setShowNewPageModal(true)}
+        onPress={handleOpenModal}
         accessibilityLabel="Create new page"
+        style={styles.fab}
       />
 
+      {/* Single modal instance - prevents duplication bug */}
       <NewPageModal
         visible={showNewPageModal}
-        onClose={() => {
-          setShowNewPageModal(false);
-          setCreateError(null); // Clear error when modal closes
-        }}
+        onClose={handleCloseModal}
         onSubmit={handleCreatePage}
         isLoading={isCreating}
         error={createError}
@@ -187,54 +260,78 @@ export function PageListScreen({ navigation }: Props): ReactElement {
   );
 }
 
+// ============================================================================
+// Styles
+// ============================================================================
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: BACKGROUND_COLOR,
   },
   listContent: {
+    padding: 16,
     paddingBottom: 80, // Space for FAB
   },
-  headerText: {
-    fontSize: 14,
-    color: '#666',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+  listHeader: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#8E8E93',
+    marginBottom: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
-  pageItem: {
-    backgroundColor: '#FFF',
-    paddingVertical: 12,
+  card: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    marginBottom: 12,
+    minHeight: MIN_TOUCH_TARGET,
+    paddingVertical: 14,
     paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E5E5',
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    minHeight: 44,
+    // Shadow
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
   },
-  pageInfo: {
+  cardContent: {
     flex: 1,
   },
-  pageTitle: {
-    fontSize: 16,
+  cardTitle: {
+    fontSize: 17,
     fontWeight: '500',
-    color: '#333',
+    color: '#1C1C1E',
     marginBottom: 4,
   },
-  pageDate: {
+  cardMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  cardDate: {
     fontSize: 13,
-    color: '#999',
+    color: '#8E8E93',
   },
   dailyNoteBadge: {
     backgroundColor: '#E3F2FD',
     paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingVertical: 2,
     borderRadius: 4,
-    marginLeft: 12,
   },
   dailyNoteBadgeText: {
-    fontSize: 12,
-    fontWeight: '500',
+    fontSize: 11,
+    fontWeight: '600',
     color: '#1976D2',
+  },
+  cardChevron: {
+    fontSize: 22,
+    color: '#C6C6C8',
+    marginLeft: 8,
+  },
+  fab: {
+    backgroundColor: BRAND_INDIGO,
   },
 });

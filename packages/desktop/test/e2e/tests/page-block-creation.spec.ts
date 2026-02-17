@@ -155,7 +155,7 @@ test.describe('Dynamic Page and Block Creation', () => {
     await expect(blockNode).toBeVisible({ timeout: 5000 });
 
     // Click on the block content to focus it
-    await blockNode.locator('.block-content').click();
+    await blockNode.locator('[data-testid="block-content"]').click();
 
     // Wait for ProseMirror editor to appear
     await expect(blockNode.locator('.ProseMirror')).toBeVisible({ timeout: 3000 });
@@ -210,7 +210,7 @@ test.describe('Dynamic Page and Block Creation', () => {
       .locator(`[data-testid="block-node"][data-block-id="${blockId}"]`)
       .first();
     await expect(blockNode).toBeVisible({ timeout: 5000 });
-    await blockNode.locator('.block-content').click();
+    await blockNode.locator('[data-testid="block-content"]').click();
     await expect(blockNode.locator('.ProseMirror')).toBeVisible({ timeout: 3000 });
 
     // Create a new block and immediately invalidate queries + focus it

@@ -32,14 +32,14 @@ const mockAppState = AppState as unknown as {
 // Mock Database Factory
 // ============================================================================
 
-interface MockMobileGraphDB {
+interface MockMobileDatabase {
   suspend: Mock;
   resume: Mock;
   onLowMemory: Mock;
   close: Mock;
 }
 
-function createMockDatabase(): MockMobileGraphDB {
+function createMockDatabase(): MockMobileDatabase {
   return {
     suspend: vi.fn().mockResolvedValue(undefined),
     resume: vi.fn().mockResolvedValue(undefined),

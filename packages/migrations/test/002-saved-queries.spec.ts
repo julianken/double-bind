@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { MockGraphDB } from '@double-bind/test-utils';
+import { MockDatabase } from '@double-bind/test-utils';
 import { migration } from '../src/migrations/002-saved-queries.js';
 import { runSingleMigration, rollbackMigration } from '../src/runner.js';
 
@@ -62,10 +62,10 @@ describe('002-saved-queries migration', () => {
   });
 
   describe('migration execution', () => {
-    let db: MockGraphDB;
+    let db: MockDatabase;
 
     beforeEach(() => {
-      db = new MockGraphDB();
+      db = new MockDatabase();
     });
 
     it('executes up script without errors', async () => {

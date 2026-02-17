@@ -1,7 +1,7 @@
 /**
  * Zod validation schemas for LinkRepository
  *
- * Validates CozoDB query results at the boundary between raw rows and domain types.
+ * Validates SQLite query results at the boundary between raw rows and domain types.
  * Throws DoubleBindError(DB_QUERY_FAILED) with Zod error as cause on validation failure.
  */
 
@@ -15,7 +15,7 @@ import type { Link, BlockRef } from '@double-bind/types';
 const LinkTypeSchema = z.enum(['reference', 'embed', 'tag']);
 
 /**
- * Schema for validating raw CozoDB row tuple from links relation.
+ * Schema for validating raw SQLite row tuple from links table.
  * Order matches: source_id, target_id, link_type, created_at, context_block_id
  */
 export const LinkRowSchema = z.tuple([
@@ -41,7 +41,7 @@ export const LinkSchema = z.object({
 });
 
 /**
- * Schema for validating raw CozoDB row tuple from block_refs relation.
+ * Schema for validating raw SQLite row tuple from block_refs table.
  * Order matches: source_block_id, target_block_id, created_at
  */
 export const BlockRefRowSchema = z.tuple([
@@ -63,9 +63,9 @@ export const BlockRefSchema = z.object({
 });
 
 /**
- * Parses a raw CozoDB row into a Link domain object.
+ * Parses a raw SQLite row into a Link domain object.
  *
- * @param row - Raw row from CozoDB query result
+ * @param row - Raw row from SQLite query result
  * @returns Link domain object
  * @throws DoubleBindError with DB_QUERY_FAILED code if validation fails
  */
@@ -90,9 +90,9 @@ export function parseLinkRow(row: unknown[]): Link {
 }
 
 /**
- * Parses a raw CozoDB row into a BlockRef domain object.
+ * Parses a raw SQLite row into a BlockRef domain object.
  *
- * @param row - Raw row from CozoDB query result
+ * @param row - Raw row from SQLite query result
  * @returns BlockRef domain object
  * @throws DoubleBindError with DB_QUERY_FAILED code if validation fails
  */

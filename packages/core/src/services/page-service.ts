@@ -175,6 +175,42 @@ export class PageService {
   }
 
   /**
+   * Get or create a daily note for a specific date.
+   *
+   * Creates the daily note page if it doesn't exist, and ensures it has
+   * at least one block so users can start typing immediately.
+   *
+   * @param date - ISO date string (YYYY-MM-DD format)
+   * @returns The daily note page for the given date
+   * @throws DoubleBindError with context on repository failure
+   */
+  async getOrCreateDailyNote(date: string): Promise<Page> {
+    try {
+      const page = await this.pageRepo.getOrCreateDailyNote(date);
+
+      // Ensure daily note has at least one block for immediate typing
+      const blocks = await this.blockRepo.getByPage(page.pageId);
+      if (blocks.length === 0) {
+        await this.blockRepo.create({
+          pageId: page.pageId,
+          content: '',
+        });
+      }
+
+      return page;
+    } catch (error) {
+      if (error instanceof DoubleBindError) {
+        throw error;
+      }
+      throw new DoubleBindError(
+        `Failed to get or create daily note for "${date}": ${error instanceof Error ? error.message : String(error)}`,
+        ErrorCode.DB_QUERY_FAILED,
+        error instanceof Error ? error : undefined
+      );
+    }
+  }
+
+  /**
    * Get or create today's daily note.
    *
    * Uses the current local date (YYYY-MM-DD format) to find or create
@@ -184,19 +220,8 @@ export class PageService {
    * @throws DoubleBindError with context on repository failure
    */
   async getTodaysDailyNote(): Promise<Page> {
-    try {
-      const today = new Date().toISOString().split('T')[0]!;
-      return await this.pageRepo.getOrCreateDailyNote(today);
-    } catch (error) {
-      if (error instanceof DoubleBindError) {
-        throw error;
-      }
-      throw new DoubleBindError(
-        `Failed to get today's daily note: ${error instanceof Error ? error.message : String(error)}`,
-        ErrorCode.DB_QUERY_FAILED,
-        error instanceof Error ? error : undefined
-      );
-    }
+    const today = new Date().toISOString().split('T')[0]!;
+    return this.getOrCreateDailyNote(today);
   }
 
   /**

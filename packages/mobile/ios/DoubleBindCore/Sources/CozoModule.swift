@@ -65,7 +65,7 @@ final class CozoModule: NSObject {
     /// Uses SQLite storage engine for mobile.
     ///
     /// - Parameters:
-    ///   - path: Absolute path to the database file
+    ///   - path: Path to the database file (relative or absolute)
     ///   - resolve: Promise resolve callback
     ///   - reject: Promise reject callback with error code, message, and optional error
     @objc
@@ -79,7 +79,18 @@ final class CozoModule: NSObject {
             try? await dbManager.closeAndClear()
 
             do {
-                let newDb = try CozoGraphDB(engine: "sqlite", path: path)
+                // Convert relative paths to absolute paths within the app sandbox
+                let absolutePath = self.resolveAbsolutePath(path)
+
+                // Ensure the parent directory exists
+                let directoryPath = (absolutePath as NSString).deletingLastPathComponent
+                try FileManager.default.createDirectory(
+                    atPath: directoryPath,
+                    withIntermediateDirectories: true,
+                    attributes: nil
+                )
+
+                let newDb = try CozoGraphDB(engine: "sqlite", path: absolutePath)
                 await dbManager.setDatabase(newDb)
                 resolve(nil)
             } catch {
@@ -90,6 +101,19 @@ final class CozoModule: NSObject {
                 )
             }
         }
+    }
+
+    /// Resolve a path to an absolute path within the app sandbox.
+    /// If the path is already absolute, returns it unchanged.
+    /// If relative, prepends the app's home directory.
+    private func resolveAbsolutePath(_ path: String) -> String {
+        if path.hasPrefix("/") {
+            return path
+        }
+
+        // Get the app's home directory (sandbox root)
+        let homeDir = NSHomeDirectory()
+        return (homeDir as NSString).appendingPathComponent(path)
     }
 
     /// Close the database and release all resources.

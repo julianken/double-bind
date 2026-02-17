@@ -6,10 +6,10 @@ import { renderHook } from '@testing-library/react-hooks';
 import type { ReactNode } from 'react';
 import { useDailyNote } from '../../src/hooks/useDailyNote';
 import { DatabaseContext } from '../../src/providers/DatabaseProvider';
-import type { GraphDB, Page } from '@double-bind/types';
+import type { Database, Page } from '@double-bind/types';
 
 describe('useDailyNote', () => {
-  let mockDb: GraphDB;
+  let mockDb: Database;
 
   const mockPage: Page = {
     pageId: 'test-page-id',
@@ -28,7 +28,7 @@ describe('useDailyNote', () => {
       close: vi.fn(),
       export: vi.fn(),
       importRelations: vi.fn(),
-    } as unknown as GraphDB;
+    } as unknown as Database;
   });
 
   function createWrapper() {
