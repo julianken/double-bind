@@ -5,12 +5,17 @@
  * interface that HttpGraphDBProvider expects. Run alongside `pnpm dev`
  * to use the app in a browser without Tauri.
  *
+ * Also exposes service-layer commands (service:createPage, service:createBlock,
+ * service:updateContent) so scripts and tools can leverage business logic
+ * (e.g., automatic page creation for [[wiki links]]).
+ *
  * Usage: npx tsx packages/desktop/scripts/bridge-server.ts
  */
 
 import express from 'express';
 import Database from 'better-sqlite3';
 import { ALL_SQLITE_MIGRATIONS } from '@double-bind/migrations';
+import { SqliteNodeAdapter, createServices, type Services } from '@double-bind/core';
 
 const PORT = Number(process.env.BRIDGE_PORT) || 3008;
 
@@ -98,9 +103,8 @@ function executeMutate(
 }
 
 async function main() {
-  // Apply migration SQL directly using better-sqlite3's Database.exec() method.
-  // This is NOT child_process.exec — it's the SQLite driver's native multi-statement
-  // SQL execution, which correctly handles triggers, FTS5 tables, etc.
+  // Apply migrations using better-sqlite3's native multi-statement SQL method.
+  // This correctly handles triggers, FTS5 tables, and complex DDL.
   for (const migration of ALL_SQLITE_MIGRATIONS) {
     try {
       db.exec(migration.up);
@@ -109,6 +113,12 @@ async function main() {
       throw new Error(`SQLite migration '${migration.name}' failed: ${msg}`);
     }
   }
+
+  // Wrap the raw better-sqlite3 instance with the Database interface adapter,
+  // then create the full service layer. This reuses the same DB connection —
+  // raw SQL commands and service commands share the same in-memory database.
+  const database = new SqliteNodeAdapter(db);
+  const services: Services = createServices(database);
 
   const app = express();
   app.use(express.json({ limit: '10mb' }));
@@ -145,6 +155,41 @@ async function main() {
           res.json(result);
           break;
         }
+
+        // ── Service-layer commands ──────────────────────────────
+        // These expose business logic (auto-page creation for wiki links,
+        // tag/property extraction) that raw SQL bypasses.
+
+        case 'service:createPage': {
+          const page = await services.pageService.createPage(args.title as string);
+          res.json({ pageId: page.pageId, title: page.title });
+          break;
+        }
+        case 'service:createBlock': {
+          const block = await services.blockService.createBlock(
+            args.pageId as string,
+            (args.parentId as string) ?? null,
+            args.content as string,
+            args.afterBlockId as string | undefined
+          );
+          res.json({
+            blockId: block.blockId,
+            pageId: block.pageId,
+            parentId: block.parentId,
+            content: block.content,
+            order: block.order,
+          });
+          break;
+        }
+        case 'service:updateContent': {
+          await services.blockService.updateContent(
+            args.blockId as string,
+            args.content as string
+          );
+          res.json({ success: true });
+          break;
+        }
+
         case 'import_relations': {
           // Basic import support
           res.json({});
