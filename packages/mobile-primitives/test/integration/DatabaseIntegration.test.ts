@@ -12,7 +12,7 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type { PageId, BlockId } from '@double-bind/types';
-import { MockGraphDB } from '@double-bind/test-utils';
+import { MockDatabase } from '@double-bind/test-utils';
 import {
   createTestContext,
   seedTestData,
@@ -508,7 +508,7 @@ describe('Database Integration - Mobile Adapters', () => {
 
     // Real CozoDB doesn't have reset() or queries tracking
     it.skip('should track database queries', async () => {
-      const mockDb = ctx.db as MockGraphDB;
+      const mockDb = ctx.db as MockDatabase;
       mockDb.reset(); // Clear any previous queries
 
       await ctx.pageRepo.getById('page-1' as PageId);
@@ -519,7 +519,7 @@ describe('Database Integration - Mobile Adapters', () => {
 
     // Real CozoDB doesn't have reset() or mutations tracking
     it.skip('should track database mutations', async () => {
-      const mockDb = ctx.db as MockGraphDB;
+      const mockDb = ctx.db as MockDatabase;
       mockDb.reset(); // Clear any previous mutations
 
       await ctx.pageRepo.create({ title: 'Test Page' });
@@ -530,11 +530,11 @@ describe('Database Integration - Mobile Adapters', () => {
 
     it('should handle database errors gracefully', async () => {
       // Create a mock that throws errors
-      const errorDb = new MockGraphDB() as unknown;
-      (errorDb as MockGraphDB).query = vi.fn().mockRejectedValue(new Error('Database error'));
+      const errorDb = new MockDatabase() as unknown;
+      (errorDb as MockDatabase).query = vi.fn().mockRejectedValue(new Error('Database error'));
 
       const errorPageRepo = ctx.pageRepo;
-      (errorPageRepo as unknown as { db: MockGraphDB }).db = errorDb as MockGraphDB;
+      (errorPageRepo as unknown as { db: MockDatabase }).db = errorDb as MockDatabase;
 
       // Operation should propagate error
       await expect(errorPageRepo.getById('page-1' as PageId)).rejects.toThrow();

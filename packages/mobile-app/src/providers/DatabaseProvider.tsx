@@ -1,7 +1,7 @@
 /**
  * DatabaseProvider - React context provider for mobile database access.
  *
- * This provider manages the lifecycle of the MobileGraphDB instance,
+ * This provider manages the lifecycle of the MobileDatabase instance,
  * handling initialization, platform detection, and proper cleanup.
  *
  * @example
@@ -19,9 +19,10 @@
  */
 import { createContext, useEffect, useState, useCallback, type ReactNode } from 'react';
 import { Platform, AppState, type AppStateStatus } from 'react-native';
-import type { GraphDB } from '@double-bind/types';
-import { MobileGraphDB } from '@double-bind/mobile';
+import type { Database } from '@double-bind/types';
+import { MobileDatabase } from '@double-bind/mobile';
 import { createServices, type Services } from '@double-bind/core';
+import { runMigrations } from '@double-bind/migrations';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -42,7 +43,7 @@ export type MobilePlatform = 'ios' | 'android';
  */
 export interface DatabaseContextValue {
   /** The database instance, null until initialized */
-  db: GraphDB | null;
+  db: Database | null;
   /** Application services (pageService, blockService, etc.), null until db is ready */
   services: Services | null;
   /** Current initialization status */
@@ -72,7 +73,7 @@ export interface DatabaseProviderProps {
   /**
    * Called when database initialization succeeds.
    */
-  onReady?: (db: GraphDB) => void;
+  onReady?: (db: Database) => void;
   /**
    * Called when database initialization fails.
    */
@@ -135,7 +136,7 @@ export function DatabaseProvider({
   onReady,
   onError,
 }: DatabaseProviderProps) {
-  const [db, setDb] = useState<GraphDB | null>(null);
+  const [db, setDb] = useState<Database | null>(null);
   const [services, setServices] = useState<Services | null>(null);
   const [status, setStatus] = useState<DatabaseStatus>('idle');
   const [error, setError] = useState<string | null>(null);
@@ -150,19 +151,28 @@ export function DatabaseProvider({
 
   useEffect(() => {
     let mounted = true;
-    let dbInstance: MobileGraphDB | null = null;
+    let dbInstance: MobileDatabase | null = null;
 
     async function initDatabase() {
       setStatus('initializing');
       setError(null);
 
       try {
-        dbInstance = await MobileGraphDB.create(effectivePath);
+        dbInstance = await MobileDatabase.create(effectivePath);
 
         if (!mounted) {
           // Component unmounted during initialization
           await dbInstance.close();
           return;
+        }
+
+        // Run migrations to ensure schema is set up
+        const migrationResult = await runMigrations(dbInstance);
+        if (migrationResult.errors.length > 0) {
+          const migrationError = migrationResult.errors[0];
+          throw new Error(
+            `Migration '${migrationError?.migration}' failed: ${migrationError?.error}`
+          );
         }
 
         // Create services from the database instance
@@ -203,7 +213,7 @@ export function DatabaseProvider({
   useEffect(() => {
     if (!db) return;
 
-    const mobileDb = db as MobileGraphDB;
+    const mobileDb = db as MobileDatabase;
 
     function handleAppStateChange(nextState: AppStateStatus) {
       if (nextState === 'background' || nextState === 'inactive') {
@@ -230,7 +240,7 @@ export function DatabaseProvider({
     if (status === 'error') {
       // Close any existing db instance before retry
       if (db) {
-        void (db as MobileGraphDB).close();
+        void (db as MobileDatabase).close();
         setDb(null);
         setServices(null);
       }

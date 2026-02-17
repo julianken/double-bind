@@ -2,6 +2,9 @@ import { defineConfig } from 'vitest/config';
 import path from 'path';
 
 export default defineConfig({
+  esbuild: {
+    jsx: 'automatic',
+  },
   test: {
     name: 'mobile-app',
     globals: true,
@@ -18,9 +21,8 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      // Map workspace packages to source for testing
+      // Map workspace package to source for testing
       '@double-bind/mobile': path.resolve(__dirname, '../mobile/src'),
-      '@double-bind/mobile-primitives': path.resolve(__dirname, '../mobile-primitives/src'),
     },
   },
 });

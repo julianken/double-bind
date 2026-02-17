@@ -9,9 +9,10 @@
  * - Navigate from graph to page view
  */
 
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { View, StyleSheet, useWindowDimensions, TouchableOpacity, Text } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useIsFocused } from '@react-navigation/native';
 import type { PageId } from '@double-bind/types';
 import type { GraphStackScreenProps } from '../navigation/types';
 import { MobileGraph, GraphDetailPanel } from '../components/graph';
@@ -49,12 +50,23 @@ export function GraphScreen({ navigation }: Props): React.ReactElement {
     pageTitle: string;
   } | null>(null);
 
+  // Track screen focus state
+  const isFocused = useIsFocused();
+
   // Fetch graph data based on current mode
-  const { nodes, edges, loading, error } = useGraphData({
+  const { nodes, edges, loading, error, refresh } = useGraphData({
     mode: viewMode,
     centerPageId: centerPageId || undefined,
     depth: 1,
   });
+
+  // Refresh graph data when screen comes into focus
+  // This ensures new pages appear after switching from Pages tab
+  useEffect(() => {
+    if (isFocused) {
+      refresh();
+    }
+  }, [isFocused, refresh]);
 
   // Calculate graph dimensions using safe area insets for pixel-perfect layout
   // The gap between controls and graph should equal the gap between graph and tab bar

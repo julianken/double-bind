@@ -1,7 +1,7 @@
 /**
  * Zod validation schemas for SavedQueryRepository
  *
- * Validates CozoDB query results at the boundary between raw rows and domain types.
+ * Validates SQLite query results at the boundary between raw rows and domain types.
  * Throws DoubleBindError(DB_QUERY_FAILED) with Zod error as cause on validation failure.
  */
 
@@ -10,7 +10,7 @@ import { DoubleBindError, ErrorCode, SavedQueryType } from '@double-bind/types';
 import type { SavedQuery } from '@double-bind/types';
 
 /**
- * Schema for validating raw CozoDB row tuple from saved_queries relation.
+ * Schema for validating raw SQLite row tuple from saved_queries table.
  * Order matches: id, name, type, definition, description, created_at, updated_at
  */
 export const SavedQueryRowSchema = z.tuple([
@@ -40,9 +40,9 @@ export const SavedQuerySchema = z.object({
 });
 
 /**
- * Parses a raw CozoDB row into a SavedQuery domain object.
+ * Parses a raw SQLite row into a SavedQuery domain object.
  *
- * @param row - Raw row from CozoDB query result
+ * @param row - Raw row from SQLite query result
  * @returns SavedQuery domain object
  * @throws DoubleBindError with DB_QUERY_FAILED code if validation fails
  */

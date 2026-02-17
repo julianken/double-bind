@@ -59,7 +59,7 @@ async function waitForServices(page: import('@playwright/test').Page): Promise<v
  */
 async function getBlockParentId(blockId: string): Promise<string | null> {
   const result = await executeQuery(
-    `?[parent_id] := *blocks{ block_id, parent_id }, block_id == $block_id`,
+    `SELECT parent_id FROM blocks WHERE block_id = $block_id`,
     { block_id: blockId }
   );
   if (result.rows.length > 0 && result.rows[0]) {
@@ -73,11 +73,12 @@ async function getBlockParentId(blockId: string): Promise<string | null> {
  */
 async function isBlockDeleted(blockId: string): Promise<boolean> {
   const result = await executeQuery(
-    `?[is_deleted] := *blocks{ block_id, is_deleted }, block_id == $block_id`,
+    `SELECT is_deleted FROM blocks WHERE block_id = $block_id`,
     { block_id: blockId }
   );
   if (result.rows.length > 0 && result.rows[0]) {
-    return result.rows[0][0] as boolean;
+    // SQLite returns 0/1 integers for boolean columns
+    return Boolean(result.rows[0][0]);
   }
   return false;
 }
@@ -93,7 +94,7 @@ async function waitForBlockStable(
     (id) => {
       const blocks = document.querySelectorAll(`[data-testid="block-node"][data-block-id="${id}"]`);
       for (const block of blocks) {
-        const content = block.querySelector('.block-content');
+        const content = block.querySelector('[data-testid="block-content"]');
         if (content) return true;
       }
       return false;
@@ -110,7 +111,7 @@ async function _focusBlock(page: import('@playwright/test').Page, blockId: strin
   await waitForBlockStable(page, blockId);
   const blockNode = page.locator(`[data-testid="block-node"][data-block-id="${blockId}"]`).first();
   await expect(blockNode).toBeVisible({ timeout: 5000 });
-  await blockNode.locator('.block-content').click();
+  await blockNode.locator('[data-testid="block-content"]').click();
   await expect(blockNode.locator('.ProseMirror')).toBeVisible({ timeout: 3000 });
 }
 

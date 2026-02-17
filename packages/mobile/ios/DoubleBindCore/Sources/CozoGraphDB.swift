@@ -8,6 +8,7 @@
 
 import Foundation
 import CozoSwiftBridge
+import SwiftyJSON
 
 /// Actor that manages the closed state with thread-safe access.
 private actor ClosedStateManager {
@@ -26,6 +27,48 @@ private actor ClosedStateManager {
             throw GraphDBError.databaseClosed
         }
     }
+}
+
+/// Recursively converts SwiftyJSON objects and other non-serializable types to Foundation types.
+/// This is necessary because CozoSwiftBridge may return JSON objects that JSONSerialization can't handle.
+private func convertToFoundation(_ value: Any) -> Any {
+    // Handle SwiftyJSON objects
+    if let json = value as? JSON {
+        return convertToFoundation(json.object)
+    }
+
+    // Handle arrays
+    if let array = value as? [Any] {
+        return array.map { convertToFoundation($0) }
+    }
+
+    // Handle dictionaries
+    if let dict = value as? [String: Any] {
+        return dict.mapValues { convertToFoundation($0) }
+    }
+
+    // Handle NSNumber (includes booleans)
+    if let number = value as? NSNumber {
+        return number
+    }
+
+    // Handle basic types that are already serializable
+    if value is String || value is Int || value is Double || value is Float || value is Bool {
+        return value
+    }
+
+    // Handle NSNull
+    if value is NSNull {
+        return value
+    }
+
+    // Handle nil (convert to NSNull for JSON compatibility)
+    if case Optional<Any>.none = value {
+        return NSNull()
+    }
+
+    // Fallback: convert to string representation
+    return String(describing: value)
 }
 
 /// Thread-safe wrapper around CozoDB that implements the GraphDB interface.
@@ -91,16 +134,33 @@ public final class CozoGraphDB: @unchecked Sendable {
                 }
 
                 do {
-                    // Parse params JSON to pass to CozoDB
+                    // Parse params JSON string to SwiftyJSON for CozoDB
                     let paramsData = params.data(using: .utf8) ?? Data()
-                    let paramsDict = try JSONSerialization.jsonObject(with: paramsData) as? [String: Any] ?? [:]
+                    let paramsJSON = try JSON(data: paramsData)
 
-                    // Execute the query
-                    let result = try db.run(script, params: paramsDict)
+                    // Execute the query - returns [NamedRow]
+                    // NamedRow has: headers: RowHeaders (with .headers: [String]), fields: [JSON]
+                    let result = try db.run(script, params: paramsJSON)
 
-                    // Convert result to JSON string
-                    let jsonData = try JSONSerialization.data(withJSONObject: result)
-                    let jsonString = String(data: jsonData, encoding: .utf8) ?? "{}"
+                    // Transform CozoDB result format to QueryResult format
+                    // TypeScript expects: { headers: [String], rows: [[Any]] }
+                    let headers: [String] = result.first?.headers.headers ?? []
+
+                    // Convert each NamedRow.fields to an array of Foundation values
+                    let rows: [[Any]] = result.map { namedRow -> [Any] in
+                        return namedRow.fields.map { json -> Any in
+                            return convertToFoundation(json.object)
+                        }
+                    }
+
+                    let queryResult: [String: Any] = [
+                        "headers": headers,
+                        "rows": rows
+                    ]
+
+                    // Convert to JSON string
+                    let jsonData = try JSONSerialization.data(withJSONObject: queryResult)
+                    let jsonString = String(data: jsonData, encoding: .utf8) ?? "{\"headers\":[],\"rows\":[]}"
 
                     continuation.resume(returning: jsonString)
                 } catch {
@@ -134,9 +194,8 @@ public final class CozoGraphDB: @unchecked Sendable {
                     // Export relations
                     let result = try db.exportRelations(relations: relationsArray)
 
-                    // Convert to JSON string
-                    let jsonData = try JSONSerialization.data(withJSONObject: result)
-                    let jsonString = String(data: jsonData, encoding: .utf8) ?? "{}"
+                    // Convert SwiftyJSON result to JSON string
+                    let jsonString = result.rawString(.utf8, options: []) ?? "{}"
 
                     continuation.resume(returning: jsonString)
                 } catch {
@@ -162,12 +221,12 @@ public final class CozoGraphDB: @unchecked Sendable {
                 }
 
                 do {
-                    // Parse data JSON
+                    // Parse data JSON string to SwiftyJSON for CozoDB
                     let dataObj = data.data(using: .utf8) ?? Data()
-                    let dataDict = try JSONSerialization.jsonObject(with: dataObj) as? [String: Any] ?? [:]
+                    let dataJSON = try JSON(data: dataObj)
 
                     // Import relations
-                    try db.importRelations(data: dataDict)
+                    try db.importRelations(data: dataJSON)
 
                     continuation.resume()
                 } catch {

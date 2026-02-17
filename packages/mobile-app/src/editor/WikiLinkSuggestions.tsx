@@ -360,6 +360,8 @@ const styles = StyleSheet.create({
   item: {
     paddingHorizontal: 16,
     paddingVertical: 12,
+    minHeight: 44,
+    justifyContent: 'center',
   },
   itemSelected: {
     backgroundColor: '#F2F2F7',

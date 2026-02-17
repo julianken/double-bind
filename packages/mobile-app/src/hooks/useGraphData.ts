@@ -287,11 +287,9 @@ export function useGraphData(options: UseGraphDataOptions): UseGraphDataResult {
     return () => {
       isMounted = false;
     };
-    // Note: centerPageId only matters for 'local' mode, so we only include it
-    // in dependencies when mode is 'local'. This prevents unnecessary refetches
-    // in 'full' mode when the center node changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [db, status, mode, ...(mode === 'local' ? [centerPageId] : []), depth, refreshKey]);
+    // Always include centerPageId to keep dependency array size constant
+    // (React requires stable array size between renders)
+  }, [db, status, mode, centerPageId, depth, refreshKey]);
 
   return {
     nodes,

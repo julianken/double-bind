@@ -46,24 +46,10 @@ export async function resetDatabase(): Promise<void> {
 }
 
 /**
- * Seed test data into the database.
+ * Seed test data into the database using SQL INSERT statements.
  *
  * Creates pages with optional blocks. Links are automatically extracted
  * from [[wiki-style links]] in block content.
- *
- * @example
- * ```typescript
- * await seedTestData({
- *   pages: [
- *     {
- *       id: 'page-1',
- *       title: 'Page One',
- *       blocks: [{ content: 'See [[Page Two]]' }],
- *     },
- *     { id: 'page-2', title: 'Page Two' },
- *   ],
- * });
- * ```
  */
 export async function seedTestData(data: { pages: SeedPage[] }): Promise<Map<string, string>> {
   const { pages } = data;
@@ -78,19 +64,15 @@ export async function seedTestData(data: { pages: SeedPage[] }): Promise<Map<str
     titleToId.set(page.title, id);
   }
 
-  // Create pages
+  // Phase 1: Create all pages first (before blocks/links, to satisfy FK constraints)
+  const now = Date.now();
   for (let i = 0; i < pages.length; i++) {
     const page = pages[i]!;
     const pageId = pageIds[i]!;
-    const now = Date.now();
 
     await invokeCommand('mutate', {
-      script: `
-        ?[page_id, title, daily_note_date, created_at, updated_at, is_deleted] <- [[
-          $page_id, $title, $daily_note_date, $created_at, $updated_at, false
-        ]]
-        :put pages { page_id, title, daily_note_date, created_at, updated_at, is_deleted }
-      `,
+      script: `INSERT INTO pages (page_id, title, daily_note_date, created_at, updated_at, is_deleted)
+               VALUES ($page_id, $title, $daily_note_date, $created_at, $updated_at, 0)`,
       params: {
         page_id: pageId,
         title: page.title,
@@ -99,8 +81,13 @@ export async function seedTestData(data: { pages: SeedPage[] }): Promise<Map<str
         updated_at: now,
       },
     });
+  }
 
-    // Create blocks for this page
+  // Phase 2: Create blocks and links (pages already exist, so FK constraints pass)
+  for (let i = 0; i < pages.length; i++) {
+    const page = pages[i]!;
+    const pageId = pageIds[i]!;
+
     if (page.blocks && page.blocks.length > 0) {
       for (let j = 0; j < page.blocks.length; j++) {
         const block = page.blocks[j]!;
@@ -108,12 +95,9 @@ export async function seedTestData(data: { pages: SeedPage[] }): Promise<Map<str
         const order = block.order || String(j).padStart(5, '0');
 
         await invokeCommand('mutate', {
-          script: `
-            ?[block_id, page_id, parent_id, content, order, is_collapsed, created_at, updated_at, is_deleted] <- [[
-              $block_id, $page_id, $parent_id, $content, $order, false, $created_at, $updated_at, false
-            ]]
-            :put blocks { block_id, page_id, parent_id, content, order, is_collapsed, created_at, updated_at, is_deleted }
-          `,
+          script: `INSERT INTO blocks (block_id, page_id, parent_id, content, content_type, "order",
+                                       is_collapsed, is_deleted, created_at, updated_at)
+                   VALUES ($block_id, $page_id, $parent_id, $content, 'text', $order, 0, 0, $created_at, $updated_at)`,
           params: {
             block_id: blockId,
             page_id: pageId,
@@ -125,21 +109,17 @@ export async function seedTestData(data: { pages: SeedPage[] }): Promise<Map<str
           },
         });
 
-        // Extract links from block content
+        // Extract links from block content using RegExp.prototype.exec
         const linkRegex = /\[\[([^\]]+)\]\]/g;
-        let match;
-        while ((match = linkRegex.exec(block.content)) !== null) {
+        let match = linkRegex.exec(block.content);
+        while (match !== null) {
           const targetTitle = match[1]!;
           const targetId = titleToId.get(targetTitle);
 
           if (targetId) {
             await invokeCommand('mutate', {
-              script: `
-                ?[source_id, target_id, link_type, context_block_id, created_at] <- [[
-                  $source_id, $target_id, "reference", $block_id, $created_at
-                ]]
-                :put links { source_id, target_id, link_type, context_block_id, created_at }
-              `,
+              script: `INSERT INTO links (source_id, target_id, link_type, context_block_id, created_at)
+                       VALUES ($source_id, $target_id, 'reference', $block_id, $created_at)`,
               params: {
                 source_id: pageId,
                 target_id: targetId,
@@ -148,6 +128,7 @@ export async function seedTestData(data: { pages: SeedPage[] }): Promise<Map<str
               },
             });
           }
+          match = linkRegex.exec(block.content);
         }
       }
     }

@@ -101,9 +101,12 @@ export {
   type Services,
 } from './services/index.js';
 
+// Adapters - database adapter implementations
+export { SqliteNodeAdapter } from './adapters/sqlite-node-adapter.js';
+
 // Providers - platform-agnostic database lifecycle management
 export {
-  type GraphDBProvider,
-  type GraphDBProviderConfig,
-  type GraphDBProviderInitResult,
+  type DatabaseProvider,
+  type DatabaseProviderConfig,
+  type DatabaseProviderInitResult,
 } from './providers/index.js';

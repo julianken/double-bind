@@ -2,7 +2,7 @@
  * Unit tests for SearchService
  *
  * These tests verify correct FTS query construction and result merging.
- * Uses MockGraphDB to verify:
+ * Uses MockDatabase to verify:
  * - Parallel page and block FTS queries
  * - Result merging and sorting by score
  * - Options handling (limit, minScore, includeTypes)
@@ -10,16 +10,16 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { MockGraphDB } from '@double-bind/test-utils';
+import { MockDatabase } from '@double-bind/test-utils';
 import { DoubleBindError, ErrorCode } from '@double-bind/types';
 import { SearchService } from '../../../src/services/search-service.js';
 
 describe('SearchService', () => {
-  let db: MockGraphDB;
+  let db: MockDatabase;
   let service: SearchService;
 
   beforeEach(() => {
-    db = new MockGraphDB();
+    db = new MockDatabase();
     service = new SearchService(db);
   });
 

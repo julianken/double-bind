@@ -11,12 +11,12 @@
  * - Handles rapid state transitions with debouncing
  * - Tracks pending operations to prevent state corruption
  *
- * @see MobileGraphDB - Database implementation with suspend/resume methods
+ * @see MobileDatabase - Database implementation with suspend/resume methods
  */
 
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { AppState, type AppStateStatus } from 'react-native';
-import type { MobileGraphDB } from '@double-bind/mobile';
+import type { MobileDatabase } from '@double-bind/mobile';
 
 /**
  * Options for the useAppLifecycle hook.
@@ -63,7 +63,7 @@ interface LifecycleState {
 /**
  * Hook to manage app lifecycle events and coordinate database operations.
  *
- * @param db - MobileGraphDB instance to manage
+ * @param db - MobileDatabase instance to manage
  * @param options - Optional configuration
  *
  * @example
@@ -82,7 +82,7 @@ interface LifecycleState {
  * ```
  */
 export function useAppLifecycle(
-  db: MobileGraphDB | null,
+  db: MobileDatabase | null,
   options: UseAppLifecycleOptions = {}
 ): void {
   const { onBackground, onForeground, onError, debounceMs = 100 } = options;

@@ -40,6 +40,15 @@
     "tsx": "^4.19.0",
     "vitest": "^2.0.0"
   },
+  "pnpm": {
+    "overrides": {
+      "react-native-reanimated": "3.6.0",
+      "react-native>@types/react": "18.3.28"
+    },
+    "peerDependencyRules": {
+      "allowAny": ["@types/react", "@types/react-dom"]
+    }
+  },
   "packageManager": "pnpm@9.15.0",
   "engines": {
     "node": ">=20.0.0"

@@ -9,7 +9,7 @@
  * over network or stored as a file.
  */
 
-import type { GraphDB, Page, Block, Link } from '@double-bind/types';
+import type { Database, Page, Block, Link } from '@double-bind/types';
 import { generateHLC, serializeHLC } from './hlc.js';
 
 // ============================================================================
@@ -73,7 +73,7 @@ export class SyncExportService {
   /** Export format version */
   private static readonly EXPORT_VERSION = '1.0.0';
 
-  constructor(private readonly db: GraphDB) {}
+  constructor(private readonly db: Database) {}
 
   /**
    * Export database state for synchronization.

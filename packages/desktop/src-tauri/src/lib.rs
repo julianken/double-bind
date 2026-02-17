@@ -1,154 +1,296 @@
 //! Double Bind - Rust shim for Tauri IPC
 //!
-//! This is the thinnest possible bridge between Tauri's IPC system and CozoDB's Rust API.
+//! Thin bridge between Tauri's IPC system and SQLite via rusqlite.
 //! All business logic lives in TypeScript. See docs/infrastructure/rust-shim.md.
+
+mod db;
 
 use std::collections::HashMap;
 use std::path::PathBuf;
+use std::sync::Mutex;
+use rusqlite::types::Value;
 use tauri::Manager;
 
-/// Database state managed by Tauri
-struct DbState(cozo::DbInstance);
+/// Database state managed by Tauri. Mutex makes the connection safe across threads.
+struct DbState(Mutex<rusqlite::Connection>);
 
-/// CozoDB response structure
-#[derive(serde::Deserialize)]
-struct CozoResponse {
-    ok: bool,
-    #[serde(default)]
-    headers: Vec<String>,
-    #[serde(default)]
-    rows: Vec<Vec<serde_json::Value>>,
-    #[serde(default)]
-    message: Option<String>,
-}
-
-/// QueryResult structure expected by TypeScript
+/// QueryResult structure expected by TypeScript.
 #[derive(serde::Serialize)]
 struct QueryResult {
     headers: Vec<String>,
     rows: Vec<Vec<serde_json::Value>>,
 }
 
-/// Parse CozoDB response and convert errors to Err
-fn parse_cozo_response(result: &str) -> Result<QueryResult, String> {
-    let response: CozoResponse = serde_json::from_str(result)
-        .map_err(|e| format!("Failed to parse CozoDB response: {}", e))?;
-
-    if !response.ok {
-        return Err(response.message.unwrap_or_else(|| "Unknown database error".to_string()));
-    }
-
-    Ok(QueryResult {
-        headers: response.headers,
-        rows: response.rows,
-    })
+/// A single statement in a transaction batch.
+#[derive(serde::Deserialize)]
+struct TransactionStatement {
+    script: String,
+    #[serde(default)]
+    params: HashMap<String, serde_json::Value>,
 }
 
-/// Read-only queries using immutable mode
+/// Convert a rusqlite Value to a serde_json Value.
+fn sqlite_to_json(val: Value) -> serde_json::Value {
+    match val {
+        Value::Null => serde_json::Value::Null,
+        Value::Integer(i) => serde_json::json!(i),
+        Value::Real(f) => serde_json::json!(f),
+        Value::Text(s) => serde_json::json!(s),
+        Value::Blob(b) => serde_json::json!(b),
+    }
+}
+
+/// Convert JSON params map into a Vec of (name, rusqlite Value) pairs.
+/// The TypeScript side sends `{ name: value }` where SQL uses `$name`.
+/// rusqlite expects param names prefixed with `$`, `:`, or `@`.
+fn json_params_to_named(params: &HashMap<String, serde_json::Value>) -> Vec<(String, Box<dyn rusqlite::types::ToSql>)> {
+    params
+        .iter()
+        .map(|(key, val)| {
+            let name = if key.starts_with('$') || key.starts_with(':') || key.starts_with('@') {
+                key.clone()
+            } else {
+                format!("${}", key)
+            };
+            let boxed: Box<dyn rusqlite::types::ToSql> = match val {
+                serde_json::Value::Null => Box::new(Option::<String>::None),
+                serde_json::Value::Bool(b) => Box::new(if *b { 1i64 } else { 0i64 }),
+                serde_json::Value::Number(n) => {
+                    if let Some(i) = n.as_i64() {
+                        Box::new(i)
+                    } else if let Some(f) = n.as_f64() {
+                        Box::new(f)
+                    } else {
+                        Box::new(n.to_string())
+                    }
+                }
+                serde_json::Value::String(s) => Box::new(s.clone()),
+                other => Box::new(other.to_string()),
+            };
+            (name, boxed)
+        })
+        .collect()
+}
+
+/// Execute a read-only SELECT query, returning headers and rows.
 #[tauri::command]
 fn query(
     db: tauri::State<'_, DbState>,
     script: String,
     params: HashMap<String, serde_json::Value>,
 ) -> Result<QueryResult, String> {
-    let params_json = serde_json::to_string(&params).map_err(|e| e.to_string())?;
-    let result = db.0.run_script_str(&script, &params_json, true); // immutable = true
-    parse_cozo_response(&result)
+    let conn = db.0.lock().map_err(|e| format!("Lock error: {}", e))?;
+    let named = json_params_to_named(&params);
+    let param_refs: Vec<(&str, &dyn rusqlite::types::ToSql)> = named
+        .iter()
+        .map(|(k, v)| (k.as_str(), v.as_ref() as &dyn rusqlite::types::ToSql))
+        .collect();
+
+    let mut stmt = conn.prepare(&script).map_err(|e| format!("Prepare error: {}", e))?;
+
+    let headers: Vec<String> = stmt.column_names().iter().map(|s| s.to_string()).collect();
+    let col_count = headers.len();
+
+    let rows: Vec<Vec<serde_json::Value>> = stmt
+        .query_map(param_refs.as_slice(), |row| {
+            let mut vals = Vec::with_capacity(col_count);
+            for i in 0..col_count {
+                let val: Value = row.get(i)?;
+                vals.push(sqlite_to_json(val));
+            }
+            Ok(vals)
+        })
+        .map_err(|e| format!("Query error: {}", e))?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| format!("Row error: {}", e))?;
+
+    Ok(QueryResult { headers, rows })
 }
 
-/// Write operations - allows all operations for now (development mode)
+/// Execute a write operation (INSERT/UPDATE/DELETE), returning affected row count.
 #[tauri::command]
 fn mutate(
     db: tauri::State<'_, DbState>,
     script: String,
     params: HashMap<String, serde_json::Value>,
 ) -> Result<QueryResult, String> {
-    // Note: In production, add blocklist for ::remove, ::rename, etc.
-    let params_json = serde_json::to_string(&params).map_err(|e| e.to_string())?;
-    let result = db.0.run_script_str(&script, &params_json, false); // immutable = false
-    parse_cozo_response(&result)
+    let conn = db.0.lock().map_err(|e| format!("Lock error: {}", e))?;
+    let named = json_params_to_named(&params);
+    let param_refs: Vec<(&str, &dyn rusqlite::types::ToSql)> = named
+        .iter()
+        .map(|(k, v)| (k.as_str(), v.as_ref() as &dyn rusqlite::types::ToSql))
+        .collect();
+
+    let affected = conn
+        .execute(&script, param_refs.as_slice())
+        .map_err(|e| format!("Mutate error: {}", e))?;
+
+    Ok(QueryResult {
+        headers: vec!["affected_rows".to_string()],
+        rows: vec![vec![serde_json::json!(affected)]],
+    })
 }
 
-/// Bulk import for data migration
+/// Execute multiple statements atomically inside a transaction.
+#[tauri::command]
+fn transaction(
+    db: tauri::State<'_, DbState>,
+    statements: Vec<TransactionStatement>,
+) -> Result<QueryResult, String> {
+    let mut conn = db.0.lock().map_err(|e| format!("Lock error: {}", e))?;
+    let tx = conn.transaction().map_err(|e| format!("Transaction begin error: {}", e))?;
+
+    let mut total_affected: usize = 0;
+    for stmt_def in &statements {
+        let named = json_params_to_named(&stmt_def.params);
+        let param_refs: Vec<(&str, &dyn rusqlite::types::ToSql)> = named
+            .iter()
+            .map(|(k, v)| (k.as_str(), v.as_ref() as &dyn rusqlite::types::ToSql))
+            .collect();
+
+        let affected = tx
+            .execute(&stmt_def.script, param_refs.as_slice())
+            .map_err(|e| format!("Transaction statement error: {}", e))?;
+        total_affected += affected;
+    }
+
+    tx.commit().map_err(|e| format!("Transaction commit error: {}", e))?;
+
+    Ok(QueryResult {
+        headers: vec!["affected_rows".to_string()],
+        rows: vec![vec![serde_json::json!(total_affected)]],
+    })
+}
+
+/// Bulk import: accept `{ tableName: [[values...], ...] }` and insert via prepared statements.
 #[tauri::command]
 fn import_relations(
     db: tauri::State<'_, DbState>,
     data: HashMap<String, Vec<Vec<serde_json::Value>>>,
 ) -> Result<(), String> {
-    let data_json = serde_json::to_string(&data).map_err(|e| e.to_string())?;
-    db.0.import_relations_str_with_err(&data_json)
-        .map_err(|e| e.to_string())
+    let mut conn = db.0.lock().map_err(|e| format!("Lock error: {}", e))?;
+    let tx = conn.transaction().map_err(|e| format!("Transaction error: {}", e))?;
+
+    for (table, rows) in &data {
+        if rows.is_empty() {
+            continue;
+        }
+        let col_count = rows[0].len();
+        let placeholders: Vec<String> = (0..col_count).map(|_| "?".to_string()).collect();
+        let sql = format!(
+            "INSERT INTO \"{}\" VALUES ({})",
+            table.replace('"', "\"\""),
+            placeholders.join(", ")
+        );
+        let mut stmt = tx.prepare(&sql).map_err(|e| format!("Prepare error for {}: {}", table, e))?;
+
+        for row in rows {
+            let params: Vec<Box<dyn rusqlite::types::ToSql>> = row
+                .iter()
+                .map(|val| -> Box<dyn rusqlite::types::ToSql> {
+                    match val {
+                        serde_json::Value::Null => Box::new(Option::<String>::None),
+                        serde_json::Value::Bool(b) => Box::new(if *b { 1i64 } else { 0i64 }),
+                        serde_json::Value::Number(n) => {
+                            if let Some(i) = n.as_i64() {
+                                Box::new(i)
+                            } else if let Some(f) = n.as_f64() {
+                                Box::new(f)
+                            } else {
+                                Box::new(n.to_string())
+                            }
+                        }
+                        serde_json::Value::String(s) => Box::new(s.clone()),
+                        other => Box::new(other.to_string()),
+                    }
+                })
+                .collect();
+            let param_refs: Vec<&dyn rusqlite::types::ToSql> =
+                params.iter().map(|p| p.as_ref()).collect();
+            stmt.execute(param_refs.as_slice())
+                .map_err(|e| format!("Insert error for {}: {}", table, e))?;
+        }
+    }
+
+    tx.commit().map_err(|e| format!("Import commit error: {}", e))
 }
 
-/// Bulk export for backup and data export
+/// Bulk export: SELECT * from each named table and return rows.
 #[tauri::command]
 fn export_relations(
     db: tauri::State<'_, DbState>,
     relations: Vec<String>,
 ) -> Result<HashMap<String, Vec<Vec<serde_json::Value>>>, String> {
-    let relations_json = serde_json::to_string(&relations).map_err(|e| e.to_string())?;
-    let result = db.0.export_relations_str(&relations_json);
-    serde_json::from_str(&result).map_err(|e| format!("Parse error: {}", e))
+    let conn = db.0.lock().map_err(|e| format!("Lock error: {}", e))?;
+    let mut result = HashMap::new();
+
+    for table in &relations {
+        let sql = format!("SELECT * FROM \"{}\"", table.replace('"', "\"\""));
+        let mut stmt = conn.prepare(&sql).map_err(|e| format!("Prepare error for {}: {}", table, e))?;
+        let col_count = stmt.column_count();
+
+        let rows: Vec<Vec<serde_json::Value>> = stmt
+            .query_map([], |row| {
+                let mut vals = Vec::with_capacity(col_count);
+                for i in 0..col_count {
+                    let val: Value = row.get(i)?;
+                    vals.push(sqlite_to_json(val));
+                }
+                Ok(vals)
+            })
+            .map_err(|e| format!("Query error for {}: {}", table, e))?
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| format!("Row error for {}: {}", table, e))?;
+
+        result.insert(table.clone(), rows);
+    }
+
+    Ok(result)
 }
 
-/// Point-in-time database backup
+/// Database backup using rusqlite's backup API.
 #[tauri::command]
 fn backup(db: tauri::State<'_, DbState>, path: String) -> Result<(), String> {
-    db.0.backup_db(&path).map_err(|e| e.to_string())
+    let conn = db.0.lock().map_err(|e| format!("Lock error: {}", e))?;
+    let mut dest = rusqlite::Connection::open(&path)
+        .map_err(|e| format!("Failed to open backup destination: {}", e))?;
+    let backup = rusqlite::backup::Backup::new(&conn, &mut dest)
+        .map_err(|e| format!("Backup init error: {}", e))?;
+    backup
+        .run_to_completion(100, std::time::Duration::from_millis(50), None)
+        .map_err(|e| format!("Backup error: {}", e))
 }
 
-/// Restore database from backup (database must be empty)
+/// Restore database from a backup file.
 #[tauri::command]
 fn restore(db: tauri::State<'_, DbState>, path: String) -> Result<(), String> {
-    db.0.restore_backup(&path).map_err(|e| e.to_string())
+    let mut conn = db.0.lock().map_err(|e| format!("Lock error: {}", e))?;
+    let src = rusqlite::Connection::open(&path)
+        .map_err(|e| format!("Failed to open backup source: {}", e))?;
+    let backup = rusqlite::backup::Backup::new(&src, &mut *conn)
+        .map_err(|e| format!("Restore init error: {}", e))?;
+    backup
+        .run_to_completion(100, std::time::Duration::from_millis(50), None)
+        .map_err(|e| format!("Restore error: {}", e))
 }
 
-/// Import specific relations from a backup file
+/// Explicit connection cleanup.
 #[tauri::command]
-fn import_relations_from_backup(
-    db: tauri::State<'_, DbState>,
-    path: String,
-    relations: Vec<String>,
-) -> Result<(), String> {
-    let relations_json = serde_json::to_string(&relations).map_err(|e| e.to_string())?;
-    db.0.import_from_backup_str(&path, &relations_json)
-        .map_err(|e| e.to_string())
+fn close(db: tauri::State<'_, DbState>) -> Result<(), String> {
+    // Trigger a PRAGMA optimize before closing for query planner stats
+    let conn = db.0.lock().map_err(|e| format!("Lock error: {}", e))?;
+    let _ = conn.execute_batch("PRAGMA optimize;");
+    Ok(())
 }
 
-/// Get platform-correct database path
+/// Get platform-correct database path.
 fn get_db_path(app: &tauri::AppHandle) -> PathBuf {
     let data_dir = app
         .path()
         .app_data_dir()
         .expect("Failed to resolve app data directory");
     std::fs::create_dir_all(&data_dir).expect("Failed to create app data directory");
-    data_dir.join("db")
-}
-
-/// Try to open the database with retry logic for lock contention
-fn open_database_with_retry(db_path: &str, max_retries: u32) -> Result<cozo::DbInstance, String> {
-    for attempt in 0..max_retries {
-        match cozo::DbInstance::new("rocksdb", db_path, Default::default()) {
-            Ok(db) => return Ok(db),
-            Err(e) => {
-                let error_str = e.to_string();
-                // Check if it's a lock error (another instance is running)
-                if error_str.contains("LOCK") || error_str.contains("Resource temporarily unavailable") {
-                    if attempt < max_retries - 1 {
-                        eprintln!(
-                            "Database locked (attempt {}/{}), waiting for other instance to exit...",
-                            attempt + 1,
-                            max_retries
-                        );
-                        std::thread::sleep(std::time::Duration::from_millis(500));
-                        continue;
-                    }
-                }
-                return Err(format!("Failed to open database: {}", error_str));
-            }
-        }
-    }
-    Err("Failed to open database after max retries".to_string())
+    data_dir.join("double-bind.db")
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -158,21 +300,21 @@ pub fn run() {
             let db_path = get_db_path(app.handle());
             let db_path_str = db_path.to_str().ok_or("Invalid database path")?;
 
-            // Try to open with retry logic - gives old process time to exit during hot reload
-            let db = open_database_with_retry(db_path_str, 5)
+            let conn = db::init_database(db_path_str)
                 .map_err(|e| Box::new(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
 
-            app.manage(DbState(db));
+            app.manage(DbState(Mutex::new(conn)));
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
             query,
             mutate,
+            transaction,
             import_relations,
             export_relations,
             backup,
             restore,
-            import_relations_from_backup,
+            close,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

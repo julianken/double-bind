@@ -1,17 +1,17 @@
 /**
- * LinkRepository - Encapsulates all Datalog queries for Link and BlockRef entities.
+ * LinkRepository - Encapsulates all SQL queries for Link and BlockRef entities.
  *
- * Each method constructs parameterized Datalog queries that are executed
- * against CozoDB. User data never enters the query string directly;
+ * Each method constructs parameterized SQL queries that are executed
+ * against SQLite. User data never enters the query string directly;
  * all values are passed as parameters.
  *
  * Key patterns:
- * - Backlink queries leverage reverse indexes (links:by_target, block_refs:by_target)
- * - removeLinksFromBlock cleans up both links and block_refs
- * - All queries use parameterized variables
+ * - Backlink queries leverage reverse indexes (idx_links_target, idx_block_refs_target)
+ * - removeLinksFromBlock cleans up both links and block_refs atomically
+ * - All queries use parameterized variables ($name)
  */
 
-import type { GraphDB, Link, BlockRef, PageId, BlockId } from '@double-bind/types';
+import type { Database, Link, BlockRef, PageId, BlockId } from '@double-bind/types';
 import { parseLinkRow, parseBlockRefRow } from './link-repository.schemas.js';
 
 /**
@@ -56,10 +56,10 @@ export interface BlockBacklink extends BlockRef {
 
 /**
  * Repository for Link and BlockRef entity operations.
- * All methods use parameterized Datalog queries for security.
+ * All methods use parameterized SQL queries for security.
  */
 export class LinkRepository {
-  constructor(private readonly db: GraphDB) {}
+  constructor(private readonly db: Database) {}
 
   /**
    * Get outgoing links from a page, joined with target page titles.
@@ -69,11 +69,12 @@ export class LinkRepository {
    */
   async getOutLinks(pageId: PageId): Promise<LinkWithTargetTitle[]> {
     const script = `
-?[source_id, target_id, link_type, created_at, context_block_id, title] :=
-    *links{ source_id, target_id, link_type, created_at, context_block_id },
-    source_id == $page_id,
-    *pages{ page_id: target_id, title, is_deleted: false }
-`.trim();
+      SELECT l.source_id, l.target_id, l.link_type, l.created_at, l.context_block_id, p.title
+      FROM links l
+      JOIN pages p ON l.target_id = p.page_id
+      WHERE l.source_id = $page_id
+        AND p.is_deleted = 0
+    `;
 
     const result = await this.db.query(script, { page_id: pageId });
 
@@ -99,7 +100,7 @@ export class LinkRepository {
 
   /**
    * Get incoming links (backlinks) to a page.
-   * Uses the links:by_target reverse index for performance.
+   * Uses the idx_links_target index for performance.
    * Joins with blocks to get the context content.
    *
    * @param pageId - The target page identifier
@@ -107,11 +108,12 @@ export class LinkRepository {
    */
   async getInLinks(pageId: PageId): Promise<InLink[]> {
     const script = `
-?[source_id, target_id, link_type, created_at, context_block_id, content] :=
-    *links{ source_id, target_id, link_type, created_at, context_block_id },
-    target_id == $page_id,
-    *blocks{ block_id: context_block_id, content, is_deleted: false }
-`.trim();
+      SELECT l.source_id, l.target_id, l.link_type, l.created_at, l.context_block_id, b.content
+      FROM links l
+      JOIN blocks b ON l.context_block_id = b.block_id
+      WHERE l.target_id = $page_id
+        AND b.is_deleted = 0
+    `;
 
     const result = await this.db.query(script, { page_id: pageId });
 
@@ -137,7 +139,7 @@ export class LinkRepository {
 
   /**
    * Get backlinks to a specific block.
-   * Uses the block_refs:by_target reverse index for performance.
+   * Uses the idx_block_refs_target index for performance.
    * Joins with blocks to get the source block content and page.
    *
    * @param blockId - The target block identifier
@@ -145,11 +147,12 @@ export class LinkRepository {
    */
   async getBlockBacklinks(blockId: BlockId): Promise<BlockBacklink[]> {
     const script = `
-?[source_block_id, target_block_id, created_at, content, page_id] :=
-    *block_refs{ source_block_id, target_block_id, created_at },
-    target_block_id == $target,
-    *blocks{ block_id: source_block_id, content, page_id, is_deleted: false }
-`.trim();
+      SELECT br.source_block_id, br.target_block_id, br.created_at, b.content, b.page_id
+      FROM block_refs br
+      JOIN blocks b ON br.source_block_id = b.block_id
+      WHERE br.target_block_id = $target
+        AND b.is_deleted = 0
+    `;
 
     const result = await this.db.query(script, { target: blockId });
 
@@ -183,11 +186,9 @@ export class LinkRepository {
     const now = Date.now();
 
     const script = `
-?[source_id, target_id, link_type, created_at, context_block_id] <- [
-    [$source_id, $target_id, $link_type, $now, $context_block_id]
-]
-:put links { source_id, target_id, link_type, created_at, context_block_id }
-`.trim();
+      INSERT OR REPLACE INTO links (source_id, target_id, link_type, created_at, context_block_id)
+      VALUES ($source_id, $target_id, $link_type, $now, $context_block_id)
+    `;
 
     await this.db.mutate(script, {
       source_id: input.sourceId,
@@ -208,11 +209,9 @@ export class LinkRepository {
     const now = Date.now();
 
     const script = `
-?[source_block_id, target_block_id, created_at] <- [
-    [$source_block_id, $target_block_id, $now]
-]
-:put block_refs { source_block_id, target_block_id, created_at }
-`.trim();
+      INSERT OR REPLACE INTO block_refs (source_block_id, target_block_id, created_at)
+      VALUES ($source_block_id, $target_block_id, $now)
+    `;
 
     await this.db.mutate(script, {
       source_block_id: input.sourceBlockId,
@@ -226,30 +225,23 @@ export class LinkRepository {
    * Called when block content is updated to clear old references
    * before creating new ones.
    *
-   * Atomically removes (via CozoDB transaction block):
+   * Removes:
    * 1. Links where context_block_id matches (page links from this block)
    * 2. Block refs where source_block_id matches (block refs from this block)
    *
    * @param blockId - The block whose references should be removed
    */
   async removeLinksFromBlock(blockId: BlockId): Promise<void> {
-    // Use CozoDB transaction blocks { } for atomic execution.
-    // Both removals succeed or fail together.
-    const script = `
-{
-  ?[source_id, target_id, link_type] :=
-    *links{ source_id, target_id, link_type, context_block_id },
-    context_block_id == $block_id
-  :rm links { source_id, target_id, link_type }
-}
-{
-  ?[source_block_id, target_block_id] :=
-    *block_refs{ source_block_id, target_block_id },
-    source_block_id == $block_id
-  :rm block_refs { source_block_id, target_block_id }
-}
-`.trim();
+    // Delete links where this block is the context
+    await this.db.mutate(
+      `DELETE FROM links WHERE context_block_id = $block_id`,
+      { block_id: blockId }
+    );
 
-    await this.db.mutate(script, { block_id: blockId });
+    // Delete block refs where this block is the source
+    await this.db.mutate(
+      `DELETE FROM block_refs WHERE source_block_id = $block_id`,
+      { block_id: blockId }
+    );
   }
 }

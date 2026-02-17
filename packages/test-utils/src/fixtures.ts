@@ -5,7 +5,7 @@
  * These provide consistent, well-known data sets for testing various features.
  *
  * Data format: Plain objects matching domain types, suitable for:
- * - Seeding MockGraphDB via seed()
+ * - Seeding MockDatabase via seed()
  * - Inserting into real CozoDB via repository create() calls
  */
 

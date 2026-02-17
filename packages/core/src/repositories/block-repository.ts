@@ -1,19 +1,24 @@
 /**
- * BlockRepository - Encapsulates all Datalog queries for Block entities.
+ * BlockRepository - Encapsulates all SQL queries for Block entities.
  *
- * Each method constructs parameterized Datalog queries that are executed
- * against CozoDB. User data never enters the query string directly;
- * all values are passed as parameters.
+ * Each method constructs parameterized SQL queries that are executed
+ * against SQLite. User data never enters the query string directly;
+ * all values are passed as named parameters.
  *
  * Key patterns:
- * - Root-level blocks use "__page:<pageId>" sentinel as parent key in blocks_by_parent
- * - Atomic transactions use { } braces to group multiple statements
- * - Index maintenance for blocks_by_page and blocks_by_parent
+ * - Root-level blocks have parent_id = NULL (no sentinel values)
+ * - SQLite indexes handle page/parent lookups (no manual index maintenance)
+ * - Booleans stored as 0/1 integers; Zod schemas handle conversion
+ * - The "order" column is a reserved word and must always be quoted
+ *
+ * Backward compatibility:
+ * - computeParentKey() is preserved for callers that use the old sentinel pattern
+ * - getChildren() and rebalanceSiblings() accept both sentinel strings and null/pageId
  */
 
 import { ulid } from 'ulid';
 import type {
-  GraphDB,
+  Database,
   Block,
   BlockId,
   PageId,
@@ -25,6 +30,9 @@ import { DoubleBindError, ErrorCode } from '@double-bind/types';
 import { parseBlockRow, parseBlockVersionRow } from './block-repository.schemas.js';
 import { DEFAULT_ORDER } from '../utils/ordering.js';
 
+/** Sentinel prefix used by the old CozoDB implementation for root blocks */
+const PAGE_SENTINEL_PREFIX = '__page:';
+
 /**
  * Search result type that includes relevance score.
  */
@@ -33,23 +41,26 @@ export interface BlockSearchResult extends Block {
 }
 
 /**
- * Computes the parent key for blocks_by_parent index.
- * Root-level blocks (no parent) use "__page:<pageId>" sentinel.
+ * Computes the parent key for backward compatibility with block-service.ts.
+ *
+ * In the CozoDB implementation, root-level blocks used "__page:<pageId>" sentinel
+ * in the blocks_by_parent index. In SQLite, root blocks have parent_id = NULL.
+ * This function is preserved so callers (e.g., BlockService) continue to work.
  *
  * @param parentId - The block's parent ID (null for root)
  * @param pageId - The block's page ID
- * @returns The key for blocks_by_parent relation
+ * @returns The key for parent lookups (block_id or "__page:<page_id>" sentinel)
  */
 export function computeParentKey(parentId: BlockId | null, pageId: PageId): string {
-  return parentId ?? `__page:${pageId}`;
+  return parentId ?? `${PAGE_SENTINEL_PREFIX}${pageId}`;
 }
 
 /**
  * Repository for Block entity operations.
- * All methods use parameterized Datalog queries for security.
+ * All methods use parameterized SQL queries for security.
  */
 export class BlockRepository {
-  constructor(private readonly db: GraphDB) {}
+  constructor(private readonly db: Database) {}
 
   /**
    * Get a block by its ID.
@@ -59,10 +70,10 @@ export class BlockRepository {
    */
   async getById(blockId: BlockId): Promise<Block | null> {
     const script = `
-?[block_id, page_id, parent_id, content, content_type, order, is_collapsed, is_deleted, created_at, updated_at] :=
-    *blocks{ block_id, page_id, parent_id, content, content_type, order, is_collapsed, is_deleted, created_at, updated_at },
-    block_id == $id,
-    is_deleted == false
+SELECT block_id, page_id, parent_id, content, content_type, "order",
+       is_collapsed, is_deleted, created_at, updated_at
+FROM blocks
+WHERE block_id = $id AND is_deleted = 0
 `.trim();
 
     const result = await this.db.query(script, { id: blockId });
@@ -76,19 +87,17 @@ export class BlockRepository {
 
   /**
    * Get all blocks for a page, ordered by their position.
-   * Joins blocks_by_page index with blocks relation.
    *
    * @param pageId - The page identifier
    * @returns Array of blocks sorted by order
    */
   async getByPage(pageId: PageId): Promise<Block[]> {
     const script = `
-?[block_id, page_id, parent_id, content, content_type, order, is_collapsed, is_deleted, created_at, updated_at] :=
-    *blocks_by_page{ page_id, block_id },
-    page_id == $page_id,
-    *blocks{ block_id, page_id, parent_id, content, content_type, order, is_collapsed, is_deleted, created_at, updated_at },
-    is_deleted == false
-:order order
+SELECT block_id, page_id, parent_id, content, content_type, "order",
+       is_collapsed, is_deleted, created_at, updated_at
+FROM blocks
+WHERE page_id = $page_id AND is_deleted = 0
+ORDER BY "order"
 `.trim();
 
     const result = await this.db.query(script, { page_id: pageId });
@@ -97,37 +106,65 @@ export class BlockRepository {
   }
 
   /**
-   * Get children of a parent (block or page root).
-   * Joins blocks_by_parent index with blocks relation.
+   * Get children of a parent block, ordered by position.
    *
-   * @param parentKey - Either a block_id or "__page:<page_id>" sentinel for root blocks
+   * Accepts either:
+   * - A direct parent block ID (returns children of that block)
+   * - A "__page:<pageId>" sentinel (returns root-level blocks for that page)
+   * - null with a pageId parameter (returns root-level blocks for that page)
+   *
+   * @param parentKey - Parent block ID, "__page:<pageId>" sentinel, or null for root blocks
+   * @param pageId - Page ID (used when parentKey is null)
    * @returns Array of child blocks sorted by order
    */
-  async getChildren(parentKey: string): Promise<Block[]> {
-    // NOTE: Use distinct variable names to avoid CozoDB binding conflicts:
-    // - `idx_parent` for the blocks_by_parent index key (may be sentinel like __page:X)
-    // - `parent_id` for the actual block's parent_id field (may be null for root blocks)
-    const script = `
-?[block_id, page_id, parent_id, content, content_type, order, is_collapsed, is_deleted, created_at, updated_at] :=
-    *blocks_by_parent{ parent_id: idx_parent, block_id },
-    idx_parent == $parent_key,
-    *blocks{ block_id, page_id, parent_id, content, content_type, order, is_collapsed, is_deleted, created_at, updated_at },
-    is_deleted == false
-:order order
-`.trim();
+  async getChildren(parentKey: string | null, pageId?: PageId): Promise<Block[]> {
+    let script: string;
+    let params: Record<string, unknown>;
 
-    const result = await this.db.query(script, { parent_key: parentKey });
+    // Determine if this is a root-level query
+    if (parentKey === null || parentKey === undefined) {
+      // Direct null: root-level blocks for the given page
+      script = `
+SELECT block_id, page_id, parent_id, content, content_type, "order",
+       is_collapsed, is_deleted, created_at, updated_at
+FROM blocks
+WHERE parent_id IS NULL AND page_id = $page_id AND is_deleted = 0
+ORDER BY "order"
+`.trim();
+      params = { page_id: pageId };
+    } else if (parentKey.startsWith(PAGE_SENTINEL_PREFIX)) {
+      // Legacy sentinel format: "__page:<pageId>"
+      const extractedPageId = parentKey.slice(PAGE_SENTINEL_PREFIX.length);
+      script = `
+SELECT block_id, page_id, parent_id, content, content_type, "order",
+       is_collapsed, is_deleted, created_at, updated_at
+FROM blocks
+WHERE parent_id IS NULL AND page_id = $page_id AND is_deleted = 0
+ORDER BY "order"
+`.trim();
+      params = { page_id: extractedPageId };
+    } else {
+      // Regular parent block ID
+      script = `
+SELECT block_id, page_id, parent_id, content, content_type, "order",
+       is_collapsed, is_deleted, created_at, updated_at
+FROM blocks
+WHERE parent_id = $parent_id AND is_deleted = 0
+ORDER BY "order"
+`.trim();
+      params = { parent_id: parentKey };
+    }
+
+    const result = await this.db.query(script, params);
 
     return result.rows.map((row) => parseBlockRow(row as unknown[]));
   }
 
   /**
-   * Create a new block with atomic index maintenance.
+   * Create a new block.
    *
-   * Inserts into (atomically via CozoDB transaction block):
-   * - blocks: the main block data
-   * - blocks_by_page: page-to-blocks index
-   * - blocks_by_parent: parent-to-children index
+   * In SQLite, a single INSERT handles everything. No manual index
+   * maintenance is needed (SQLite indexes are automatic).
    *
    * @param input - Block creation input (pageId, optional parentId, content, etc.)
    * @returns The ID of the newly created block
@@ -138,25 +175,12 @@ export class BlockRepository {
     const parentId = input.parentId ?? null;
     const contentType = input.contentType ?? 'text';
     const order = input.order ?? DEFAULT_ORDER;
-    const parentKey = computeParentKey(parentId, input.pageId);
 
-    // Use CozoDB transaction blocks { } for atomic execution.
-    // All three operations succeed or fail together - no orphaned blocks.
     const script = `
-{
-  ?[block_id, page_id, parent_id, content, content_type, order, is_collapsed, is_deleted, created_at, updated_at] <- [
-    [$id, $page_id, $parent_id, $content, $content_type, $order, false, false, $now, $now]
-  ]
-  :put blocks { block_id, page_id, parent_id, content, content_type, order, is_collapsed, is_deleted, created_at, updated_at }
-}
-{
-  ?[page_id, block_id] <- [[$page_id, $id]]
-  :put blocks_by_page { page_id, block_id }
-}
-{
-  ?[parent_id, block_id] <- [[$parent_key, $id]]
-  :put blocks_by_parent { parent_id, block_id }
-}
+INSERT INTO blocks (block_id, page_id, parent_id, content, content_type, "order",
+                    is_collapsed, is_deleted, created_at, updated_at)
+VALUES ($id, $page_id, $parent_id, $content, $content_type, $order,
+        0, 0, $now, $now)
 `.trim();
 
     await this.db.mutate(script, {
@@ -166,7 +190,6 @@ export class BlockRepository {
       content: input.content,
       content_type: contentType,
       order,
-      parent_key: parentKey,
       now,
     });
 
@@ -177,7 +200,7 @@ export class BlockRepository {
    * Update an existing block.
    *
    * This is a read-modify-write operation: it reads the current state,
-   * applies the updates, and writes back the full record.
+   * applies the updates, and writes back the changed fields.
    *
    * @param blockId - The block to update
    * @param input - Partial block data to update
@@ -197,34 +220,33 @@ export class BlockRepository {
     const newIsCollapsed = input.isCollapsed ?? existing.isCollapsed;
 
     const script = `
-?[block_id, page_id, parent_id, content, content_type, order, is_collapsed, is_deleted, created_at, updated_at] <- [
-    [$id, $page_id, $parent_id, $content, $content_type, $order, $is_collapsed, $is_deleted, $created_at, $now]
-]
-:put blocks { block_id, page_id, parent_id, content, content_type, order, is_collapsed, is_deleted, created_at, updated_at }
+UPDATE blocks
+SET content = $content,
+    parent_id = $parent_id,
+    "order" = $order,
+    is_collapsed = $is_collapsed,
+    updated_at = $now
+WHERE block_id = $id
 `.trim();
 
     await this.db.mutate(script, {
       id: blockId,
-      page_id: existing.pageId,
-      parent_id: newParentId,
       content: newContent,
-      content_type: existing.contentType,
+      parent_id: newParentId,
       order: newOrder,
       is_collapsed: newIsCollapsed,
-      is_deleted: existing.isDeleted,
-      created_at: existing.createdAt,
       now,
     });
   }
 
   /**
-   * Soft-delete a block by setting is_deleted = true.
+   * Soft-delete a block by setting is_deleted = 1.
    *
    * @param blockId - The block to delete
    * @throws DoubleBindError if block not found
    */
   async softDelete(blockId: BlockId): Promise<void> {
-    // First, read the existing block to get all fields
+    // First, read the existing block to verify it exists
     const existing = await this.getById(blockId);
     if (!existing) {
       throw new DoubleBindError(`Block not found: ${blockId}`, ErrorCode.BLOCK_NOT_FOUND);
@@ -233,21 +255,13 @@ export class BlockRepository {
     const now = Date.now();
 
     const script = `
-?[block_id, page_id, parent_id, content, content_type, order, is_collapsed, is_deleted, created_at, updated_at] <- [
-    [$id, $page_id, $parent_id, $content, $content_type, $order, $is_collapsed, true, $created_at, $now]
-]
-:put blocks { block_id, page_id, parent_id, content, content_type, order, is_collapsed, is_deleted, created_at, updated_at }
+UPDATE blocks
+SET is_deleted = 1, updated_at = $now
+WHERE block_id = $id
 `.trim();
 
     await this.db.mutate(script, {
       id: blockId,
-      page_id: existing.pageId,
-      parent_id: existing.parentId,
-      content: existing.content,
-      content_type: existing.contentType,
-      order: existing.order,
-      is_collapsed: existing.isCollapsed,
-      created_at: existing.createdAt,
       now,
     });
   }
@@ -255,9 +269,7 @@ export class BlockRepository {
   /**
    * Move a block to a new parent and/or position.
    *
-   * Atomically updates (via CozoDB transaction block):
-   * - Block's parent_id and order
-   * - blocks_by_parent index (removes from old, adds to new)
+   * In SQLite, this is a simple UPDATE. No index maintenance needed.
    *
    * @param blockId - The block to move
    * @param newParentId - New parent block ID (null for root)
@@ -265,47 +277,26 @@ export class BlockRepository {
    * @throws DoubleBindError if block not found
    */
   async move(blockId: BlockId, newParentId: BlockId | null, newOrder: string): Promise<void> {
-    // First, read the existing block to get all fields
+    // First, read the existing block to verify it exists
     const existing = await this.getById(blockId);
     if (!existing) {
       throw new DoubleBindError(`Block not found: ${blockId}`, ErrorCode.BLOCK_NOT_FOUND);
     }
 
     const now = Date.now();
-    const oldParentKey = computeParentKey(existing.parentId, existing.pageId);
-    const newParentKey = computeParentKey(newParentId, existing.pageId);
 
-    // Use CozoDB transaction blocks { } for atomic execution.
-    // All three operations succeed or fail together - no orphaned blocks in indexes.
     const script = `
-{
-  ?[block_id, page_id, parent_id, content, content_type, order, is_collapsed, is_deleted, created_at, updated_at] <- [
-    [$id, $page_id, $new_parent_id, $content, $content_type, $new_order, $is_collapsed, $is_deleted, $created_at, $now]
-  ]
-  :put blocks { block_id, page_id, parent_id, content, content_type, order, is_collapsed, is_deleted, created_at, updated_at }
-}
-{
-  ?[parent_id, block_id] <- [[$old_parent_key, $id]]
-  :rm blocks_by_parent { parent_id, block_id }
-}
-{
-  ?[parent_id, block_id] <- [[$new_parent_key, $id]]
-  :put blocks_by_parent { parent_id, block_id }
-}
+UPDATE blocks
+SET parent_id = $new_parent_id,
+    "order" = $new_order,
+    updated_at = $now
+WHERE block_id = $id
 `.trim();
 
     await this.db.mutate(script, {
       id: blockId,
-      page_id: existing.pageId,
       new_parent_id: newParentId,
-      content: existing.content,
-      content_type: existing.contentType,
       new_order: newOrder,
-      is_collapsed: existing.isCollapsed,
-      is_deleted: existing.isDeleted,
-      created_at: existing.createdAt,
-      old_parent_key: oldParentKey,
-      new_parent_key: newParentKey,
       now,
     });
   }
@@ -313,22 +304,27 @@ export class BlockRepository {
   /**
    * Full-text search on block content.
    *
+   * Uses FTS5 for full-text search. The blocks_fts table is kept in sync
+   * via triggers defined in the schema migration.
+   *
    * @param query - The search query string
    * @param limit - Maximum number of results (default 50)
    * @returns Array of blocks matching the search, sorted by relevance score
    */
   async search(query: string, limit = 50): Promise<Block[]> {
     const script = `
-?[block_id, page_id, parent_id, content, content_type, order, is_collapsed, is_deleted, created_at, updated_at, score] :=
-    ~blocks:fts{ block_id, content | query: $query, k: $limit, bind_score: score },
-    *blocks{ block_id, page_id, parent_id, content, content_type, order, is_collapsed, is_deleted, created_at, updated_at },
-    is_deleted == false
-:order -score
+SELECT b.block_id, b.page_id, b.parent_id, b.content, b.content_type, b."order",
+       b.is_collapsed, b.is_deleted, b.created_at, b.updated_at
+FROM blocks_fts fts
+JOIN blocks b ON b.block_id = fts.block_id
+WHERE blocks_fts MATCH $query
+  AND b.is_deleted = 0
+ORDER BY rank
+LIMIT $limit
 `.trim();
 
     const result = await this.db.query(script, { query, limit });
 
-    // Map rows to Blocks (excluding the score column at index 10)
     return result.rows.map((row) => {
       const blockRow = (row as unknown[]).slice(0, 10);
       return parseBlockRow(blockRow);
@@ -344,11 +340,12 @@ export class BlockRepository {
    */
   async getHistory(blockId: BlockId, limit = 100): Promise<BlockVersion[]> {
     const script = `
-?[block_id, version, content, parent_id, order, is_collapsed, is_deleted, operation, timestamp] :=
-    *block_history{ block_id, version, content, parent_id, order, is_collapsed, is_deleted, operation, timestamp },
-    block_id == $id
-:order -version
-:limit $limit
+SELECT block_id, version, content, parent_id, "order",
+       is_collapsed, is_deleted, operation, timestamp
+FROM block_history
+WHERE block_id = $id
+ORDER BY version DESC
+LIMIT $limit
 `.trim();
 
     const result = await this.db.query(script, { id: blockId, limit });
@@ -360,57 +357,43 @@ export class BlockRepository {
    * Rebalance the order keys for all siblings under a parent.
    *
    * This method regenerates evenly-spaced order keys for all children
-   * of the specified parent in a single atomic transaction. Used when
+   * of the specified parent in a single batch update. Used when
    * pathological insertion patterns cause keys to grow too long.
    *
-   * @param parentKey - The parent key (block_id or "__page:<page_id>" sentinel)
+   * Accepts either:
+   * - A direct parent block ID
+   * - A "__page:<pageId>" sentinel (for root-level blocks)
+   * - null with a pageId parameter
+   *
+   * @param parentKey - Parent block ID, sentinel, or null for root blocks
    * @param newOrders - Map of block_id to new order key (must include all siblings)
+   * @param pageId - Page ID (used when parentKey is null)
    * @throws DoubleBindError if the update fails
    */
-  async rebalanceSiblings(parentKey: string, newOrders: Map<BlockId, string>): Promise<void> {
+  async rebalanceSiblings(
+    _parentKey: string | null,
+    newOrders: Map<BlockId, string>,
+    _pageId?: PageId
+  ): Promise<void> {
     if (newOrders.size === 0) {
       return;
     }
 
     const now = Date.now();
 
-    // First, fetch all blocks we need to update
-    const fetchScript = `
-?[block_id, page_id, parent_id, content, content_type, order, is_collapsed, is_deleted, created_at, updated_at] :=
-    *blocks_by_parent{ parent_id, block_id },
-    parent_id == $parent_key,
-    *blocks{ block_id, page_id, parent_id, content, content_type, order, is_collapsed, is_deleted, created_at, updated_at },
-    is_deleted == false
+    // Update each block's order individually
+    for (const [blockId, newOrder] of newOrders) {
+      const script = `
+UPDATE blocks
+SET "order" = $new_order, updated_at = $now
+WHERE block_id = $block_id
 `.trim();
 
-    const fetchResult = await this.db.query(fetchScript, { parent_key: parentKey });
-    const blocks = fetchResult.rows.map((row) => parseBlockRow(row as unknown[]));
-
-    // Build the update rows with new order keys
-    const updateRows: string[] = [];
-    for (const block of blocks) {
-      const newOrder = newOrders.get(block.blockId);
-      if (newOrder !== undefined) {
-        // Escape string values for Datalog
-        const escapedContent = block.content.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-        updateRows.push(
-          `["${block.blockId}", "${block.pageId}", ${block.parentId === null ? 'null' : `"${block.parentId}"`}, "${escapedContent}", "${block.contentType}", "${newOrder}", ${block.isCollapsed}, ${block.isDeleted}, ${block.createdAt}, ${now}]`
-        );
-      }
+      await this.db.mutate(script, {
+        block_id: blockId,
+        new_order: newOrder,
+        now,
+      });
     }
-
-    if (updateRows.length === 0) {
-      return;
-    }
-
-    // Execute the batch update in a single transaction
-    const updateScript = `
-?[block_id, page_id, parent_id, content, content_type, order, is_collapsed, is_deleted, created_at, updated_at] <- [
-    ${updateRows.join(',\n    ')}
-]
-:put blocks { block_id, page_id, parent_id, content, content_type, order, is_collapsed, is_deleted, created_at, updated_at }
-`.trim();
-
-    await this.db.mutate(updateScript, {});
   }
 }

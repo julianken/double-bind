@@ -19,14 +19,14 @@ import { useWikiLinkAutocomplete } from '../../../src/hooks/useWikiLinkAutocompl
 import { DatabaseContext } from '../../../src/providers/DatabaseProvider';
 import { createServices } from '@double-bind/core';
 import type { AutocompleteSuggestion } from '../../../src/editor/types';
-import type { MobileGraphDB } from '../../../src/database/MobileGraphDB';
+import type { MobileDatabase } from '../../../src/database/MobileDatabase';
 
 // Mock dependencies
 vi.mock('@double-bind/core');
 
 describe('useWikiLinkAutocomplete', () => {
   // Mock values
-  let mockDb: MobileGraphDB;
+  let mockDb: MobileDatabase;
   let mockPageService: {
     getOrCreateByTitle: Mock;
     searchPages: Mock;
@@ -42,7 +42,7 @@ describe('useWikiLinkAutocomplete', () => {
       close: vi.fn(),
       export: vi.fn(),
       importRelations: vi.fn(),
-    } as unknown as MobileGraphDB;
+    } as unknown as MobileDatabase;
 
     // Setup mock page service
     mockPageService = {

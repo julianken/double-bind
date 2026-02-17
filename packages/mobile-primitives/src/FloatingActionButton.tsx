@@ -17,7 +17,7 @@
  * ```
  */
 
-import type { ReactElement } from 'react';
+import React, { type ReactElement } from 'react';
 import { TouchableOpacity, Text, StyleSheet, type ViewStyle } from 'react-native';
 
 /**

@@ -1,17 +1,23 @@
 /**
- * PageRepository - Encapsulates all Datalog queries for Page entities.
+ * PageRepository - Encapsulates all SQL queries for Page entities.
  *
- * Each method constructs parameterized Datalog queries that are executed
- * against CozoDB. User data never enters the query string directly;
- * all values are passed as parameters.
+ * Each method constructs parameterized SQL queries that are executed
+ * against SQLite. User data never enters the query string directly;
+ * all values are passed as named parameters.
+ *
+ * Key patterns:
+ * - Booleans stored as 0/1 integers; validation handles conversion
+ * - Case-insensitive matching uses LOWER() function
+ * - Soft-delete pattern (is_deleted = 0/1) instead of physical deletion
+ * - Daily notes use a separate lookup table (daily_notes)
  */
 
 import { ulid } from 'ulid';
-import type { GraphDB, Page, PageId, CreatePageInput } from '@double-bind/types';
+import type { Database, Page, PageId, CreatePageInput } from '@double-bind/types';
 import { DoubleBindError, ErrorCode } from '@double-bind/types';
 
-/** Database row type for pages relation */
-type PageRow = [string, string, number, number, boolean, string | null];
+/** Database row type for pages relation (SQLite returns 0/1 for booleans) */
+type PageRow = [string, string, number, number, number | boolean, string | null];
 
 /**
  * Options for listing pages.
@@ -24,10 +30,10 @@ export interface GetAllOptions {
 
 /**
  * Repository for Page entity operations.
- * All methods use parameterized Datalog queries for security.
+ * All methods use parameterized SQL queries for security.
  */
 export class PageRepository {
-  constructor(private readonly db: GraphDB) {}
+  constructor(private readonly db: Database) {}
 
   /**
    * Get a page by its ID.
@@ -37,10 +43,9 @@ export class PageRepository {
    */
   async getById(pageId: PageId): Promise<Page | null> {
     const script = `
-?[page_id, title, created_at, updated_at, is_deleted, daily_note_date] :=
-    *pages{ page_id, title, created_at, updated_at, is_deleted, daily_note_date },
-    page_id == $id,
-    is_deleted == false
+SELECT page_id, title, created_at, updated_at, is_deleted, daily_note_date
+FROM pages
+WHERE page_id = $id AND is_deleted = 0
 `.trim();
 
     const result = await this.db.query(script, { id: pageId });
@@ -66,20 +71,18 @@ export class PageRepository {
 
     if (includeDeleted) {
       script = `
-?[page_id, title, created_at, updated_at, is_deleted, daily_note_date] :=
-    *pages{ page_id, title, created_at, updated_at, is_deleted, daily_note_date }
-:order -updated_at
-:limit $limit
-:offset $offset
+SELECT page_id, title, created_at, updated_at, is_deleted, daily_note_date
+FROM pages
+ORDER BY updated_at DESC
+LIMIT $limit OFFSET $offset
 `.trim();
     } else {
       script = `
-?[page_id, title, created_at, updated_at, is_deleted, daily_note_date] :=
-    *pages{ page_id, title, created_at, updated_at, is_deleted, daily_note_date },
-    is_deleted == false
-:order -updated_at
-:limit $limit
-:offset $offset
+SELECT page_id, title, created_at, updated_at, is_deleted, daily_note_date
+FROM pages
+WHERE is_deleted = 0
+ORDER BY updated_at DESC
+LIMIT $limit OFFSET $offset
 `.trim();
     }
 
@@ -91,24 +94,28 @@ export class PageRepository {
   /**
    * Full-text search on page titles.
    *
+   * Uses FTS5 for full-text search. The pages_fts table is kept in sync
+   * via triggers defined in the schema migration.
+   *
    * @param query - The search query string
    * @param limit - Maximum number of results (default 50)
    * @returns Array of pages matching the search, sorted by relevance score
    */
   async search(query: string, limit = 50): Promise<Page[]> {
     const script = `
-?[page_id, title, created_at, updated_at, is_deleted, daily_note_date, score] :=
-    ~pages:fts{ page_id, title | query: $query, k: $limit, bind_score: score },
-    *pages{ page_id, title, created_at, updated_at, is_deleted, daily_note_date },
-    is_deleted == false
-:order -score
+SELECT p.page_id, p.title, p.created_at, p.updated_at, p.is_deleted, p.daily_note_date
+FROM pages_fts fts
+JOIN pages p ON p.page_id = fts.page_id
+WHERE pages_fts MATCH $query
+  AND p.is_deleted = 0
+ORDER BY rank
+LIMIT $limit
 `.trim();
 
     const result = await this.db.query(script, { query, limit });
 
-    // Map rows to Pages (excluding the score column at index 6)
     return result.rows.map((row) => {
-      const pageRow = row.slice(0, 6) as PageRow;
+      const pageRow = row as PageRow;
       return this.rowToPage(pageRow);
     });
   }
@@ -135,10 +142,8 @@ export class PageRepository {
     const dailyNoteDate = input.dailyNoteDate ?? null;
 
     const script = `
-?[page_id, title, created_at, updated_at, is_deleted, daily_note_date] <- [
-    [$id, $title, $now, $now, false, $daily_date]
-]
-:put pages { page_id, title, created_at, updated_at, is_deleted, daily_note_date }
+INSERT INTO pages (page_id, title, created_at, updated_at, is_deleted, daily_note_date)
+VALUES ($id, $title, $now, $now, 0, $daily_date)
 `.trim();
 
     await this.db.mutate(script, {
@@ -155,7 +160,7 @@ export class PageRepository {
    * Update an existing page.
    *
    * This is a read-modify-write operation: it reads the current state,
-   * applies the updates, and writes back the full record.
+   * applies the updates, and writes back the changed fields.
    *
    * @param pageId - The page to update
    * @param input - Partial page data to update
@@ -189,30 +194,29 @@ export class PageRepository {
     }
 
     const script = `
-?[page_id, title, created_at, updated_at, is_deleted, daily_note_date] <- [
-    [$id, $title, $created_at, $now, $is_deleted, $daily_date]
-]
-:put pages { page_id, title, created_at, updated_at, is_deleted, daily_note_date }
+UPDATE pages
+SET title = $title,
+    daily_note_date = $daily_date,
+    updated_at = $now
+WHERE page_id = $id
 `.trim();
 
     await this.db.mutate(script, {
       id: pageId,
       title: newTitle,
-      created_at: existing.createdAt,
-      now,
-      is_deleted: existing.isDeleted,
       daily_date: newDailyNoteDate,
+      now,
     });
   }
 
   /**
-   * Soft-delete a page by setting is_deleted = true.
+   * Soft-delete a page by setting is_deleted = 1.
    *
    * @param pageId - The page to delete
    * @throws DoubleBindError if page not found
    */
   async softDelete(pageId: PageId): Promise<void> {
-    // First, read the existing page to get all fields
+    // First, read the existing page to verify it exists
     const existing = await this.getById(pageId);
     if (!existing) {
       throw new DoubleBindError(`Page not found: ${pageId}`, ErrorCode.PAGE_NOT_FOUND);
@@ -221,18 +225,14 @@ export class PageRepository {
     const now = Date.now();
 
     const script = `
-?[page_id, title, created_at, updated_at, is_deleted, daily_note_date] <- [
-    [$id, $title, $created_at, $now, true, $daily_date]
-]
-:put pages { page_id, title, created_at, updated_at, is_deleted, daily_note_date }
+UPDATE pages
+SET is_deleted = 1, updated_at = $now
+WHERE page_id = $id
 `.trim();
 
     await this.db.mutate(script, {
       id: pageId,
-      title: existing.title,
-      created_at: existing.createdAt,
       now,
-      daily_date: existing.dailyNoteDate,
     });
   }
 
@@ -244,10 +244,9 @@ export class PageRepository {
    */
   async getByTitle(title: string): Promise<Page | null> {
     const script = `
-?[page_id, title, created_at, updated_at, is_deleted, daily_note_date] :=
-    *pages{ page_id, title, created_at, updated_at, is_deleted, daily_note_date },
-    title == $title,
-    is_deleted == false
+SELECT page_id, title, created_at, updated_at, is_deleted, daily_note_date
+FROM pages
+WHERE title = $title AND is_deleted = 0
 `.trim();
 
     const result = await this.db.query(script, { title });
@@ -268,10 +267,9 @@ export class PageRepository {
    */
   async getByTitleCaseInsensitive(title: string): Promise<Page | null> {
     const script = `
-?[page_id, title, created_at, updated_at, is_deleted, daily_note_date] :=
-    *pages{ page_id, title, created_at, updated_at, is_deleted, daily_note_date },
-    lowercase(title) == lowercase($title),
-    is_deleted == false
+SELECT page_id, title, created_at, updated_at, is_deleted, daily_note_date
+FROM pages
+WHERE LOWER(title) = LOWER($title) AND is_deleted = 0
 `.trim();
 
     const result = await this.db.query(script, { title });
@@ -319,11 +317,9 @@ export class PageRepository {
    * @returns The daily note page if found, null otherwise
    */
   async getByDailyNoteDate(date: string): Promise<Page | null> {
-    // First query the daily_notes lookup relation
+    // Query the daily_notes lookup table
     const lookupScript = `
-?[page_id] :=
-    *daily_notes{ date, page_id },
-    date == $date
+SELECT page_id FROM daily_notes WHERE date = $date
 `.trim();
 
     const lookupResult = await this.db.query(lookupScript, { date });
@@ -344,7 +340,7 @@ export class PageRepository {
    *
    * If a daily note already exists for the date, returns it.
    * Otherwise, creates a new page with the date as the title
-   * and registers it in the daily_notes lookup relation.
+   * and registers it in the daily_notes lookup table.
    *
    * @param date - The date in YYYY-MM-DD format
    * @returns The daily note page (existing or newly created)
@@ -362,10 +358,9 @@ export class PageRepository {
       dailyNoteDate: date,
     });
 
-    // Register in daily_notes lookup relation
+    // Register in daily_notes lookup table
     const registerScript = `
-?[date, page_id] <- [[$date, $page_id]]
-:put daily_notes { date, page_id }
+INSERT INTO daily_notes (date, page_id) VALUES ($date, $page_id)
 `.trim();
 
     await this.db.mutate(registerScript, {
@@ -387,12 +382,13 @@ export class PageRepository {
 
   /**
    * Convert a database row to a Page object.
+   * Handles both boolean and integer (0/1) values for is_deleted.
    *
    * @param row - Database row tuple
    * @returns Page domain object
    */
   private rowToPage(row: PageRow): Page {
-    const [pageId, title, createdAt, updatedAt, isDeleted, dailyNoteDate] = row;
+    const [pageId, title, createdAt, updatedAt, isDeletedRaw, dailyNoteDate] = row;
 
     // Simple type validation
     if (typeof pageId !== 'string') {
@@ -413,15 +409,22 @@ export class PageRepository {
         ErrorCode.DB_QUERY_FAILED
       );
     }
-    if (typeof isDeleted !== 'boolean') {
-      throw new DoubleBindError(
-        'Invalid is_deleted type in database row',
-        ErrorCode.DB_QUERY_FAILED
-      );
-    }
     if (dailyNoteDate !== null && typeof dailyNoteDate !== 'string') {
       throw new DoubleBindError(
         'Invalid daily_note_date type in database row',
+        ErrorCode.DB_QUERY_FAILED
+      );
+    }
+
+    // Handle both boolean and integer (0/1) for is_deleted
+    let isDeleted: boolean;
+    if (typeof isDeletedRaw === 'boolean') {
+      isDeleted = isDeletedRaw;
+    } else if (typeof isDeletedRaw === 'number') {
+      isDeleted = isDeletedRaw !== 0;
+    } else {
+      throw new DoubleBindError(
+        'Invalid is_deleted type in database row',
         ErrorCode.DB_QUERY_FAILED
       );
     }

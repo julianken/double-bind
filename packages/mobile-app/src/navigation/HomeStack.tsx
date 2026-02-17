@@ -28,7 +28,8 @@ export function HomeStack(): React.ReactElement {
         component={HomeScreen}
         options={{
           title: 'Double Bind',
-          headerLargeTitle: true,
+          // Disable large title to prevent content overlap issues
+          headerLargeTitle: false,
         }}
       />
       <Stack.Screen

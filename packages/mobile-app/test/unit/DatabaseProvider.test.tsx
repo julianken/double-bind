@@ -30,7 +30,7 @@ vi.mock('react-native', () => ({
   },
 }));
 
-// Mock MobileGraphDB - must be before import
+// Mock MobileDatabase - must be before import
 const mockDatabaseInstance = {
   suspend: vi.fn().mockResolvedValue(undefined),
   resume: vi.fn().mockResolvedValue(undefined),
@@ -43,7 +43,7 @@ const mockDatabaseInstance = {
 const mockCreate = vi.fn().mockResolvedValue(mockDatabaseInstance);
 
 vi.mock('@double-bind/mobile', () => ({
-  MobileGraphDB: {
+  MobileDatabase: {
     create: (...args: unknown[]) => mockCreate(...args),
   },
 }));

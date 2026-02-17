@@ -28,7 +28,7 @@ export function PagesStack(): React.ReactElement {
         component={PageListScreen}
         options={{
           title: 'Pages',
-          headerLargeTitle: true,
+          headerLargeTitle: false,
         }}
       />
       <Stack.Screen
