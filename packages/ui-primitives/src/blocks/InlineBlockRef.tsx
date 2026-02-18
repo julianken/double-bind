@@ -56,8 +56,8 @@ export interface InlineBlockRefProps {
 
 // CSS custom properties for theming — prefer design tokens, fall back to raw values
 const cssVars = {
-  color: 'var(--accent-primary, var(--db-inline-ref-color, #2563eb))',
-  bg: 'var(--accent-muted, var(--db-inline-ref-bg, rgba(37, 99, 235, 0.08)))',
+  color: 'var(--accent-interactive, var(--db-inline-ref-color, #2563eb))',
+  bg: 'var(--accent-subtle, var(--db-inline-ref-bg, rgba(37, 99, 235, 0.08)))',
   colorMissing: 'var(--text-muted, var(--db-inline-ref-color-missing, #9ca3af))',
 } as const;
 

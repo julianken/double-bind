@@ -68,7 +68,7 @@
 }
 
 .bulletHandle:hover {
-  background-color: var(--bg-hover);
+  background-color: var(--surface-overlay);
   color: var(--text-secondary);
 }
 
@@ -153,7 +153,7 @@
 }
 
 .checkbox--checked {
-  color: var(--accent-primary);
+  color: var(--accent-interactive);
 }
 
 /* Text content */
@@ -179,7 +179,7 @@
   font-family: var(--font-mono);
   font-size: 0.9em;
   padding: 0.1em 0.3em;
-  background-color: var(--bg-tertiary);
+  background-color: var(--surface-elevated);
   border-radius: var(--radius-sm);
   color: var(--text-secondary);
 }
@@ -201,7 +201,7 @@
  * ============================================================================ */
 
 .pageLink {
-  color: var(--accent-primary);
+  color: var(--accent-interactive);
   cursor: pointer;
   text-decoration: none;
   border-bottom: 1px solid transparent;
@@ -209,26 +209,26 @@
 }
 
 .pageLink:hover {
-  border-bottom-color: var(--accent-primary);
+  border-bottom-color: var(--accent-interactive);
 }
 
 .blockRef {
   font-size: 0.95em;
   padding: 0.1em 0.4em;
-  background-color: var(--accent-muted);
+  background-color: var(--accent-subtle);
   border-radius: var(--radius-sm);
-  color: var(--accent-primary);
+  color: var(--accent-interactive);
   cursor: pointer;
   transition: background-color var(--transition-fast);
 }
 
 .blockRef:hover {
-  background-color: var(--accent-primary);
+  background-color: var(--accent-interactive);
   color: white;
 }
 
 .tag {
-  color: var(--accent-primary);
+  color: var(--accent-interactive);
   cursor: pointer;
 }
 
@@ -255,9 +255,9 @@
   height: var(--block-min-height, 24px);
   background: linear-gradient(
     90deg,
-    var(--bg-tertiary) 25%,
-    var(--bg-hover) 50%,
-    var(--bg-tertiary) 75%
+    var(--surface-elevated) 25%,
+    var(--surface-overlay) 50%,
+    var(--surface-elevated) 75%
   );
   background-size: 200% 100%;
   border-radius: var(--radius-sm);

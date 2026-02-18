@@ -55,7 +55,7 @@ export interface InlinePageLinkProps {
 
 // CSS custom properties for theming — prefer design tokens, fall back to raw values
 const cssVars = {
-  color: 'var(--accent-primary, var(--db-inline-link-color, #2563eb))',
+  color: 'var(--accent-interactive, var(--db-inline-link-color, #2563eb))',
   colorMissing: 'var(--text-muted, var(--db-inline-link-color-missing, #9ca3af))',
 } as const;
 

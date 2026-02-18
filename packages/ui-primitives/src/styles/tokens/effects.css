@@ -26,7 +26,7 @@
   /* Focus ring */
   --ring-width: 2px;
   --ring-offset: 2px;
-  --ring-color: var(--accent-primary);
+  --ring-color: var(--accent-interactive);
 
   /* Legacy transition aliases — now composed from motion primitives */
   --transition-fast:   var(--duration-instant) var(--ease-out);

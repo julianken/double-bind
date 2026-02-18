@@ -22,7 +22,7 @@
   line-height: var(--leading-body);
   letter-spacing: var(--tracking-body);
   font-optical-sizing: auto;
-  caret-color: var(--accent-primary, #6366F1);
+  caret-color: var(--accent-interactive, #6366F1);
 }
 
 .ProseMirror:focus {
@@ -59,7 +59,7 @@
   font-family: var(--font-mono);
   font-size: 0.875em;
   font-feature-settings: 'ss01' 1;
-  background-color: var(--bg-tertiary);
+  background-color: var(--surface-elevated);
   border-radius: 3px;
   padding: 0.1em 0.3em;
   color: var(--text-secondary);
@@ -68,7 +68,7 @@
 /* Page links: accent-colored underlined text */
 .ProseMirror .highlight-page-link,
 .ProseMirror .page-link {
-  color: var(--accent-primary);
+  color: var(--accent-interactive);
   text-decoration: underline;
   cursor: pointer;
 }
@@ -76,8 +76,8 @@
 /* Block references: accent with subtle background */
 .ProseMirror .highlight-block-ref,
 .ProseMirror .block-ref {
-  color: var(--accent-primary);
-  background-color: var(--accent-muted);
+  color: var(--accent-interactive);
+  background-color: var(--accent-subtle);
   border-radius: var(--radius-sm);
   padding: 0 2px;
 }
@@ -85,6 +85,6 @@
 /* Tags: accent-colored with medium weight */
 .ProseMirror .highlight-tag,
 .ProseMirror .tag {
-  color: var(--accent-primary);
+  color: var(--accent-interactive);
   font-weight: var(--font-medium);
 }
