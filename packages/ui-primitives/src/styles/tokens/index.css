@@ -28,8 +28,8 @@
 @import './themes/hc-light.css';
 @import './themes/hc-dark.css';
 
-/* Existing flat token files remain — do not remove yet */
-@import './colors.css';
+/* Remaining flat token files — spacing, effects, layout, typography still define
+ * tokens used across the codebase and are not purely alias files. */
 @import './typography.css';
 @import './spacing.css';
 @import './effects.css';

@@ -23,4 +23,10 @@
   --accent-pressed:     var(--accent-700);
   --accent-subtle:      var(--accent-500-a08);
   --accent-emphasis:    var(--accent-500-a20);
+
+  /* Status colors */
+  --error:   #ef4444;
+  --warning: #f59e0b;
+  --success: #10b981;
+  --info:    var(--accent-interactive);
 }
