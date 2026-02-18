@@ -1,7 +1,7 @@
 /**
  * PageList Component Styles
  *
- * Displays pages in the sidebar with relative timestamps.
+ * Three-section page list with Starred, Recent, and All Pages sections.
  */
 
 /* ============================================================================
@@ -11,11 +11,26 @@
 .list {
   padding: 0;
   margin: 0;
-  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
 }
 
 /* ============================================================================
- * Page List Item
+ * Section Header Row
+ *
+ * List item wrapper for SectionHeader inside the listbox.
+ * aria-hidden="true" so screen readers skip the header li element.
+ * ============================================================================ */
+
+.sectionHeaderRow {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+/* ============================================================================
+ * Legacy Page List Item (kept for backward compatibility)
  * ============================================================================ */
 
 .item {
@@ -54,7 +69,7 @@
 }
 
 /* ============================================================================
- * Item Content
+ * Legacy Item Content
  * ============================================================================ */
 
 .title {

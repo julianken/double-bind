@@ -1,23 +1,24 @@
 /**
- * Sidebar - Main navigation sidebar component
+ * Sidebar - Main navigation sidebar component with three-mode operation.
  *
- * Contains page list, search bar, quick capture, "New Page" button, and page neighborhood graph.
- * Collapsible via Ctrl+\ keyboard shortcut.
- * Width is resizable and persisted to localStorage.
+ * Modes:
+ * - open:   Full sidebar with QuickCapture, sectioned PageList, and footer.
+ * - rail:   Narrow (48px) icon-only navigation rail via IconRail component.
+ * - closed: Renders nothing; container is hidden by AppShell CSS.
+ *
+ * Mode cycling (Ctrl+\) is handled globally in useGlobalShortcuts.ts.
+ * Width in open mode is resizable and persisted to localStorage.
  *
  * @see docs/frontend/react-architecture.md for component hierarchy
  * @see docs/frontend/keyboard-first.md for keyboard shortcuts
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { MiniGraph } from '@double-bind/ui-primitives';
-import type { PageId } from '@double-bind/types';
+import { useCallback, useEffect, useRef } from 'react';
 import { ErrorBoundary } from '../components/ErrorBoundary.js';
-import { SearchBar } from '../components/SearchBar.js';
+import { QuickCapture } from '../components/QuickCapture.js';
+import { IconRail } from '../components/IconRail.js';
 import { PageList } from '../components/PageList.js';
-import { ThemeToggle } from '../components/ThemeToggle.js';
 import { useAppStore } from '../stores/ui-store.js';
-import { useNeighborhood } from '../hooks/useNeighborhood.js';
 import styles from './Sidebar.module.css';
 
 // ============================================================================
@@ -30,34 +31,15 @@ const MAX_SIDEBAR_WIDTH = 500;
 const LOCAL_STORAGE_KEY = 'sidebar-width';
 
 // ============================================================================
-// Stub Components
+// SidebarFooter
 // ============================================================================
 
 /**
- * QuickCapture placeholder - rapid note capture.
- * TODO: Implement quick capture functionality in separate issue.
- */
-export function QuickCapture() {
-  return (
-    <div className={styles.quickCapture}>
-      <textarea
-        className={styles.quickCaptureInput}
-        placeholder="Quick capture..."
-        aria-label="Quick capture"
-        disabled
-        rows={2}
-      />
-    </div>
-  );
-}
-
-/**
- * SidebarFooter - displays app info and theme toggle.
+ * SidebarFooter - displays branding. ThemeToggle has been removed per DBB-445.
  */
 export function SidebarFooter() {
   return (
     <footer className={styles.footer}>
-      <ThemeToggle />
       <small className={styles.footerBrand}>Double Bind</small>
     </footer>
   );
@@ -86,7 +68,7 @@ function SidebarErrorFallback(_error: Error, reset: () => void) {
 export interface SidebarProps {
   /**
    * Optional callback when a new page is requested.
-   * If not provided, button will be disabled.
+   * If not provided, the New Page button will be disabled.
    */
   onNewPage?: () => void;
 }
@@ -96,7 +78,7 @@ export interface SidebarProps {
 // ============================================================================
 
 /**
- * Custom hook to persist sidebar width to localStorage.
+ * Persists sidebar width to localStorage.
  * Reads initial value on mount and saves on width changes.
  */
 function useSidebarWidthPersistence() {
@@ -116,11 +98,9 @@ function useSidebarWidthPersistence() {
           setSidebarWidth(parsed);
         }
       } else {
-        // Set default width if nothing stored
         setSidebarWidth(DEFAULT_SIDEBAR_WIDTH);
       }
     } catch {
-      // localStorage unavailable, use default
       setSidebarWidth(DEFAULT_SIDEBAR_WIDTH);
     }
   }, [setSidebarWidth]);
@@ -137,167 +117,6 @@ function useSidebarWidthPersistence() {
   }, [sidebarWidth]);
 
   return { sidebarWidth, setSidebarWidth };
-}
-
-/**
- * Custom hook to register keyboard shortcuts for the sidebar.
- * Ctrl+\ toggles sidebar visibility.
- */
-function useSidebarKeyboard() {
-  const toggleSidebar = useAppStore((state) => state.toggleSidebar);
-
-  useEffect(() => {
-    function handleKeyDown(event: KeyboardEvent) {
-      // Ctrl+\ (backslash) toggles sidebar
-      if (event.ctrlKey && event.key === '\\') {
-        event.preventDefault();
-        toggleSidebar();
-      }
-    }
-
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [toggleSidebar]);
-}
-
-// ============================================================================
-// Sidebar Graph Section
-// ============================================================================
-
-const GRAPH_SECTION_STORAGE_KEY = 'sidebar-graph-collapsed';
-const GRAPH_HOPS = 2;
-const MIN_GRAPH_HEIGHT = 120; // Minimum height before graph becomes unusable
-
-interface SidebarGraphSectionProps {
-  /** Callback when a node is clicked for navigation */
-  onNavigate: (pageId: PageId) => void;
-}
-
-/**
- * Collapsible graph section showing current page's neighborhood.
- * Uses MiniGraph to visualize connected pages within N hops.
- */
-function SidebarGraphSection({ onNavigate }: SidebarGraphSectionProps) {
-  const currentPageIdRaw = useAppStore((state) => state.currentPageId);
-  // Extract actual page ID from route format (e.g., "page/01KGX..." -> "01KGX...")
-  const currentPageId = currentPageIdRaw?.startsWith('page/')
-    ? currentPageIdRaw.slice(5)
-    : currentPageIdRaw;
-  const [isCollapsed, setIsCollapsed] = useState(() => {
-    try {
-      return localStorage.getItem(GRAPH_SECTION_STORAGE_KEY) === 'true';
-    } catch {
-      return false;
-    }
-  });
-
-  // Dynamic sizing with ResizeObserver
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [dimensions, setDimensions] = useState<{ width: number; height: number } | null>(null);
-
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    // Get initial dimensions synchronously
-    const rect = container.getBoundingClientRect();
-    if (rect.width > 0 && rect.height >= MIN_GRAPH_HEIGHT) {
-      setDimensions({ width: rect.width, height: rect.height });
-    }
-
-    const observer = new ResizeObserver((entries) => {
-      const entry = entries[0];
-      if (entry) {
-        const { width, height } = entry.contentRect;
-        if (width > 0 && height >= MIN_GRAPH_HEIGHT) {
-          setDimensions({ width, height });
-        }
-      }
-    });
-
-    observer.observe(container);
-    return () => observer.disconnect();
-  }, [isCollapsed]); // Re-observe when collapsed state changes
-
-  const { nodes, edges, isLoading } = useNeighborhood(currentPageId, GRAPH_HOPS);
-
-  // Persist collapsed state
-  const handleToggle = useCallback(() => {
-    setIsCollapsed((prev) => {
-      const newValue = !prev;
-      try {
-        localStorage.setItem(GRAPH_SECTION_STORAGE_KEY, String(newValue));
-      } catch {
-        // localStorage unavailable, ignore
-      }
-      return newValue;
-    });
-  }, []);
-
-  // Render loading state
-  const renderContent = () => {
-    if (!currentPageId) {
-      return (
-        <div className={styles.graphEmpty} data-testid="sidebar-graph-empty">
-          No page selected
-        </div>
-      );
-    }
-
-    if (isLoading) {
-      return (
-        <div className={styles.graphLoading} data-testid="sidebar-graph-loading">
-          Loading graph...
-        </div>
-      );
-    }
-
-    return (
-      <div ref={containerRef} className={styles.graphContent}>
-        {dimensions && (
-          <MiniGraph
-            centerNodeId={currentPageId}
-            nodes={nodes}
-            edges={edges}
-            width={dimensions.width}
-            height={dimensions.height}
-            onNodeClick={onNavigate}
-          />
-        )}
-      </div>
-    );
-  };
-
-  return (
-    <section className={styles.graphSection} data-testid="sidebar-graph-section">
-      <button
-        type="button"
-        className={styles.graphToggle}
-        onClick={handleToggle}
-        aria-expanded={!isCollapsed}
-        aria-controls="sidebar-graph-content"
-        data-testid="sidebar-graph-toggle"
-      >
-        <span>Graph</span>
-        <span
-          className={`${styles.graphToggleIcon} ${isCollapsed ? styles['graphToggleIcon--collapsed'] : ''}`}
-        >
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
-            <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="1.5" fill="none" />
-          </svg>
-        </span>
-      </button>
-      {!isCollapsed && (
-        <div
-          id="sidebar-graph-content"
-          data-testid="sidebar-graph-content"
-          style={{ display: 'flex', flex: 1, minHeight: 0 }}
-        >
-          {renderContent()}
-        </div>
-      )}
-    </section>
-  );
 }
 
 // ============================================================================
@@ -322,7 +141,6 @@ function ResizeHandle({ onResize, sidebarRef }: ResizeHandleProps) {
 
       function handleMouseMove(e: MouseEvent) {
         if (!isDragging.current) return;
-
         const delta = e.clientX - startX;
         const newWidth = Math.min(
           MAX_SIDEBAR_WIDTH,
@@ -355,17 +173,48 @@ function ResizeHandle({ onResize, sidebarRef }: ResizeHandleProps) {
 }
 
 // ============================================================================
-// Main Component
+// Rail Mode
 // ============================================================================
 
-function SidebarContent({ onNewPage }: SidebarProps) {
-  const sidebarRef = useRef<HTMLElement>(null);
-  const sidebarOpen = useAppStore((state) => state.sidebarOpen);
+/**
+ * SidebarRail - renders IconRail for the 48px rail mode.
+ */
+function SidebarRail() {
   const navigateToPage = useAppStore((state) => state.navigateToPage);
-  const { sidebarWidth, setSidebarWidth } = useSidebarWidthPersistence();
+  const currentPageId = useAppStore((state) => state.currentPageId);
 
-  // Register keyboard shortcuts
-  useSidebarKeyboard();
+  const handleNavigate = useCallback(
+    (route: string) => {
+      navigateToPage(route);
+    },
+    [navigateToPage]
+  );
+
+  // Derive active route from currentPageId
+  const activeRoute = currentPageId?.startsWith('page/') ? undefined : currentPageId ?? undefined;
+
+  return (
+    <div className={styles.rail} data-testid="sidebar-rail">
+      <IconRail onNavigate={handleNavigate} activeRoute={activeRoute} />
+    </div>
+  );
+}
+
+// ============================================================================
+// Open Mode Content
+// ============================================================================
+
+interface SidebarOpenProps {
+  onNewPage?: () => void;
+  sidebarRef: React.RefObject<HTMLElement | null>;
+}
+
+/**
+ * SidebarOpen - renders the full sidebar content for open mode.
+ */
+function SidebarOpen({ onNewPage, sidebarRef }: SidebarOpenProps) {
+  const navigateToPage = useAppStore((state) => state.navigateToPage);
+  const { setSidebarWidth } = useSidebarWidthPersistence();
 
   const handleResize = useCallback(
     (width: number) => {
@@ -374,28 +223,9 @@ function SidebarContent({ onNewPage }: SidebarProps) {
     [setSidebarWidth]
   );
 
-  const handleGraphNavigate = useCallback(
-    (pageId: PageId) => {
-      navigateToPage('page/' + pageId);
-    },
-    [navigateToPage]
-  );
-
-  if (!sidebarOpen) {
-    return null;
-  }
-
   return (
-    <aside
-      ref={sidebarRef}
-      className={styles.sidebar}
-      data-testid="sidebar"
-      role="complementary"
-      aria-label="Application sidebar"
-      style={{ width: `${sidebarWidth}px` }}
-    >
+    <>
       <div className={styles.content}>
-        <SearchBar />
         <QuickCapture />
 
         <button
@@ -420,17 +250,41 @@ function SidebarContent({ onNewPage }: SidebarProps) {
         <div className={styles.pageListWrapper}>
           <PageList />
         </div>
-        <SidebarGraphSection onNavigate={handleGraphNavigate} />
+
         <SidebarFooter />
       </div>
 
       <ResizeHandle onResize={handleResize} sidebarRef={sidebarRef} />
-    </aside>
+    </>
   );
 }
 
+// ============================================================================
+// Main Component
+// ============================================================================
+
+function SidebarContent({ onNewPage }: SidebarProps) {
+  const sidebarRef = useRef<HTMLElement>(null);
+  const sidebarMode = useAppStore((state) => state.sidebarMode);
+
+  // Closed mode: render nothing (AppShell hides the container)
+  if (sidebarMode === 'closed') {
+    return null;
+  }
+
+  // Rail mode: icon navigation only
+  if (sidebarMode === 'rail') {
+    return <SidebarRail />;
+  }
+
+  // Open mode: full sidebar
+  return <SidebarOpen onNewPage={onNewPage} sidebarRef={sidebarRef} />;
+}
+
 /**
- * Sidebar component wrapped in ErrorBoundary for isolated error handling.
+ * Sidebar component — three-mode operation (open/rail/closed).
+ *
+ * Wrapped in ErrorBoundary for isolated error handling.
  *
  * @example
  * ```tsx
