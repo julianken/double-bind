@@ -1,52 +1,42 @@
 /**
- * HoverPreview - Floating page preview card (STUB)
+ * HoverPreview - Page-level singleton for hover preview overlays.
  *
- * Listens for `hover-preview-show` and `hover-preview-hide` CustomEvents
- * dispatched by the hover-preview ProseMirror plugin (DBB-447).
+ * Listens for `hover-preview-open` / `hover-preview-close` CustomEvents
+ * dispatched by:
+ *   - The ProseMirror `hover-preview` plugin (DBB-447) when hovering [[wikilinks]]
+ *   - SourceListRow (sidebar) onMouseEnter/onMouseLeave handlers
  *
- * This is a stub implementation that shows a positioned card with the page
- * title. Full implementation with page content preview will be done in DBB-450.
+ * Uses the useHoverPreview hook (150ms open debounce, immediate close) and
+ * renders a HoverPreviewCard at the reported screen coordinates.
  *
- * CustomEvent contract (from hover-preview.ts plugin):
- *   `hover-preview-show`
- *     - detail.pageId  — page ID string (may be empty for unresolved links)
- *     - detail.title   — link title text
- *     - detail.coords  — { top, left, bottom, right } of the hovered element
+ * Event contract (dispatched on `window`):
+ *   hover-preview-open  → CustomEvent<{ pageId: PageId; x: number; y: number }>
+ *   hover-preview-close → CustomEvent<{ pageId?: PageId }>
  *
- *   `hover-preview-hide`
- *     - detail         — {}
- *
- * @see packages/desktop/src/editor/plugins/hover-preview.ts
- * @see DBB-450 for full implementation
+ * @see packages/desktop/src/hooks/useHoverPreview.ts
+ * @see packages/desktop/src/hooks/usePagePreview.ts
+ * @see packages/desktop/src/components/HoverPreviewCard.tsx
  */
 
-import { memo, useState, useEffect, useCallback } from 'react';
-import styles from './HoverPreview.module.css';
+import { memo } from 'react';
+import type { PageId } from '@double-bind/types';
+import { useHoverPreview } from '../hooks/useHoverPreview.js';
+import { HoverPreviewCard } from './HoverPreviewCard.js';
 
 // ============================================================================
 // Types
 // ============================================================================
 
-export interface HoverPreviewCoords {
-  top: number;
-  left: number;
-  bottom: number;
-  right: number;
-}
-
-export interface HoverPreviewState {
-  visible: boolean;
-  pageId: string;
-  title: string;
-  coords: HoverPreviewCoords | null;
-}
-
+/**
+ * Props accepted by HoverPreview. Normally used without any props as a
+ * page-level singleton (self-managing via CustomEvents). Pass `testPageId`
+ * and `testPosition` to override state in unit tests.
+ */
 export interface HoverPreviewProps {
-  /**
-   * Optional override to control the preview externally (for testing).
-   * When not provided, the component self-manages via CustomEvent listeners.
-   */
-  controlled?: HoverPreviewState;
+  /** Force-open with this pageId (testing only) */
+  testPageId?: string;
+  /** Force position (testing only) */
+  testPosition?: { x: number; y: number };
 }
 
 // ============================================================================
@@ -54,79 +44,32 @@ export interface HoverPreviewProps {
 // ============================================================================
 
 /**
- * HoverPreview stub — shows a floating card with the page title.
+ * HoverPreview — singleton overlay that renders HoverPreviewCard when a user
+ * hovers over a page link in the editor or sidebar.
  *
- * Mounts to the document body via portal-style positioning.
- * Listens to document-level CustomEvents from the ProseMirror plugin.
- *
- * Note: This stub renders a positioned card using fixed positioning based on
- * the hovered element's bounding rect. Full preview content (page summary,
- * backlinks count) will be implemented in DBB-450.
+ * Mount once near the root of the app tree (PageView already does this).
+ * The component has no visible output when not active.
  */
-export const HoverPreview = memo(function HoverPreview({ controlled }: HoverPreviewProps) {
-  const [state, setState] = useState<HoverPreviewState>({
-    visible: false,
-    pageId: '',
-    title: '',
-    coords: null,
-  });
+export const HoverPreview = memo(function HoverPreview({
+  testPageId,
+  testPosition,
+}: HoverPreviewProps) {
+  const { isVisible, position, pageId } = useHoverPreview();
 
-  const handleShow = useCallback((event: Event) => {
-    const e = event as CustomEvent<{ pageId: string; title: string; coords: HoverPreviewCoords }>;
-    setState({
-      visible: true,
-      pageId: e.detail.pageId,
-      title: e.detail.title,
-      coords: e.detail.coords,
-    });
-  }, []);
+  // Allow test overrides
+  const activePageId = testPageId ?? (isVisible ? pageId : null);
+  const activePosition = testPosition ?? position;
 
-  const handleHide = useCallback(() => {
-    setState((prev) => ({ ...prev, visible: false }));
-  }, []);
-
-  useEffect(() => {
-    // Listen for events bubbled up to document level
-    document.addEventListener('hover-preview-show', handleShow);
-    document.addEventListener('hover-preview-hide', handleHide);
-
-    return () => {
-      document.removeEventListener('hover-preview-show', handleShow);
-      document.removeEventListener('hover-preview-hide', handleHide);
-    };
-  }, [handleShow, handleHide]);
-
-  // Use controlled state if provided (for testing or external control)
-  const activeState = controlled ?? state;
-
-  if (!activeState.visible || !activeState.coords) {
+  if (!activePageId) {
     return null;
   }
 
-  // Position the card below the hovered element
-  const { bottom, left } = activeState.coords;
-  const cardStyle: React.CSSProperties = {
-    position: 'fixed',
-    top: bottom + 8,
-    left,
-  };
-
   return (
-    <div
-      className={styles.hoverPreview}
-      style={cardStyle}
-      role="tooltip"
-      aria-label={`Preview: ${activeState.title}`}
-      data-testid="hover-preview"
-    >
-      <div className={styles.hoverPreviewTitle}>
-        {activeState.title || 'Untitled'}
-      </div>
-      {/* DBB-450: page content preview will go here */}
-      <div className={styles.hoverPreviewStub}>
-        Page preview — full implementation in DBB-450
-      </div>
-    </div>
+    <HoverPreviewCard
+      pageId={activePageId as PageId}
+      x={activePosition.x}
+      y={activePosition.y}
+    />
   );
 });
 

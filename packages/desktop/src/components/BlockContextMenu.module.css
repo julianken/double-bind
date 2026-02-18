@@ -1,0 +1,98 @@
+/**
+ * BlockContextMenu Component Styles
+ *
+ * Floating context menu for block-level actions (right-click).
+ */
+
+/* ============================================================================
+ * Full-screen backdrop to capture outside clicks
+ * ============================================================================ */
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-dropdown, 200);
+  /* Transparent — just captures pointer events */
+}
+
+/* ============================================================================
+ * Menu Container
+ * ============================================================================ */
+
+.menu {
+  position: fixed;
+  min-width: 180px;
+  background-color: var(--surface-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg, 0 8px 24px rgba(0, 0, 0, 0.16));
+  padding: var(--space-1) 0;
+  overflow: hidden;
+
+  /* Entrance animation */
+  animation: menuIn 120ms ease-out both;
+}
+
+@keyframes menuIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* ============================================================================
+ * Menu Item
+ * ============================================================================ */
+
+.item {
+  display: block;
+  width: 100%;
+  padding: var(--space-1-5, 6px) var(--space-3);
+  text-align: left;
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+  transition: background-color var(--transition-fast);
+  min-height: 32px;
+}
+
+.item:hover:not(:disabled) {
+  background-color: var(--surface-overlay);
+}
+
+.item:focus-visible {
+  outline: 2px solid var(--accent-default);
+  outline-offset: -2px;
+}
+
+.item:disabled {
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
+/* Danger items (e.g. Delete) */
+.item--danger {
+  color: var(--text-danger, #e53e3e);
+}
+
+.item--danger:hover:not(:disabled) {
+  background-color: var(--surface-danger-subtle, rgba(229, 62, 62, 0.08));
+}
+
+/* ============================================================================
+ * Separator
+ * ============================================================================ */
+
+.separator {
+  height: 1px;
+  background-color: var(--border-subtle);
+  margin: var(--space-1) 0;
+}

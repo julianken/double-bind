@@ -85,6 +85,10 @@ export { SectionHeader, type SectionHeaderProps } from './SectionHeader.js';
 
 export { QuickCapture, type QuickCaptureProps } from './QuickCapture.js';
 
-export { HoverPreviewCard } from './HoverPreviewCard.js';
+export { HoverPreviewCard, type HoverPreviewCardProps } from './HoverPreviewCard.js';
+
+export { HoverPreview, type HoverPreviewProps } from './HoverPreview.js';
+
+export { BlockContextMenu, type BlockContextMenuProps } from './BlockContextMenu.js';
 
 export { IconRail, type IconRailProps } from './IconRail.js';

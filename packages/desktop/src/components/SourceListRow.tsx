@@ -12,7 +12,12 @@
  */
 
 import { memo, useCallback } from 'react';
+import type { PageId } from '@double-bind/types';
 import { usePageContextMenu } from '../hooks/usePageContextMenu.js';
+import {
+  dispatchHoverPreviewOpen,
+  dispatchHoverPreviewClose,
+} from '../hooks/useHoverPreview.js';
 import styles from './SourceListRow.module.css';
 
 // ============================================================================
@@ -34,6 +39,11 @@ export interface SourceListRowProps {
   onStar?: () => void;
   /** Callback when the delete button is clicked */
   onDelete?: () => void;
+  /**
+   * Whether to show a hover preview card when mousing over this row.
+   * Defaults to true. Set false in contexts where preview isn't meaningful.
+   */
+  enableHoverPreview?: boolean;
 }
 
 // ============================================================================
@@ -111,8 +121,31 @@ export const SourceListRow = memo(function SourceListRow({
   onClick,
   onStar,
   onDelete,
+  enableHoverPreview = true,
 }: SourceListRowProps) {
   const { showContextMenu } = usePageContextMenu(pageId);
+
+  // Hover preview: dispatch events so the HoverPreview singleton picks them up.
+  // We dispatch on the window so the singleton (mounted elsewhere in the tree)
+  // can respond regardless of component hierarchy.
+  const handleMouseEnter = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      if (!enableHoverPreview) return;
+      const rect = e.currentTarget.getBoundingClientRect();
+      // Position the preview card to the right of the row, aligned to its top
+      dispatchHoverPreviewOpen(
+        pageId as PageId,
+        rect.right + 8,
+        rect.top
+      );
+    },
+    [pageId, enableHoverPreview]
+  );
+
+  const handleMouseLeave = useCallback(() => {
+    if (!enableHoverPreview) return;
+    dispatchHoverPreviewClose(pageId as PageId);
+  }, [pageId, enableHoverPreview]);
 
   const handleStar = useCallback(
     (event: React.MouseEvent) => {
@@ -151,6 +184,8 @@ export const SourceListRow = memo(function SourceListRow({
       onClick={onClick}
       onContextMenu={showContextMenu}
       onKeyDown={handleKeyDown}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
       tabIndex={0}
     >
       <span className={styles.icon} aria-hidden="true">
