@@ -25,6 +25,22 @@ export interface BlockService {
 }
 
 /**
+ * Navigation service interface for block zoom and sibling navigation.
+ * These operations cause the app to navigate to a different page/block view
+ * rather than modifying the document.
+ */
+export interface NavigationService {
+  /** Navigate to the block as if it were a top-level page (zoom in) */
+  zoomIntoBlock(blockId: string): void;
+  /** Navigate to the parent block / page (zoom out) */
+  jumpToParent(blockId: string): void;
+  /** Move focus to the previous sibling block */
+  focusPrevSibling(blockId: string): void;
+  /** Move focus to the next sibling block */
+  focusNextSibling(blockId: string): void;
+}
+
+/**
  * Options for keymap plugin creation
  */
 export interface KeymapPluginOptions {
@@ -34,7 +50,118 @@ export interface KeymapPluginOptions {
   blockService?: BlockService;
   /** Current block ID (for block operations) */
   getBlockId?: () => string | null;
+  /** Navigation service for zoom and sibling navigation */
+  navigationService?: NavigationService;
 }
+
+// ============================================================================
+// Block Zoom & Sibling Navigation Commands
+// ============================================================================
+
+/**
+ * Creates a `zoomIntoBlock` command that navigates to the current block
+ * as if it were a top-level page.
+ *
+ * Keybinding: Alt+Period (Alt+.)
+ */
+export function zoomIntoBlock(
+  navigationService: NavigationService,
+  getBlockId: () => string | null
+): Command {
+  return () => {
+    const blockId = getBlockId();
+    if (!blockId) return false;
+    navigationService.zoomIntoBlock(blockId);
+    return true;
+  };
+}
+
+/**
+ * Creates a `jumpToParent` command that navigates to the parent block or page.
+ *
+ * Keybinding: Alt+Comma (Alt+,)
+ */
+export function jumpToParent(
+  navigationService: NavigationService,
+  getBlockId: () => string | null
+): Command {
+  return () => {
+    const blockId = getBlockId();
+    if (!blockId) return false;
+    navigationService.jumpToParent(blockId);
+    return true;
+  };
+}
+
+/**
+ * Creates a `focusPrevSibling` command that moves editor focus to the
+ * previous sibling block.
+ *
+ * Keybinding: Alt+ArrowUp (when not already handled by navigation)
+ * Note: This is distinct from `moveBlockUp` — it changes focus, not order.
+ */
+export function focusPrevSibling(
+  navigationService: NavigationService,
+  getBlockId: () => string | null
+): Command {
+  return () => {
+    const blockId = getBlockId();
+    if (!blockId) return false;
+    navigationService.focusPrevSibling(blockId);
+    return true;
+  };
+}
+
+/**
+ * Creates a `focusNextSibling` command that moves editor focus to the
+ * next sibling block.
+ *
+ * Keybinding: Alt+ArrowDown (when not already handled by navigation)
+ * Note: This is distinct from `moveBlockDown` — it changes focus, not order.
+ */
+export function focusNextSibling(
+  navigationService: NavigationService,
+  getBlockId: () => string | null
+): Command {
+  return () => {
+    const blockId = getBlockId();
+    if (!blockId) return false;
+    navigationService.focusNextSibling(blockId);
+    return true;
+  };
+}
+
+/**
+ * Creates block zoom and sibling navigation keybindings.
+ */
+function createBlockZoomKeymap(
+  navigationService?: NavigationService,
+  getBlockId?: () => string | null
+): Record<string, Command> {
+  const bindings: Record<string, Command> = {};
+
+  if (!navigationService || !getBlockId) {
+    return bindings;
+  }
+
+  // Zoom into block: Alt+.
+  bindings['Alt-.'] = zoomIntoBlock(navigationService, getBlockId);
+
+  // Jump to parent: Alt+,
+  bindings['Alt-,'] = jumpToParent(navigationService, getBlockId);
+
+  // Focus previous sibling: Ctrl+Shift+, (avoids collision with Alt+Up which moves block)
+  bindings['Mod-Shift-,'] = focusPrevSibling(navigationService, getBlockId);
+
+  // Focus next sibling: Ctrl+Shift+. (avoids collision with Alt+Down which moves block)
+  bindings['Mod-Shift-.'] = focusNextSibling(navigationService, getBlockId);
+
+  return bindings;
+}
+
+// ============================================================================
+// Mark Commands
+// ============================================================================
 
 /**
  * Creates a toggle mark command that handles missing mark types gracefully
@@ -47,34 +174,29 @@ function createToggleMarkCommand(markType: MarkType | undefined): Command {
 }
 
 /**
- * Check if cursor is at the first line of the editor
+ * Check if cursor is at the first line of the editor.
+ *
+ * ProseMirror single-paragraph blocks never contain literal '\n' characters,
+ * so newline-based checks are unreliable. The correct approach is to test
+ * whether the cursor's parentOffset is 0 (i.e. at the very start of the
+ * block's content), which unambiguously means "first line".
  */
 function isAtFirstLine(state: EditorState): boolean {
   const { $from } = state.selection;
-  // If selection is at the start of the document
-  if ($from.pos <= 1) return true;
-
-  // Check if there's no text before on the current line
-  const textBefore = $from.parent.textBetween(0, $from.parentOffset, '\n');
-  const hasNewlineBefore = textBefore.includes('\n');
-
-  // At first line if no newline in text before cursor within this block
-  return !hasNewlineBefore && $from.parentOffset === $from.parent.firstChild?.nodeSize;
+  if (!state.selection.empty) return false;
+  return $from.parentOffset === 0;
 }
 
 /**
- * Check if cursor is at the last line of the editor
+ * Check if cursor is at the last line of the editor.
+ *
+ * Symmetric to isAtFirstLine: the cursor is at the last line when its
+ * parentOffset equals the full content size of the parent node.
  */
 function isAtLastLine(state: EditorState): boolean {
   const { $from } = state.selection;
-  const parent = $from.parent;
-
-  // Get text from cursor to end of parent
-  const textAfter = parent.textBetween($from.parentOffset, parent.content.size, '\n');
-  const hasNewlineAfter = textAfter.includes('\n');
-
-  // At last line if no newline in text after cursor within this block
-  return !hasNewlineAfter;
+  if (!state.selection.empty) return false;
+  return $from.parentOffset === $from.parent.content.size;
 }
 
 /**
@@ -226,7 +348,7 @@ function createBlockNavigationKeymap(blockService?: BlockService): Record<string
  * ```
  */
 export function createKeymapPlugin(options: KeymapPluginOptions): Plugin {
-  const { schema, blockService, getBlockId } = options;
+  const { schema, blockService, getBlockId, navigationService } = options;
 
   // Combine all keybindings
   const bindings: Record<string, Command> = {
@@ -234,8 +356,10 @@ export function createKeymapPlugin(options: KeymapPluginOptions): Plugin {
     ...createTextFormattingKeymap(schema),
     // Block operations
     ...createBlockOperationsKeymap(blockService, getBlockId),
-    // Block navigation
+    // Block navigation (arrow keys at boundaries)
     ...createBlockNavigationKeymap(blockService),
+    // Block zoom and sibling navigation
+    ...createBlockZoomKeymap(navigationService, getBlockId),
   };
 
   return keymap(bindings);
@@ -277,6 +401,12 @@ export const KEYBINDINGS = {
   // Block navigation
   previousBlock: 'Up (at first line)',
   nextBlock: 'Down (at last line)',
+
+  // Block zoom & sibling navigation
+  zoomIntoBlock: 'Alt+.',
+  jumpToParent: 'Alt+,',
+  focusPrevSibling: 'Ctrl+Shift+,',
+  focusNextSibling: 'Ctrl+Shift+.',
 } as const;
 
 export type KeybindingName = keyof typeof KEYBINDINGS;

@@ -9,7 +9,12 @@ import {
   createKeymapPlugin,
   createEditorKeymaps,
   KEYBINDINGS,
+  zoomIntoBlock,
+  jumpToParent,
+  focusPrevSibling,
+  focusNextSibling,
   type BlockService,
+  type NavigationService,
 } from '../../../../src/editor/plugins/keymap.js';
 
 /**
@@ -437,6 +442,276 @@ describe('createKeymapPlugin', () => {
       const values = Object.values(KEYBINDINGS);
       const hasCtrlQ = values.some((v) => v === 'Ctrl+Q' || v.includes('Ctrl+Q'));
       expect(hasCtrlQ).toBe(false);
+    });
+  });
+});
+
+// ============================================================================
+// Arrow Navigation Behavioral Tests
+// ============================================================================
+
+describe('Arrow Navigation Behavioral Tests', () => {
+  let schema: Schema;
+  let mockBlockService: BlockService;
+
+  beforeEach(() => {
+    schema = createTestSchema();
+    mockBlockService = createMockBlockService();
+    vi.clearAllMocks();
+  });
+
+  /**
+   * Build an EditorState with cursor placed at the given absolute position.
+   */
+  function stateWithCursorAt(content: string, cursorPos: number): EditorState {
+    const { TextSelection } = require('prosemirror-state') as typeof import('prosemirror-state');
+    const doc = schema.node('doc', null, [
+      schema.node('paragraph', null, content ? [schema.text(content)] : []),
+    ]);
+    const state = EditorState.create({ doc });
+    return state.apply(state.tr.setSelection(TextSelection.create(state.doc, cursorPos)));
+  }
+
+  /**
+   * Invoke the plugin's handleKeyDown with a synthetic arrow key event.
+   * Returns whether the plugin handled the event (true = consumed it).
+   */
+  function fireArrowKey(plugin: Plugin, state: EditorState, key: 'ArrowUp' | 'ArrowDown'): boolean {
+    const handleKeyDown = plugin.props.handleKeyDown as
+      | ((view: { state: EditorState; dispatch: (tr: unknown) => void }, event: KeyboardEvent) => boolean)
+      | undefined;
+
+    if (!handleKeyDown) return false;
+
+    const mockEvent = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
+    const mockView = {
+      state,
+      dispatch: vi.fn(),
+    };
+
+    return handleKeyDown(mockView as unknown as Parameters<typeof handleKeyDown>[0], mockEvent);
+  }
+
+  it('ArrowUp at cursor position 0 calls focusPreviousBlock and returns true', () => {
+    const plugin = createKeymapPlugin({ schema, blockService: mockBlockService });
+    // Paragraph is empty, cursor is at parentOffset 0 (absolute pos 1 inside the paragraph)
+    const state = stateWithCursorAt('', 1);
+
+    const handled = fireArrowKey(plugin, state, 'ArrowUp');
+
+    expect(handled).toBe(true);
+    expect(mockBlockService.focusPreviousBlock).toHaveBeenCalledOnce();
+  });
+
+  it('ArrowUp at cursor position > 0 does NOT call focusPreviousBlock (default behavior)', () => {
+    const plugin = createKeymapPlugin({ schema, blockService: mockBlockService });
+    // Place cursor after "hello" — parentOffset is 5, not 0
+    const state = stateWithCursorAt('hello', 6); // pos 1 (paragraph open) + 5 chars = pos 6
+
+    const handled = fireArrowKey(plugin, state, 'ArrowUp');
+
+    expect(handled).toBe(false);
+    expect(mockBlockService.focusPreviousBlock).not.toHaveBeenCalled();
+  });
+
+  it('ArrowDown at end of content calls focusNextBlock and returns true', () => {
+    const plugin = createKeymapPlugin({ schema, blockService: mockBlockService });
+    // Cursor after "hello" — parentOffset equals content.size (5)
+    const state = stateWithCursorAt('hello', 6); // pos 6 = end of "hello"
+
+    const handled = fireArrowKey(plugin, state, 'ArrowDown');
+
+    expect(handled).toBe(true);
+    expect(mockBlockService.focusNextBlock).toHaveBeenCalledOnce();
+  });
+
+  it('ArrowDown at non-end position does NOT call focusNextBlock (default behavior)', () => {
+    const plugin = createKeymapPlugin({ schema, blockService: mockBlockService });
+    // Place cursor at position 2 — inside "hello", parentOffset is 1
+    const state = stateWithCursorAt('hello', 2);
+
+    const handled = fireArrowKey(plugin, state, 'ArrowDown');
+
+    expect(handled).toBe(false);
+    expect(mockBlockService.focusNextBlock).not.toHaveBeenCalled();
+  });
+});
+
+// ============================================================================
+// NavigationService Command Tests
+// ============================================================================
+
+/**
+ * Create a mock navigation service for testing zoom and sibling navigation.
+ */
+function createMockNavigationService(): NavigationService {
+  return {
+    zoomIntoBlock: vi.fn(),
+    jumpToParent: vi.fn(),
+    focusPrevSibling: vi.fn(),
+    focusNextSibling: vi.fn(),
+  };
+}
+
+describe('Block Zoom & Sibling Navigation Commands', () => {
+  let schema: Schema;
+  let mockNavigationService: NavigationService;
+
+  beforeEach(() => {
+    schema = createTestSchema();
+    mockNavigationService = createMockNavigationService();
+    vi.clearAllMocks();
+  });
+
+  // --------------------------------------------------------------------------
+  // zoomIntoBlock
+  // --------------------------------------------------------------------------
+
+  describe('zoomIntoBlock', () => {
+    it('calls navigationService.zoomIntoBlock with blockId', () => {
+      const getBlockId = vi.fn().mockReturnValue('block-abc');
+      const cmd = zoomIntoBlock(mockNavigationService, getBlockId);
+
+      const result = cmd();
+      expect(result).toBe(true);
+      expect(mockNavigationService.zoomIntoBlock).toHaveBeenCalledWith('block-abc');
+    });
+
+    it('returns false when blockId is null', () => {
+      const getBlockId = vi.fn().mockReturnValue(null);
+      const cmd = zoomIntoBlock(mockNavigationService, getBlockId);
+
+      const result = cmd();
+      expect(result).toBe(false);
+      expect(mockNavigationService.zoomIntoBlock).not.toHaveBeenCalled();
+    });
+
+    it('is a valid ProseMirror Command (accepts state and dispatch)', () => {
+      const getBlockId = vi.fn().mockReturnValue('block-1');
+      const cmd = zoomIntoBlock(mockNavigationService, getBlockId);
+
+      // ProseMirror Commands receive state and optional dispatch
+      const doc = schema.node('doc', null, [schema.node('paragraph')]);
+      const state = EditorState.create({ doc });
+      const result = cmd(state, undefined);
+      expect(result).toBe(true);
+    });
+  });
+
+  // --------------------------------------------------------------------------
+  // jumpToParent
+  // --------------------------------------------------------------------------
+
+  describe('jumpToParent', () => {
+    it('calls navigationService.jumpToParent with blockId', () => {
+      const getBlockId = vi.fn().mockReturnValue('block-xyz');
+      const cmd = jumpToParent(mockNavigationService, getBlockId);
+
+      const result = cmd();
+      expect(result).toBe(true);
+      expect(mockNavigationService.jumpToParent).toHaveBeenCalledWith('block-xyz');
+    });
+
+    it('returns false when blockId is null', () => {
+      const getBlockId = vi.fn().mockReturnValue(null);
+      const cmd = jumpToParent(mockNavigationService, getBlockId);
+
+      const result = cmd();
+      expect(result).toBe(false);
+    });
+  });
+
+  // --------------------------------------------------------------------------
+  // focusPrevSibling
+  // --------------------------------------------------------------------------
+
+  describe('focusPrevSibling', () => {
+    it('calls navigationService.focusPrevSibling with blockId', () => {
+      const getBlockId = vi.fn().mockReturnValue('block-123');
+      const cmd = focusPrevSibling(mockNavigationService, getBlockId);
+
+      const result = cmd();
+      expect(result).toBe(true);
+      expect(mockNavigationService.focusPrevSibling).toHaveBeenCalledWith('block-123');
+    });
+
+    it('returns false when blockId is null', () => {
+      const getBlockId = vi.fn().mockReturnValue(null);
+      const cmd = focusPrevSibling(mockNavigationService, getBlockId);
+
+      const result = cmd();
+      expect(result).toBe(false);
+    });
+  });
+
+  // --------------------------------------------------------------------------
+  // focusNextSibling
+  // --------------------------------------------------------------------------
+
+  describe('focusNextSibling', () => {
+    it('calls navigationService.focusNextSibling with blockId', () => {
+      const getBlockId = vi.fn().mockReturnValue('block-456');
+      const cmd = focusNextSibling(mockNavigationService, getBlockId);
+
+      const result = cmd();
+      expect(result).toBe(true);
+      expect(mockNavigationService.focusNextSibling).toHaveBeenCalledWith('block-456');
+    });
+
+    it('returns false when blockId is null', () => {
+      const getBlockId = vi.fn().mockReturnValue(null);
+      const cmd = focusNextSibling(mockNavigationService, getBlockId);
+
+      const result = cmd();
+      expect(result).toBe(false);
+    });
+  });
+
+  // --------------------------------------------------------------------------
+  // Integration with createKeymapPlugin
+  // --------------------------------------------------------------------------
+
+  describe('createKeymapPlugin with navigationService', () => {
+    it('creates plugin with navigationService', () => {
+      const getBlockId = vi.fn().mockReturnValue('block-1');
+      const plugin = createKeymapPlugin({
+        schema,
+        navigationService: mockNavigationService,
+        getBlockId,
+      });
+
+      expect(plugin).toBeInstanceOf(Plugin);
+    });
+
+    it('creates plugin without navigationService (no-op)', () => {
+      const plugin = createKeymapPlugin({ schema });
+      expect(plugin).toBeInstanceOf(Plugin);
+    });
+  });
+
+  // --------------------------------------------------------------------------
+  // KEYBINDINGS constants
+  // --------------------------------------------------------------------------
+
+  describe('KEYBINDINGS additions', () => {
+    it('exports zoomIntoBlock keybinding', () => {
+      expect(KEYBINDINGS.zoomIntoBlock).toBeDefined();
+      expect(typeof KEYBINDINGS.zoomIntoBlock).toBe('string');
+    });
+
+    it('exports jumpToParent keybinding', () => {
+      expect(KEYBINDINGS.jumpToParent).toBeDefined();
+      expect(typeof KEYBINDINGS.jumpToParent).toBe('string');
+    });
+
+    it('exports focusPrevSibling keybinding', () => {
+      expect(KEYBINDINGS.focusPrevSibling).toBeDefined();
+      expect(typeof KEYBINDINGS.focusPrevSibling).toBe('string');
+    });
+
+    it('exports focusNextSibling keybinding', () => {
+      expect(KEYBINDINGS.focusNextSibling).toBeDefined();
+      expect(typeof KEYBINDINGS.focusNextSibling).toBe('string');
     });
   });
 });
