@@ -1,0 +1,80 @@
+/**
+ * AppToolbar Styles
+ *
+ * Split toolbar layout with drag region support for macOS overlay titlebar.
+ */
+
+/* ============================================================================
+ * Toolbar Container
+ * ============================================================================ */
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  /* Left padding reserves space for macOS traffic light buttons */
+  padding: var(--space-1) var(--space-3) var(--space-1) 76px;
+  height: var(--header-height);
+  min-height: var(--header-height);
+  border-bottom: 1px solid var(--border-default);
+  background-color: var(--surface-recessed);
+  flex-shrink: 0;
+}
+
+/* ============================================================================
+ * Toolbar Zones
+ * ============================================================================ */
+
+.leftZone {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex-shrink: 0;
+}
+
+.centerZone {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  padding: 0 var(--space-2);
+}
+
+.rightZone {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex-shrink: 0;
+  /* Mirror the left zone width to keep breadcrumb visually centered */
+  min-width: 64px;
+}
+
+/* ============================================================================
+ * Navigation Buttons
+ * ============================================================================ */
+
+.navButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-md);
+  background-color: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: var(--text-base);
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.navButton:hover:not(:disabled) {
+  background-color: var(--surface-overlay);
+  color: var(--text-primary);
+}
+
+.navButton:disabled {
+  color: var(--text-disabled);
+  cursor: default;
+}
