@@ -447,6 +447,97 @@ describe('createKeymapPlugin', () => {
 });
 
 // ============================================================================
+// Arrow Navigation Behavioral Tests
+// ============================================================================
+
+describe('Arrow Navigation Behavioral Tests', () => {
+  let schema: Schema;
+  let mockBlockService: BlockService;
+
+  beforeEach(() => {
+    schema = createTestSchema();
+    mockBlockService = createMockBlockService();
+    vi.clearAllMocks();
+  });
+
+  /**
+   * Build an EditorState with cursor placed at the given absolute position.
+   */
+  function stateWithCursorAt(content: string, cursorPos: number): EditorState {
+    const { TextSelection } = require('prosemirror-state') as typeof import('prosemirror-state');
+    const doc = schema.node('doc', null, [
+      schema.node('paragraph', null, content ? [schema.text(content)] : []),
+    ]);
+    const state = EditorState.create({ doc });
+    return state.apply(state.tr.setSelection(TextSelection.create(state.doc, cursorPos)));
+  }
+
+  /**
+   * Invoke the plugin's handleKeyDown with a synthetic arrow key event.
+   * Returns whether the plugin handled the event (true = consumed it).
+   */
+  function fireArrowKey(plugin: Plugin, state: EditorState, key: 'ArrowUp' | 'ArrowDown'): boolean {
+    const handleKeyDown = plugin.props.handleKeyDown as
+      | ((view: { state: EditorState; dispatch: (tr: unknown) => void }, event: KeyboardEvent) => boolean)
+      | undefined;
+
+    if (!handleKeyDown) return false;
+
+    const mockEvent = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
+    const mockView = {
+      state,
+      dispatch: vi.fn(),
+    };
+
+    return handleKeyDown(mockView as unknown as Parameters<typeof handleKeyDown>[0], mockEvent);
+  }
+
+  it('ArrowUp at cursor position 0 calls focusPreviousBlock and returns true', () => {
+    const plugin = createKeymapPlugin({ schema, blockService: mockBlockService });
+    // Paragraph is empty, cursor is at parentOffset 0 (absolute pos 1 inside the paragraph)
+    const state = stateWithCursorAt('', 1);
+
+    const handled = fireArrowKey(plugin, state, 'ArrowUp');
+
+    expect(handled).toBe(true);
+    expect(mockBlockService.focusPreviousBlock).toHaveBeenCalledOnce();
+  });
+
+  it('ArrowUp at cursor position > 0 does NOT call focusPreviousBlock (default behavior)', () => {
+    const plugin = createKeymapPlugin({ schema, blockService: mockBlockService });
+    // Place cursor after "hello" — parentOffset is 5, not 0
+    const state = stateWithCursorAt('hello', 6); // pos 1 (paragraph open) + 5 chars = pos 6
+
+    const handled = fireArrowKey(plugin, state, 'ArrowUp');
+
+    expect(handled).toBe(false);
+    expect(mockBlockService.focusPreviousBlock).not.toHaveBeenCalled();
+  });
+
+  it('ArrowDown at end of content calls focusNextBlock and returns true', () => {
+    const plugin = createKeymapPlugin({ schema, blockService: mockBlockService });
+    // Cursor after "hello" — parentOffset equals content.size (5)
+    const state = stateWithCursorAt('hello', 6); // pos 6 = end of "hello"
+
+    const handled = fireArrowKey(plugin, state, 'ArrowDown');
+
+    expect(handled).toBe(true);
+    expect(mockBlockService.focusNextBlock).toHaveBeenCalledOnce();
+  });
+
+  it('ArrowDown at non-end position does NOT call focusNextBlock (default behavior)', () => {
+    const plugin = createKeymapPlugin({ schema, blockService: mockBlockService });
+    // Place cursor at position 2 — inside "hello", parentOffset is 1
+    const state = stateWithCursorAt('hello', 2);
+
+    const handled = fireArrowKey(plugin, state, 'ArrowDown');
+
+    expect(handled).toBe(false);
+    expect(mockBlockService.focusNextBlock).not.toHaveBeenCalled();
+  });
+});
+
+// ============================================================================
 // NavigationService Command Tests
 // ============================================================================
 

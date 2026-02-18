@@ -211,11 +211,14 @@ export function createHoverPreviewPlugin(options: HoverPreviewPluginOptions = {}
       if (stillOnLink) return false;
     }
 
-    const data = extractPageLinkData(event.target);
-    if (!data && !isVisible) return false;
-
+    // Always clear the pending show timer on any mouseout.
     clearShowTimer();
 
+    // Hide the preview whenever it is visible, regardless of whether the
+    // mouseout target is a link. The previous guard `if (!data && !isVisible)`
+    // caused a stuck-visible state when the cursor moved from a link to plain
+    // text (non-link target produces data=null, but isVisible is true — the old
+    // guard would abort early and never dispatch the hide event).
     if (isVisible) {
       isVisible = false;
 

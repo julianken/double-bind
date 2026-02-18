@@ -176,10 +176,13 @@ export function createSlashCommandPlugin(options: SlashCommandPluginOptions = {}
         if (event.key === 'Escape') {
           event.preventDefault();
 
+          // Dispatch the close meta transaction. The view.update lifecycle will
+          // detect the active → inactive transition and call dispatchSlashCommandClose
+          // on the next render cycle. Do NOT call dispatchSlashCommandClose here
+          // directly — that would fire the close event twice per Escape.
           const tr = view.state.tr.setMeta(slashCommandPluginKey, { type: 'close' });
           view.dispatch(tr);
 
-          dispatchSlashCommandClose(view, onClose);
           return true;
         }
 

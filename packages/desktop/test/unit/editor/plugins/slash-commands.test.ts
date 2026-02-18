@@ -279,6 +279,28 @@ describe('closeSlashCommand (exported function)', () => {
   it('is exported as a function', () => {
     expect(typeof closeSlashCommand).toBe('function');
   });
+
+  it('dispatches a close meta transaction via the view', () => {
+    const schema = createTestSchema();
+    const plugin = createSlashCommandPlugin();
+    const doc = createDoc(schema, '');
+    const state = EditorState.create({ doc, plugins: [plugin] });
+
+    // Track what transaction was dispatched
+    let dispatchedTr: import('prosemirror-state').Transaction | null = null;
+    const mockView = {
+      state,
+      dispatch(tr: import('prosemirror-state').Transaction) {
+        dispatchedTr = tr;
+      },
+    } as unknown as import('prosemirror-view').EditorView;
+
+    closeSlashCommand(mockView);
+
+    expect(dispatchedTr).not.toBeNull();
+    const meta = dispatchedTr!.getMeta(slashCommandPluginKey) as { type: string } | undefined;
+    expect(meta).toEqual({ type: 'close' });
+  });
 });
 
 describe('DOM event dispatching', () => {

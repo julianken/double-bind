@@ -174,34 +174,29 @@ function createToggleMarkCommand(markType: MarkType | undefined): Command {
 }
 
 /**
- * Check if cursor is at the first line of the editor
+ * Check if cursor is at the first line of the editor.
+ *
+ * ProseMirror single-paragraph blocks never contain literal '\n' characters,
+ * so newline-based checks are unreliable. The correct approach is to test
+ * whether the cursor's parentOffset is 0 (i.e. at the very start of the
+ * block's content), which unambiguously means "first line".
  */
 function isAtFirstLine(state: EditorState): boolean {
   const { $from } = state.selection;
-  // If selection is at the start of the document
-  if ($from.pos <= 1) return true;
-
-  // Check if there's no text before on the current line
-  const textBefore = $from.parent.textBetween(0, $from.parentOffset, '\n');
-  const hasNewlineBefore = textBefore.includes('\n');
-
-  // At first line if no newline in text before cursor within this block
-  return !hasNewlineBefore && $from.parentOffset === $from.parent.firstChild?.nodeSize;
+  if (!state.selection.empty) return false;
+  return $from.parentOffset === 0;
 }
 
 /**
- * Check if cursor is at the last line of the editor
+ * Check if cursor is at the last line of the editor.
+ *
+ * Symmetric to isAtFirstLine: the cursor is at the last line when its
+ * parentOffset equals the full content size of the parent node.
  */
 function isAtLastLine(state: EditorState): boolean {
   const { $from } = state.selection;
-  const parent = $from.parent;
-
-  // Get text from cursor to end of parent
-  const textAfter = parent.textBetween($from.parentOffset, parent.content.size, '\n');
-  const hasNewlineAfter = textAfter.includes('\n');
-
-  // At last line if no newline in text after cursor within this block
-  return !hasNewlineAfter;
+  if (!state.selection.empty) return false;
+  return $from.parentOffset === $from.parent.content.size;
 }
 
 /**
