@@ -154,17 +154,27 @@ describe('BulletHandle', () => {
 
     it('shows bullet icon for leaf nodes', () => {
       render(<BulletHandle isCollapsed={false} hasChildren={false} />);
-      expect(screen.getByText('•')).toBeDefined();
+      // BulletHandle renders SVG (not Unicode text). The leaf state is
+      // indicated by aria-label="Bullet" on the button and a circle SVG inside.
+      const button = screen.getByRole('button', { name: 'Bullet' });
+      expect(button).toBeDefined();
+      expect(button.querySelector('svg')).not.toBeNull();
     });
 
     it('shows expanded icon when has children and not collapsed', () => {
       render(<BulletHandle isCollapsed={false} hasChildren={true} />);
-      expect(screen.getByText('▾')).toBeDefined();
+      // Expanded state: aria-label="Collapse" and an SVG path arrow
+      const button = screen.getByRole('button', { name: 'Collapse' });
+      expect(button).toBeDefined();
+      expect(button.querySelector('svg')).not.toBeNull();
     });
 
     it('shows collapsed icon when has children and collapsed', () => {
       render(<BulletHandle isCollapsed={true} hasChildren={true} />);
-      expect(screen.getByText('▸')).toBeDefined();
+      // Collapsed state: aria-label="Expand" and an SVG path arrow
+      const button = screen.getByRole('button', { name: 'Expand' });
+      expect(button).toBeDefined();
+      expect(button.querySelector('svg')).not.toBeNull();
     });
   });
 

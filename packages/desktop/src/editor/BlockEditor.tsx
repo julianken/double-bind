@@ -36,6 +36,10 @@ import {
 } from './plugins/index.js';
 import { highlightReferencesPlugin } from './plugins/highlight-references.js';
 import { typingIsolationPlugin } from './plugins/typing-isolation.js';
+import { createSlashCommandPlugin } from './plugins/slash-commands.js';
+import { createHoverPreviewPlugin } from './plugins/hover-preview.js';
+// SlashCommandMenu and HoverPreview are now page-level singletons rendered in PageView.
+// They communicate via CustomEvents on document and do not need to be co-located with BlockEditor.
 
 /**
  * Props for the BlockEditor component.
@@ -420,6 +424,10 @@ export function BlockEditor({
       highlightReferencesPlugin(),
       // Suppress non-editor transitions during active typing
       typingIsolationPlugin(),
+      // Slash command menu: dispatches CustomEvents for React components to handle
+      createSlashCommandPlugin(),
+      // Hover preview: dispatches CustomEvents when hovering over page links
+      createHoverPreviewPlugin(),
     ];
 
     if (useServiceMode) {

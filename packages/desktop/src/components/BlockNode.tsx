@@ -35,9 +35,10 @@ import { CSS as DndCSS } from '@dnd-kit/utilities';
 import { InlineBlockRef, InlinePageLink } from '@double-bind/ui-primitives';
 import { useCozoQuery, invalidateQueries, resetQueries } from '../hooks/useCozoQuery.js';
 import { useAppStore } from '../stores/ui-store.js';
-import { useServices } from '../providers/ServiceProvider.js';
+import { useServicesOptional } from '../providers/ServiceProvider.js';
 import { BlockEditor as RealBlockEditor } from '../editor/BlockEditor.js';
 import { createDragEndHandler } from '../utils/createDragEndHandler.js';
+import { DragHandle } from './DragHandle.js';
 import styles from './BlockNode.module.css';
 
 // ============================================================================
@@ -546,6 +547,8 @@ interface ResolvedPageLink {
   title: string;
   pageId: PageId | null;
   exists: boolean;
+  /** Whether a ServiceProvider is present in the tree (false in test/storybook contexts) */
+  hasServices: boolean;
 }
 
 /**
@@ -558,14 +561,12 @@ interface ResolvedBlockRef {
 }
 
 /**
- * Hook to safely access services (returns null if not in provider)
+ * Hook to safely access services (returns null if not in provider).
+ * Uses useServicesOptional so hooks rules are not violated — no try/catch
+ * around a hook call, which silently swallows all thrown errors.
  */
 function useSafeServices() {
-  try {
-    return useServices();
-  } catch {
-    return null;
-  }
+  return useServicesOptional();
 }
 
 /**
@@ -577,11 +578,15 @@ function useResolvedPageLink(title: string): ResolvedPageLink {
     title,
     pageId: null,
     exists: false,
+    hasServices: !!services,
   });
 
   useEffect(() => {
     if (!services?.pageService) {
-      // No service available - leave as unresolved
+      // No ServiceProvider in tree (e.g. unit tests without provider).
+      // Keep hasServices=false so the component can render InlinePageLink
+      // optimistically instead of the non-interactive unresolved span.
+      setResolved((prev) => ({ ...prev, hasServices: false }));
       return;
     }
 
@@ -595,11 +600,12 @@ function useResolvedPageLink(title: string): ResolvedPageLink {
             title,
             pageId: page?.pageId ?? null,
             exists: !!page,
+            hasServices: true,
           });
         }
       } catch {
         if (!cancelled) {
-          setResolved({ title, pageId: null, exists: false });
+          setResolved({ title, pageId: null, exists: false, hasServices: true });
         }
       }
     }
@@ -686,7 +692,7 @@ const PageLinkSegment = memo(function PageLinkSegment({
     [onHover]
   );
 
-  // If page exists and we have a pageId, render the interactive component
+  // If page exists and we have a pageId, render the interactive resolved link
   if (resolved.pageId) {
     return (
       <InlinePageLink
@@ -699,16 +705,16 @@ const PageLinkSegment = memo(function PageLinkSegment({
     );
   }
 
-  // Fallback for unresolved page (show as non-interactive for now)
-  return (
-    <InlinePageLink
-      pageId={title as PageId} // Use title as fallback ID
-      title={title}
-      exists={false}
-      onClick={handleClick}
-      onHover={onHover ? handleHover : undefined}
-    />
-  );
+  // When services are present but resolution yielded no pageId, the page
+  // genuinely doesn't exist yet. Render as non-interactive text to avoid
+  // navigating to an invalid route (title is not a ULID and cannot be a PageId).
+  if (resolved.hasServices) {
+    return <span className={styles.unresolvedLink}>{title}</span>;
+  }
+
+  // No ServiceProvider in tree (unit tests, Storybook, etc.) — render
+  // as plain text since we can't construct a valid PageId from a title string.
+  return <span className={styles.unresolvedLink}>{title}</span>;
 });
 
 /**
@@ -965,6 +971,11 @@ function BlockNodeComponent({ blockId, depth = 0, previousBlockId, nextBlockId }
   const setFocusedBlock = useAppStore((s) => s.setFocusedBlock);
   const navigateToPage = useAppStore((s) => s.navigateToPage);
 
+  // Focus mode dimming — non-active blocks are dimmed when focus mode is active
+  const focusModeActive = useAppStore((s) => s.focusModeActive);
+  const blockDimmingEnabled = useAppStore((s) => s.blockDimmingEnabled);
+  const isDimmed = focusModeActive && blockDimmingEnabled && focusedBlockId !== blockId;
+
   // DnD sensors: pointer (mouse/touch) + keyboard for accessibility
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -1020,6 +1031,24 @@ function BlockNodeComponent({ blockId, depth = 0, previousBlockId, nextBlockId }
       }
     },
     [blockId, setFocusedBlock]
+  );
+
+  // Handle right-click: fire a CustomEvent with blockId and mouse coords
+  const handleContextMenu = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      const event = new CustomEvent('block-context-menu', {
+        bubbles: true,
+        cancelable: true,
+        detail: {
+          blockId,
+          x: e.clientX,
+          y: e.clientY,
+        },
+      });
+      e.currentTarget.dispatchEvent(event);
+    },
+    [blockId]
   );
 
   // Handle collapse toggle
@@ -1099,7 +1128,11 @@ function BlockNodeComponent({ blockId, depth = 0, previousBlockId, nextBlockId }
     transition,
   };
 
-  const containerClasses = [styles.container, isDragging && styles['container--dragging']]
+  const containerClasses = [
+    styles.container,
+    isDragging && styles['container--dragging'],
+    isDimmed && styles['container--dimmed'],
+  ]
     .filter(Boolean)
     .join(' ');
 
@@ -1113,13 +1146,18 @@ function BlockNodeComponent({ blockId, depth = 0, previousBlockId, nextBlockId }
       data-block-id={blockId}
       data-testid="block-node"
       style={sortableStyle}
+      onContextMenu={handleContextMenu}
     >
       <div className={styles.row}>
+        {/* DragHandle: hidden by default, revealed on .row hover via CSS */}
+        <DragHandle
+          isDragging={isDragging}
+          dragProps={{ ...attributes, ...listeners }}
+        />
         <BulletHandle
           isCollapsed={block.isCollapsed}
           hasChildren={hasChildren}
           onToggleCollapse={handleToggleCollapse}
-          dragHandleProps={{ ...attributes, ...listeners }}
         />
         <div className={styles.content} data-testid="block-content">
           {isEditing ? (
