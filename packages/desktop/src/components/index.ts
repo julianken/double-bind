@@ -78,3 +78,13 @@ export {
   type FilterRow,
   type FilterGroupRow,
 } from './VisualQueryBuilder.js';
+
+export { SourceListRow, type SourceListRowProps } from './SourceListRow.js';
+
+export { SectionHeader, type SectionHeaderProps } from './SectionHeader.js';
+
+export { QuickCapture, type QuickCaptureProps } from './QuickCapture.js';
+
+export { HoverPreviewCard } from './HoverPreviewCard.js';
+
+export { IconRail, type IconRailProps } from './IconRail.js';

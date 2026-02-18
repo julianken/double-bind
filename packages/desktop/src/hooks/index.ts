@@ -40,3 +40,9 @@ export {
   type UseSearchOptions,
   type UseSearchResult,
 } from './useSearch.js';
+
+export { useContextMenu, type ContextMenuItem, type UseContextMenuResult } from './useContextMenu.js';
+
+export { usePageContextMenu, type UsePageContextMenuResult } from './usePageContextMenu.js';
+
+export { useQuickCapture, type UseQuickCaptureResult } from './useQuickCapture.js';

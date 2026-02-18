@@ -14,6 +14,9 @@ import { useCallback } from 'react';
 import { useAppStore } from '../stores/index.js';
 import styles from './AppToolbar.module.css';
 
+/** Props for AppToolbar (stub — no props yet) */
+export type AppToolbarProps = Record<string, never>;
+
 export function AppToolbar() {
   const goBack = useAppStore((state) => state.goBack);
   const goForward = useAppStore((state) => state.goForward);
