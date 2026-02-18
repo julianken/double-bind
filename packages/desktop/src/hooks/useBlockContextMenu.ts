@@ -155,7 +155,7 @@ export function useBlockContextMenu(): UseBlockContextMenuResult {
           },
         },
         {
-          label: 'Delete',
+          label: 'Delete Block',
           separator: true,
           action: () => {
             if (blockService) {

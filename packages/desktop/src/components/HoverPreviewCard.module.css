@@ -1,6 +1,135 @@
 /**
  * HoverPreviewCard Component Styles
  *
- * Placeholder for Phase 5 implementation.
- * This file is intentionally empty pending full component implementation.
+ * Floating card that appears when hovering over page links.
+ * Uses CSS custom properties from the design token system.
  */
+
+/* ============================================================================
+ * Card Container
+ * ============================================================================ */
+
+.card {
+  z-index: var(--z-tooltip, 1000);
+  min-width: 220px;
+  max-width: 340px;
+  padding: var(--space-3);
+  background-color: var(--surface-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg, 0 8px 24px rgba(0, 0, 0, 0.16));
+  pointer-events: none;
+
+  /* Entrance animation: fade up from 4px below */
+  animation: cardIn 150ms ease-out both;
+}
+
+@keyframes cardIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ============================================================================
+ * Title
+ * ============================================================================ */
+
+.title {
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold, 600);
+  color: var(--text-primary);
+  margin-bottom: var(--space-1-5, 6px);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ============================================================================
+ * Excerpt
+ * ============================================================================ */
+
+.excerpt {
+  font-size: var(--text-xs, 0.75rem);
+  color: var(--text-secondary, var(--text-muted));
+  line-height: 1.5;
+  margin-bottom: var(--space-2);
+
+  /* Clamp to 3 lines */
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ============================================================================
+ * Meta row (block count + updated at)
+ * ============================================================================ */
+
+.meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1-5, 6px);
+  font-size: var(--text-xs, 0.75rem);
+  color: var(--text-muted);
+}
+
+.separator {
+  color: var(--border-default);
+  user-select: none;
+}
+
+.blockCount,
+.updatedAt {
+  white-space: nowrap;
+}
+
+/* ============================================================================
+ * Loading Skeleton
+ * ============================================================================ */
+
+.skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1-5, 6px);
+}
+
+.skeletonTitle,
+.skeletonLine {
+  background-color: var(--surface-overlay);
+  border-radius: var(--radius-sm);
+  animation: shimmer 1.2s ease-in-out infinite;
+}
+
+.skeletonTitle {
+  height: 14px;
+  width: 60%;
+}
+
+.skeletonLine {
+  height: 11px;
+  width: 90%;
+}
+
+.skeletonLine:last-child {
+  width: 70%;
+}
+
+@keyframes shimmer {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* ============================================================================
+ * Empty State
+ * ============================================================================ */
+
+.empty {
+  font-size: var(--text-xs, 0.75rem);
+  color: var(--text-muted);
+  font-style: italic;
+}

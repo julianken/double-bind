@@ -42,6 +42,7 @@ import { createDragEndHandler } from '../utils/createDragEndHandler.js';
 import { PageTitle as RealPageTitle } from '../components/PageTitle.js';
 import { SlashCommandMenu } from '../components/SlashCommandMenu.js';
 import { HoverPreview } from '../components/HoverPreview.js';
+import { BlockContextMenu } from '../components/BlockContextMenu.js';
 import styles from './PageView.module.css';
 
 // ============================================================================
@@ -608,12 +609,14 @@ export function PageView({ pageId }: PageViewProps) {
         )}
       </div>
 
-      {/* SlashCommandMenu and HoverPreview are page-level singletons.
-          They communicate via CustomEvents on document and position themselves
-          via fixed CSS. Rendering them once here prevents duplicate event handling
-          when multiple BlockEditor instances briefly coexist during focus transitions. */}
+      {/* Page-level overlay singletons.
+          SlashCommandMenu, HoverPreview, and BlockContextMenu all communicate
+          via CustomEvents on window and position themselves via fixed CSS.
+          Rendering them once here prevents duplicate event handling when
+          multiple BlockEditor instances briefly coexist during focus transitions. */}
       <SlashCommandMenu />
       <HoverPreview />
+      <BlockContextMenu />
     </div>
   );
 }
