@@ -307,12 +307,14 @@ export const MiniGraph = memo(function MiniGraph({
       const b = adj.get(tgt) ?? []; b.push(src); adj.set(tgt, b);
     }
 
-    // BFS distances from centerNodeId
+    // BFS distances from centerNodeId.
+    // Use a head pointer instead of Array.shift() to keep BFS O(V+E).
     const dist = new Map<string, number>();
     dist.set(centerNodeId, 0);
+    let head = 0;
     const queue = [centerNodeId];
-    while (queue.length > 0) {
-      const cur = queue.shift()!;
+    while (head < queue.length) {
+      const cur = queue[head++]!;
       const curDist = dist.get(cur) ?? 0;
       for (const nb of adj.get(cur) ?? []) {
         if (!dist.has(nb)) { dist.set(nb, curDist + 1); queue.push(nb); }

@@ -67,10 +67,12 @@ function bfsDistances(
   const distances = new Map<string, number>();
 
   distances.set(centerNodeId, 0);
+  // Use a head pointer instead of Array.shift() to keep BFS O(V+E).
+  let head = 0;
   const queue: string[] = [centerNodeId];
 
-  while (queue.length > 0) {
-    const current = queue.shift()!;
+  while (head < queue.length) {
+    const current = queue[head++]!;
     const currentDist = distances.get(current) ?? 0;
 
     for (const neighbor of adj.get(current) ?? []) {
