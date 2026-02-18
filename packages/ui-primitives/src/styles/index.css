@@ -15,14 +15,6 @@
 
 @layer reset, tokens, base, components, utilities, overrides;
 
-@layer reset {
-  @import './base/reset.css';
-}
-
-@layer tokens {
-  @import './tokens/index.css';
-}
-
-@layer base {
-  @import './base/globals.css';
-}
+@import './base/reset.css' layer(reset);
+@import './tokens/index.css' layer(tokens);
+@import './base/globals.css' layer(base);
