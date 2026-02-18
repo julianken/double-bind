@@ -80,6 +80,33 @@ function MonitorIcon() {
   );
 }
 
+function DimIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="5" />
+      <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" opacity="0.4" />
+    </svg>
+  );
+}
+
+function SepiaIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+    </svg>
+  );
+}
+
+function ContrastIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="10" />
+      <path d="M12 2a10 10 0 0 1 0 20z" fill="currentColor" />
+    </svg>
+  );
+}
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -93,6 +120,10 @@ interface ThemeOption {
 const THEME_OPTIONS: ThemeOption[] = [
   { value: 'light', label: 'Light', icon: <SunIcon /> },
   { value: 'dark', label: 'Dark', icon: <MoonIcon /> },
+  { value: 'dim', label: 'Dim', icon: <DimIcon /> },
+  { value: 'sepia', label: 'Sepia', icon: <SepiaIcon /> },
+  { value: 'hc-light', label: 'HC Light', icon: <ContrastIcon /> },
+  { value: 'hc-dark', label: 'HC Dark', icon: <ContrastIcon /> },
   { value: 'system', label: 'System', icon: <MonitorIcon /> },
 ];
 
