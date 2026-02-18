@@ -57,7 +57,7 @@ interface HoverPreviewCloseDetail {
 // Constants
 // ============================================================================
 
-const OPEN_DEBOUNCE_MS = 150;
+const OPEN_DEBOUNCE_MS = 300;
 
 // ============================================================================
 // Hook

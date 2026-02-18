@@ -86,15 +86,15 @@ export const BlockContextMenu = memo(function BlockContextMenu({
   // Build the full action list with the additional DBB-450 actions first
   const additionalActions: BlockContextMenuAction[] = [];
 
-  if (onOpenInRightPanel) {
-    additionalActions.push({
-      label: 'Open in Right Panel',
-      action: () => {
+  additionalActions.push({
+    label: 'Open in Right Panel',
+    action: () => {
+      if (onOpenInRightPanel) {
         onOpenInRightPanel(blockId);
-        close();
-      },
-    });
-  }
+      }
+      close();
+    },
+  });
 
   additionalActions.push({
     label: 'Copy Reference',

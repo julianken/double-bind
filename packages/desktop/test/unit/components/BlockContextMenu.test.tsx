@@ -4,7 +4,7 @@
  * Validates:
  * - Hidden when isVisible=false (renders null)
  * - Shows on block-context-menu CustomEvent
- * - Renders required menu items: "Open in Right Panel", "Copy Reference", "Delete"
+ * - Renders required menu items: "Open in Right Panel", "Copy Reference", "Delete Block"
  * - Dismisses on backdrop click
  * - Dismisses on Escape key
  * - "Copy Reference" writes ((blockId)) to clipboard
@@ -152,7 +152,7 @@ describe('BlockContextMenu', () => {
       expect(screen.getByTestId('block-context-menu-item-copy-reference')).toBeDefined();
     });
 
-    it('shows "Delete" item from hook actions', () => {
+    it('shows "Delete Block" item from hook actions', () => {
       expect(screen.getByTestId('block-context-menu-item-delete')).toBeDefined();
     });
   });

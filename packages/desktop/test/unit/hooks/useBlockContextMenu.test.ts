@@ -334,17 +334,17 @@ describe('useBlockContextMenu', () => {
       expect(labels).toContain('Copy');
       expect(labels).toContain('Cut');
       expect(labels).toContain('Duplicate');
-      expect(labels).toContain('Delete');
+      expect(labels).toContain('Delete Block');
     });
 
-    it('Delete action has a separator', () => {
+    it('Delete Block action has a separator', () => {
       const { result } = renderHook(() => useBlockContextMenu());
 
       act(() => {
         fireContextMenuEvent(MOCK_BLOCK_ID);
       });
 
-      const deleteAction = result.current.actions.find((a) => a.label === 'Delete');
+      const deleteAction = result.current.actions.find((a) => a.label === 'Delete Block');
       expect(deleteAction?.separator).toBe(true);
     });
   });
