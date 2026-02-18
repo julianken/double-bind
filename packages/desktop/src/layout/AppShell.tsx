@@ -16,6 +16,7 @@
 import type { ReactNode } from 'react';
 import { ErrorBoundary } from '../components/ErrorBoundary.js';
 import { useAppStore } from '../stores/index.js';
+import { useWindowFocus } from '../hooks/useWindowFocus.js';
 // AppToolbar is created in DBB-442 and will resolve when that branch merges
 import { AppToolbar } from './AppToolbar.js';
 import { StatusBar } from './StatusBar.js';
@@ -118,6 +119,9 @@ export function AppShell({
   sidebarFallback,
   mainContentFallback,
 }: AppShellProps) {
+  // Subscribe to Tauri window focus/blur events, syncing to store + data attribute
+  useWindowFocus();
+
   const sidebarMode = useAppStore((state) => state.sidebarMode);
   const sidebarWidth = useAppStore((state) => state.sidebarWidth);
   const rightPanelWidth = useAppStore((state) => state.rightPanelWidth);
