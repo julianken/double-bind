@@ -1,0 +1,29 @@
+/**
+ * SettingsWindow Layout Styles
+ *
+ * Two-column: sidebar (fixed width) + scrollable content area.
+ */
+
+.window {
+  display: flex;
+  flex-direction: row;
+  height: 100vh;
+  background-color: var(--surface-base);
+  overflow: hidden;
+}
+
+.content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  /* Tauri overlay titlebar clearance */
+  padding-top: 28px;
+}
+
+.scrollArea {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-6) var(--space-8);
+}
