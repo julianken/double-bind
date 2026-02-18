@@ -9,6 +9,9 @@
  * - Ctrl+[ (or Cmd+[ on Mac): Navigate back in history
  * - Ctrl+] (or Cmd+] on Mac): Navigate forward in history
  * - Ctrl+G (or Cmd+G on Mac): Open graph view
+ * - Ctrl+\ (or Cmd+\ on Mac): Cycle sidebar mode (open → rail → closed → open)
+ * - Ctrl+K (or Cmd+K on Mac): Open command palette
+ * - Ctrl+Shift+K (or Cmd+Shift+K on Mac): Focus quick capture
  *
  * See docs/frontend/keyboard-first.md for the full shortcut documentation.
  */
@@ -34,6 +37,9 @@ function isCtrlKey(event: KeyboardEvent, key: string): boolean {
  * - Ctrl+[ (or Cmd+[ on Mac): Navigate back in history
  * - Ctrl+] (or Cmd+] on Mac): Navigate forward in history
  * - Ctrl+G (or Cmd+G on Mac): Open graph view
+ * - Ctrl+\ (or Cmd+\ on Mac): Cycle sidebar mode (open → rail → closed → open)
+ * - Ctrl+K (or Cmd+K on Mac): Open command palette
+ * - Ctrl+Shift+K (or Cmd+Shift+K on Mac): Focus quick capture
  *
  * These shortcuts work anywhere in the app and are not blocked by
  * editor focus or other components.
@@ -72,6 +78,27 @@ export function useGlobalShortcuts(): void {
       if (isCtrlKey(event, 'g')) {
         event.preventDefault();
         useAppStore.getState().navigateToPage('graph');
+        return;
+      }
+
+      // Ctrl+\ - Cycle sidebar mode (open → rail → closed → open)
+      if (isCtrlKey(event, '\\')) {
+        event.preventDefault();
+        useAppStore.getState().cycleSidebarMode();
+        return;
+      }
+
+      // Ctrl+Shift+K - Focus quick capture (check shift first to avoid conflict with Ctrl+K)
+      if (isCtrlKey(event, 'k') && event.shiftKey) {
+        event.preventDefault();
+        useAppStore.getState().setQuickCaptureFocused(true);
+        return;
+      }
+
+      // Ctrl+K - Open command palette
+      if (isCtrlKey(event, 'k')) {
+        event.preventDefault();
+        useAppStore.getState().toggleCommandPalette();
         return;
       }
     }

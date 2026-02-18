@@ -5,8 +5,22 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, cleanup, fireEvent } from '@testing-library/react';
 import { act } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { App } from '../../../src/App.js';
 import { useAppStore } from '../../../src/stores/ui-store.js';
+
+function createTestQueryClient() {
+  return new QueryClient({ defaultOptions: { queries: { retry: false } } });
+}
+
+function renderApp() {
+  const queryClient = createTestQueryClient();
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <App />
+    </QueryClientProvider>
+  );
+}
 
 describe('App', () => {
   beforeEach(() => {
@@ -37,28 +51,28 @@ describe('App', () => {
 
   describe('Basic Rendering', () => {
     it('renders the app shell', () => {
-      render(<App />);
+      renderApp();
       expect(screen.getByTestId('app-shell')).toBeDefined();
     });
 
     it('renders the sidebar when open', () => {
-      render(<App />);
+      renderApp();
       expect(screen.getByTestId('sidebar')).toBeDefined();
     });
 
     it('does not render sidebar when closed', () => {
       useAppStore.setState({ sidebarMode: 'closed', sidebarOpen: false });
-      render(<App />);
+      renderApp();
       expect(screen.queryByTestId('sidebar')).toBeNull();
     });
 
     it('renders the navigation bar', () => {
-      render(<App />);
+      renderApp();
       expect(screen.getByTestId('navigation-bar')).toBeDefined();
     });
 
     it('renders DailyNotesView by default when no page selected', () => {
-      render(<App />);
+      renderApp();
       expect(screen.getByTestId('daily-notes-view')).toBeDefined();
     });
   });
@@ -69,7 +83,7 @@ describe('App', () => {
 
   describe('Navigation', () => {
     it('navigates to page when navigateToPage is called', () => {
-      render(<App />);
+      renderApp();
 
       act(() => {
         useAppStore.getState().navigateToPage('page/test-page');
@@ -80,7 +94,7 @@ describe('App', () => {
     });
 
     it('shows DailyNotesView when navigating to empty page ID', () => {
-      render(<App />);
+      renderApp();
 
       // First navigate to a page
       act(() => {
@@ -96,7 +110,7 @@ describe('App', () => {
     });
 
     it('navigates to graph view', () => {
-      render(<App />);
+      renderApp();
 
       act(() => {
         useAppStore.getState().navigateToPage('graph');
@@ -106,7 +120,7 @@ describe('App', () => {
     });
 
     it('navigates to query view', () => {
-      render(<App />);
+      renderApp();
 
       act(() => {
         useAppStore.getState().navigateToPage('query');
@@ -122,14 +136,14 @@ describe('App', () => {
 
   describe('Navigation Bar Buttons', () => {
     it('back button is disabled when no history', () => {
-      render(<App />);
+      renderApp();
 
       const backButton = screen.getByRole('button', { name: /go back/i });
       expect(backButton).toHaveProperty('disabled', true);
     });
 
     it('forward button is disabled when at end of history', () => {
-      render(<App />);
+      renderApp();
 
       const forwardButton = screen.getByRole('button', { name: /go forward/i });
       expect(forwardButton).toHaveProperty('disabled', true);
@@ -142,7 +156,7 @@ describe('App', () => {
         historyIndex: 1,
       });
 
-      render(<App />);
+      renderApp();
 
       const backButton = screen.getByRole('button', { name: /go back/i });
       expect(backButton).toHaveProperty('disabled', false);
@@ -155,7 +169,7 @@ describe('App', () => {
         historyIndex: 0,
       });
 
-      render(<App />);
+      renderApp();
 
       const forwardButton = screen.getByRole('button', { name: /go forward/i });
       expect(forwardButton).toHaveProperty('disabled', false);
@@ -168,7 +182,7 @@ describe('App', () => {
         historyIndex: 1,
       });
 
-      render(<App />);
+      renderApp();
 
       const backButton = screen.getByRole('button', { name: /go back/i });
       fireEvent.click(backButton);
@@ -183,7 +197,7 @@ describe('App', () => {
         historyIndex: 0,
       });
 
-      render(<App />);
+      renderApp();
 
       const forwardButton = screen.getByRole('button', { name: /go forward/i });
       fireEvent.click(forwardButton);
@@ -204,7 +218,7 @@ describe('App', () => {
         historyIndex: 1,
       });
 
-      render(<App />);
+      renderApp();
 
       const event = new KeyboardEvent('keydown', {
         key: '[',
@@ -223,7 +237,7 @@ describe('App', () => {
         historyIndex: 0,
       });
 
-      render(<App />);
+      renderApp();
 
       const event = new KeyboardEvent('keydown', {
         key: ']',
@@ -242,7 +256,7 @@ describe('App', () => {
         historyIndex: 1,
       });
 
-      render(<App />);
+      renderApp();
 
       const event = new KeyboardEvent('keydown', {
         key: '[',
@@ -261,7 +275,7 @@ describe('App', () => {
         historyIndex: 0,
       });
 
-      render(<App />);
+      renderApp();
 
       const event = new KeyboardEvent('keydown', {
         key: ']',
@@ -281,7 +295,7 @@ describe('App', () => {
   describe('Sidebar Navigation', () => {
     it('clicking Daily Notes navigates to home', () => {
       useAppStore.setState({ currentPageId: 'page/test' });
-      render(<App />);
+      renderApp();
 
       const dailyNotesButton = screen.getByRole('button', { name: /daily notes/i });
       fireEvent.click(dailyNotesButton);
@@ -292,7 +306,7 @@ describe('App', () => {
     });
 
     it('clicking Graph navigates to graph view', () => {
-      render(<App />);
+      renderApp();
 
       const graphButton = screen.getByRole('button', { name: /graph view/i });
       fireEvent.click(graphButton);
@@ -301,7 +315,7 @@ describe('App', () => {
     });
 
     it('clicking Query navigates to query view', () => {
-      render(<App />);
+      renderApp();
 
       const queryButton = screen.getByRole('button', { name: /query editor/i });
       fireEvent.click(queryButton);
@@ -316,7 +330,7 @@ describe('App', () => {
 
   describe('Content Swapping', () => {
     it('sidebar persists while content changes', () => {
-      render(<App />);
+      renderApp();
 
       // Initially shows daily notes
       expect(screen.getByTestId('sidebar')).toBeDefined();
@@ -342,7 +356,7 @@ describe('App', () => {
     });
 
     it('navigation bar persists while content changes', () => {
-      render(<App />);
+      renderApp();
 
       expect(screen.getByTestId('navigation-bar')).toBeDefined();
 
@@ -364,7 +378,7 @@ describe('App', () => {
         useAppStore.setState({ commandPaletteOpen: true });
       });
 
-      render(<App />);
+      renderApp();
 
       expect(screen.getByTestId('command-palette')).toBeDefined();
     });
@@ -375,7 +389,7 @@ describe('App', () => {
         commandPaletteOpen: true,
       });
 
-      render(<App />);
+      renderApp();
 
       // Command palette should be shown as an overlay
       expect(screen.getByTestId('command-palette')).toBeDefined();
