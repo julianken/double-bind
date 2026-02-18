@@ -11,6 +11,9 @@
       "allow": [{ "label": "main" }]
     },
     "core:window:allow-start-dragging",
-    "menu:default"
+    "core:window:allow-show",
+    "core:window:allow-hide",
+    "core:window:allow-set-focus",
+    "core:window:allow-unminimize"
   ]
 }

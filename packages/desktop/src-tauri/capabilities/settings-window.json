@@ -9,6 +9,11 @@
     {
       "identifier": "core:window:allow-set-title",
       "allow": [{ "label": "settings" }]
-    }
+    },
+    "core:window:allow-show",
+    "core:window:allow-hide",
+    "core:window:allow-set-focus",
+    "core:window:allow-unminimize",
+    "core:window:allow-start-dragging"
   ]
 }

@@ -168,7 +168,7 @@ export function DailyNotesView(_props: DailyNotesViewProps): React.ReactElement 
   // Render: Loading State
   // ============================================================================
 
-  if (isLoading) {
+  if (isLoading && !dailyNote) {
     return (
       <div
         className={`${styles.container} ${styles['container--loading']}`}

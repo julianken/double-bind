@@ -136,20 +136,20 @@ export function createPersistencePlugin(options: PersistencePluginOptions): Plug
       return;
     }
 
+    // CRITICAL: Optimistically update the block cache BEFORE the async save.
+    // This ensures StaticBlockContent renders with fresh data when
+    // the editor loses focus, without waiting for the DB round-trip.
+    // Without this, the 30s staleTime causes a race condition where
+    // the old cached data is shown briefly before refetch completes.
+    queryClient.setQueryData(['block', blockId], (oldBlock: Block | undefined) =>
+      oldBlock ? { ...oldBlock, content } : undefined
+    );
+
     isSaving = true;
     try {
       await blockService.updateContent(blockId, content);
       // Track what we saved so we can detect changes on blur
       lastSavedContent = content;
-
-      // CRITICAL: Optimistically update the block cache immediately.
-      // This ensures StaticBlockContent renders with fresh data when
-      // the editor loses focus, without waiting for a refetch.
-      // Without this, the 30s staleTime causes a race condition where
-      // the old cached data is shown briefly before refetch completes.
-      queryClient.setQueryData(['block', blockId], (oldBlock: Block | undefined) =>
-        oldBlock ? { ...oldBlock, content } : undefined
-      );
 
       // Invalidate queries to ensure other views (backlinks, search) refetch
       invalidateAllQueries();
@@ -191,15 +191,17 @@ export function createPersistencePlugin(options: PersistencePluginOptions): Plug
     // Get current content from the editor
     const content = view.state.doc.textContent;
 
-    // Only save if there were actual changes:
-    // 1. There was a pending debounce timer (user was typing), OR
-    // 2. Content differs from last saved (if we've saved before)
-    // If lastSavedContent is null, we haven't saved yet, so only save if there was typing
+    // Always update the cache optimistically on blur so StaticBlockContent
+    // renders fresh data immediately, even if the debounce already saved.
+    queryClient.setQueryData(['block', blockId], (oldBlock: Block | undefined) =>
+      oldBlock ? { ...oldBlock, content } : undefined
+    );
+
+    // Only write to DB if there were actual changes
     const contentChanged = lastSavedContent !== null && content !== lastSavedContent;
     const shouldSave = hadPendingTimer || contentChanged;
 
     if (shouldSave) {
-      // Save immediately - saveContent handles invalidation
       await saveContent(content);
     }
 

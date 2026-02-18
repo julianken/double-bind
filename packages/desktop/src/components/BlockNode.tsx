@@ -33,7 +33,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS as DndCSS } from '@dnd-kit/utilities';
 import { InlineBlockRef, InlinePageLink } from '@double-bind/ui-primitives';
-import { useCozoQuery, invalidateQueries, resetQueries } from '../hooks/useCozoQuery.js';
+import { useCozoQuery, invalidateQueries } from '../hooks/useCozoQuery.js';
 import { useAppStore } from '../stores/ui-store.js';
 import { useServicesOptional } from '../providers/ServiceProvider.js';
 import { BlockEditor as RealBlockEditor } from '../editor/BlockEditor.js';
@@ -1002,23 +1002,19 @@ function BlockNodeComponent({ blockId, depth = 0, previousBlockId, nextBlockId }
     [setFocusedBlock]
   );
 
-  // Callback when blocks change (for cache reset)
-  // Use resetQueries to clear cache and prevent duplicates during structural changes
-  // (indent/outdent, reorder). Shows brief loading state instead of stale/duplicate data.
+  // Callback when blocks change (for cache invalidation)
+  // Use invalidateQueries to mark data stale while keeping old data visible during
+  // background refetch. This prevents the loading flash that resetQueries causes
+  // by clearing the cache (which makes isLoading become true).
   const handleBlocksChanged = useCallback(() => {
     const pageId = block?.pageId;
     if (pageId) {
-      // Reset the specific page's blocks query (used by DailyNotesView/PageView)
-      resetQueries(['blocks', 'byPage', pageId]);
+      invalidateQueries(['blocks', 'byPage', pageId]);
     }
-    // Reset all block children queries to update tree structure without duplicates
-    resetQueries(['blocks', 'children']);
-    // Reset this block's detail to get updated parentId after indent/outdent
-    resetQueries(['block', blockId]);
-    // Reset page-level query for PageView
-    resetQueries(['page', 'withBlocks']);
-    // Reset daily note query for DailyNotesView (uses ['dailyNote', 'withBlocks', date])
-    resetQueries(['dailyNote']);
+    invalidateQueries(['blocks', 'children']);
+    invalidateQueries(['block', blockId]);
+    invalidateQueries(['page', 'withBlocks']);
+    invalidateQueries(['dailyNote']);
   }, [block?.pageId, blockId]);
 
   // Handle activating this block for editing

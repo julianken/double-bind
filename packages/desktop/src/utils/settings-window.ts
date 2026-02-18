@@ -5,14 +5,16 @@
  * label "settings" and visible: false. We show it on demand and
  * set focus so it appears instantly.
  *
- * Falls back gracefully in non-Tauri contexts (browser dev/E2E).
+ * In browser dev mode, falls back to navigating to the /settings route.
  */
+
+import { useAppStore } from '../stores/ui-store.js';
 
 /**
  * Opens (or focuses) the settings window.
  *
  * In Tauri: reveals the pre-created hidden window and sets focus.
- * In browser: silently ignores so development workflows are unaffected.
+ * In browser: navigates to the /settings route within the main app.
  *
  * @example
  * ```ts
@@ -21,20 +23,19 @@
  */
 export async function openSettingsWindow(): Promise<void> {
   try {
-    const { Window } = await import('@tauri-apps/api/window');
-    const settingsWindow = await Window.getByLabel('settings');
+    const { WebviewWindow } = await import('@tauri-apps/api/webviewWindow');
+    const settingsWindow = await WebviewWindow.getByLabel('settings');
 
     if (!settingsWindow) {
-      return; // Window not available — silently return
+      useAppStore.getState().navigateToPage('settings');
+      return;
     }
 
-    // Show the window if it is hidden, then bring it to the front.
     await settingsWindow.show();
     await settingsWindow.setFocus();
     await settingsWindow.unminimize();
   } catch {
-    // Not in a Tauri context (browser dev or E2E test).
-    // Silently ignore so development workflows are unaffected.
+    useAppStore.getState().navigateToPage('settings');
   }
 }
 
@@ -44,8 +45,8 @@ export async function openSettingsWindow(): Promise<void> {
  */
 export async function closeSettingsWindow(): Promise<void> {
   try {
-    const { Window } = await import('@tauri-apps/api/window');
-    const settingsWindow = await Window.getByLabel('settings');
+    const { WebviewWindow } = await import('@tauri-apps/api/webviewWindow');
+    const settingsWindow = await WebviewWindow.getByLabel('settings');
     if (settingsWindow) {
       await settingsWindow.hide();
     }

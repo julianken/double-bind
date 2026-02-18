@@ -37,6 +37,7 @@ export function SettingsWindow() {
 
   return (
     <div className={styles.window}>
+      <div className={styles.dragRegion} data-tauri-drag-region />
       <SettingsSidebar
         activeSection={activeSection}
         onSectionChange={setActiveSection}

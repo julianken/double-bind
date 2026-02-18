@@ -179,11 +179,18 @@ export function GraphViewScreen(_props: GraphViewScreenProps): ReactElement {
 
   // Graph store (encoding mode, path state, etc.)
   const encodingMode = useGraphStore((s) => s.encodingMode);
-  const setEncodingMode = useGraphStore((s) => s.setEncodingMode);
+  const rawSetEncodingMode = useGraphStore((s) => s.setEncodingMode);
 
-  // Local state for checkbox controls (starts false; mirrors legacy behavior)
-  const [colorByCommunity, setColorByCommunity] = useState(false);
-  const [sizeByPageRank, setSizeByPageRank] = useState(false);
+  const [colorByCommunity, setColorByCommunity] = useState(true);
+  const [sizeByPageRank, setSizeByPageRank] = useState(true);
+
+  // Link encoding mode to colorByCommunity: selecting "community" enables it
+  const setEncodingMode = useCallback((mode: typeof encodingMode) => {
+    rawSetEncodingMode(mode);
+    if (mode === 'community') {
+      setColorByCommunity(true);
+    }
+  }, [rawSetEncodingMode]);
   const pathSourceId = useGraphStore((s) => s.pathSourceId);
   const activePath = useGraphStore((s) => s.activePath);
   const setPathSource = useGraphStore((s) => s.setPathSource);
@@ -340,10 +347,6 @@ export function GraphViewScreen(_props: GraphViewScreenProps): ReactElement {
     [setHoveredNode]
   );
 
-  const handleClose = useCallback(() => {
-    useAppStore.setState({ currentPageId: null });
-  }, []);
-
   const handleClearPath = useCallback(() => {
     setPathSource(null);
     setActivePath(null);
@@ -444,36 +447,6 @@ export function GraphViewScreen(_props: GraphViewScreenProps): ReactElement {
           onEncodingModeChange={setEncodingMode}
         />
 
-        {/* Legacy checkbox controls (preserved for test compatibility) */}
-        <div className="graph-view-screen__toolbar-controls">
-          <label className="graph-view-screen__control">
-            <input
-              type="checkbox"
-              checked={colorByCommunity}
-              onChange={(e) => setColorByCommunity(e.target.checked)}
-              data-testid="color-by-community-toggle"
-            />
-            <span>Color by Community</span>
-          </label>
-          <label className="graph-view-screen__control">
-            <input
-              type="checkbox"
-              checked={sizeByPageRank}
-              onChange={(e) => setSizeByPageRank(e.target.checked)}
-              data-testid="size-by-pagerank-toggle"
-            />
-            <span>Size by PageRank</span>
-          </label>
-        </div>
-
-        <button
-          className="graph-view-screen__close-button"
-          onClick={handleClose}
-          data-testid="graph-close-button"
-          aria-label="Close graph view"
-        >
-          Close
-        </button>
       </div>
 
       {/* Secondary controls row */}
@@ -489,6 +462,34 @@ export function GraphViewScreen(_props: GraphViewScreenProps): ReactElement {
         }}
       >
         <HopSelector value={hopCount} onChange={setHopCount} disabled={selectedNodeIds.size === 0} />
+
+        {/* Divider */}
+        <div style={{ width: 1, height: 16, background: 'var(--border-default)', opacity: 0.5, flexShrink: 0 }} />
+
+        {/* View modifier toggle */}
+        <button
+          type="button"
+          onClick={() => setSizeByPageRank((v) => !v)}
+          aria-pressed={sizeByPageRank}
+          data-testid="size-by-pagerank-toggle"
+          style={{
+            padding: '4px 12px',
+            border: `1px solid ${sizeByPageRank ? 'color-mix(in oklch, var(--accent-interactive) 40%, transparent)' : 'var(--border-default)'}`,
+            borderRadius: 'var(--radius-md)',
+            background: sizeByPageRank ? 'color-mix(in oklch, var(--accent-interactive) 15%, transparent)' : 'transparent',
+            color: sizeByPageRank ? 'var(--accent-interactive)' : 'var(--text-secondary)',
+            fontSize: 'var(--text-sm)',
+            cursor: 'pointer',
+            fontFamily: 'inherit',
+            transition: 'background 120ms ease, color 120ms ease, border-color 120ms ease',
+          }}
+        >
+          PageRank
+        </button>
+
+        {/* Divider */}
+        <div style={{ width: 1, height: 16, background: 'var(--border-default)', opacity: 0.5, flexShrink: 0 }} />
+
         <button
           type="button"
           onClick={() => setLassoEnabled((v) => !v)}
@@ -497,13 +498,14 @@ export function GraphViewScreen(_props: GraphViewScreenProps): ReactElement {
           data-testid="lasso-toggle"
           style={{
             padding: '4px 12px',
-            border: '1px solid var(--border-default)',
+            border: `1px solid ${lassoEnabled ? 'color-mix(in oklch, var(--accent-interactive) 40%, transparent)' : 'var(--border-default)'}`,
             borderRadius: 'var(--radius-md)',
-            background: lassoEnabled ? 'var(--accent-interactive)' : 'transparent',
-            color: lassoEnabled ? 'white' : 'var(--text-secondary)',
+            background: lassoEnabled ? 'color-mix(in oklch, var(--accent-interactive) 15%, transparent)' : 'transparent',
+            color: lassoEnabled ? 'var(--accent-interactive)' : 'var(--text-secondary)',
             fontSize: 'var(--text-sm)',
             cursor: 'pointer',
             fontFamily: 'inherit',
+            transition: 'background 120ms ease, color 120ms ease, border-color 120ms ease',
           }}
         >
           Lasso

@@ -22,6 +22,7 @@ import { GraphViewScreen } from './screens/GraphViewScreen.js';
 import { SearchResultsView as RealSearchResultsView } from './screens/SearchResultsView.js';
 import { DailyNotesView as RealDailyNotesView } from './screens/DailyNotesView.js';
 import { QueryViewScreen as RealQueryViewScreen } from './screens/QueryViewScreen.js';
+import { SettingsWindow } from './settings/SettingsWindow.js';
 import { Sidebar as FullSidebar } from './layout/Sidebar.js';
 import { AppShell } from './layout/AppShell.js';
 import { invalidateQueries } from './hooks/useCozoQuery.js';
@@ -236,11 +237,21 @@ function GraphView() {
 // Routes Configuration
 // ============================================================================
 
+/**
+ * SettingsView - Renders the SettingsWindow inline as a route.
+ * In Tauri, settings open in a separate webview. In browser dev mode,
+ * this route provides the same UI inside the main window.
+ */
+function SettingsView() {
+  return <SettingsWindow />;
+}
+
 const routes: Route[] = [
   { id: 'page', path: '/page/:id', component: PageView },
   { id: 'graph', path: '/graph', component: GraphView },
   { id: 'search', path: '/search', component: SearchView },
   { id: 'query', path: '/query', component: QueryView },
+  { id: 'settings', path: '/settings', component: SettingsView },
 ];
 
 
