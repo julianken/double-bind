@@ -47,10 +47,7 @@ export function useQuickCapture(): UseQuickCaptureResult {
 
     setIsSubmitting(true);
 
-    // Stub: log the captured text
     // TODO: Connect to PageService.createBlock() or similar in follow-up issue
-    // eslint-disable-next-line no-console
-    console.log('[QuickCapture] Captured text:', text);
 
     // Simulate async completion for future real implementation
     // Using setTimeout to maintain the async contract without actual I/O
