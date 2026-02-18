@@ -83,7 +83,7 @@ export const BlockContextMenu = memo(function BlockContextMenu({
         } else {
           nextIndex = currentIndex > 0 ? currentIndex - 1 : items.length - 1;
         }
-        items[nextIndex].focus();
+        items[nextIndex]?.focus();
       }
     }
 
