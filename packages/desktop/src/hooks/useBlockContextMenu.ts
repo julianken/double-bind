@@ -22,7 +22,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import type { BlockId } from '@double-bind/types';
-import { useServices } from '../providers/ServiceProvider.js';
+import { useServicesOptional } from '../providers/ServiceProvider.js';
 import { invalidateQueries } from './useCozoQuery.js';
 
 // ============================================================================
@@ -80,12 +80,7 @@ export function useBlockContextMenu(): UseBlockContextMenuResult {
   const [blockId, setBlockId] = useState<BlockId | null>(null);
 
   // ServiceProvider may not be present in all contexts (e.g., tests)
-  let services: ReturnType<typeof useServices> | null = null;
-  try {
-    services = useServices();
-  } catch {
-    services = null;
-  }
+  const services = useServicesOptional();
 
   const close = useCallback(() => {
     setIsVisible(false);
@@ -131,9 +126,11 @@ export function useBlockContextMenu(): UseBlockContextMenuResult {
                   await blockService.deleteBlock(targetBlockId);
                   invalidate();
                 }
+                close();
               });
+            } else {
+              close();
             }
-            close();
           },
         },
         {
@@ -150,9 +147,11 @@ export function useBlockContextMenu(): UseBlockContextMenuResult {
                   );
                   invalidate();
                 }
+                close();
               });
+            } else {
+              close();
             }
-            close();
           },
         },
         {
