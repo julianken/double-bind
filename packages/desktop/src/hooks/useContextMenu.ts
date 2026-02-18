@@ -64,7 +64,7 @@ export function useContextMenu(): UseContextMenuResult {
         // Falls back gracefully in browser/test environments where the Tauri
         // runtime is not present (import() will throw and be caught below).
         const { Menu, MenuItem, PredefinedMenuItem } = await import(
-          '@tauri-apps/plugin-menu'
+          /* @vite-ignore */ '@tauri-apps/plugin-menu'
         );
 
         // Build native menu items

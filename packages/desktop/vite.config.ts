@@ -28,6 +28,7 @@ export default defineConfig({
         main: resolve(__dirname, 'index.html'),
         settings: resolve(__dirname, 'settings.html'),
       },
+      external: ['@tauri-apps/plugin-menu'],
     },
   },
 
@@ -35,7 +36,9 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': '/src',
-      // In E2E mode, replace Tauri core with mock
+      // Tauri plugins are only available at runtime inside a Tauri window.
+      // Provide stubs so Vite can resolve imports in dev/E2E mode.
+      '@tauri-apps/plugin-menu': resolve(__dirname, 'src/stubs/tauri-plugin-menu.ts'),
       ...(isE2E && {
         '@tauri-apps/api/core': resolve(__dirname, 'test/e2e/setup/tauri-mock-module.ts'),
       }),
