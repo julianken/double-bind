@@ -50,7 +50,13 @@
   justify-content: center;
   width: 20px;
   height: 20px;
-  margin-top: 2px;
+  /* Align bullet center with first-line text center.
+   * Content has 4px top padding (--space-1) then a 15px body font at
+   * 1.65 line-height = 24.75px line box. Text center sits at:
+   *   4 + 24.75/2 = 16.375px from row top.
+   * Bullet (20px tall) center = margin-top + 10px.
+   * Solving: margin-top = 16.375 - 10 = 6.375px → 6px. */
+  margin-top: 6px;
   padding: 0;
   border: none;
   border-radius: var(--radius-sm);
