@@ -46,3 +46,31 @@ export { useContextMenu, type ContextMenuItem, type UseContextMenuResult } from 
 export { usePageContextMenu, type UsePageContextMenuResult } from './usePageContextMenu.js';
 
 export { useQuickCapture, type UseQuickCaptureResult } from './useQuickCapture.js';
+
+export {
+  useHoverPreview,
+  dispatchHoverPreviewOpen,
+  dispatchHoverPreviewClose,
+  type UseHoverPreviewResult,
+  type HoverPreviewPosition,
+} from './useHoverPreview.js';
+
+export {
+  usePagePreview,
+  invalidatePagePreviewCache,
+  clearPagePreviewCache,
+  type PagePreviewData,
+  type UsePagePreviewResult,
+} from './usePagePreview.js';
+
+export {
+  useBlockContextMenu,
+  dispatchBlockContextMenu,
+  type UseBlockContextMenuResult,
+  type BlockContextMenuAction,
+  type ContextMenuPosition,
+} from './useBlockContextMenu.js';
+
+export { useTypewriterScroll } from './useTypewriterScroll.js';
+
+export { useSidebarQuietMode } from './useSidebarQuietMode.js';

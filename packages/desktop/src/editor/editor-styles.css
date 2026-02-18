@@ -88,3 +88,38 @@
   color: var(--accent-interactive);
   font-weight: var(--font-medium);
 }
+
+/* ================================================================
+ * Focus Mode (DBB-449)
+ *
+ * When focus mode is active (.focus-mode applied to a container
+ * ancestor), all blocks that are NOT the active block are dimmed.
+ * The active block keeps full opacity so the user's attention
+ * naturally centres on where they are typing.
+ *
+ * Usage: apply `.focus-mode` to the `.content` wrapper in PageView
+ * or DailyNotesView when `focusModeActive` is true in AppStore.
+ * ================================================================ */
+
+.focus-mode [data-block-id]:not(.active) {
+  opacity: 0.4;
+  transition: opacity var(--transition-normal, 200ms ease);
+}
+
+.focus-mode [data-block-id].active {
+  opacity: 1;
+  transition: opacity var(--transition-normal, 200ms ease);
+}
+
+/* ================================================================
+ * Typewriter Scroll Helper (DBB-449)
+ *
+ * When typewriter mode is active, we add `scroll-margin-block` so
+ * that `scrollIntoView({ block: 'center' })` accounts for any
+ * fixed headers (e.g., the AppToolbar). This keeps the active
+ * block visually centred even when a sticky header is present.
+ * ================================================================ */
+
+[data-block-id] {
+  scroll-margin-block: 30vh;
+}
