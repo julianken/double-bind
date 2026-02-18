@@ -6,7 +6,12 @@ export {
   createKeymapPlugin,
   createEditorKeymaps,
   KEYBINDINGS,
+  zoomIntoBlock,
+  jumpToParent,
+  focusPrevSibling,
+  focusNextSibling,
   type BlockService,
+  type NavigationService,
   type KeymapPluginOptions,
   type KeybindingName,
 } from './keymap.js';
@@ -91,3 +96,22 @@ export {
   type OnSelectSuggestion as OnSelectPageSuggestion,
   type SearchPages,
 } from './page-autocomplete.js';
+
+export {
+  createSlashCommandPlugin,
+  slashCommandPluginKey,
+  getSlashCommandState,
+  isSlashCommandActive,
+  closeSlashCommand,
+  type SlashCommandState,
+  type SlashCommandPluginOptions,
+} from './slash-commands.js';
+
+export {
+  createHoverPreviewPlugin,
+  hoverPreviewPluginKey,
+  getHoverPreviewState,
+  type HoverPreviewState,
+  type HoverPreviewPluginOptions,
+  type PreviewCoords,
+} from './hover-preview.js';
