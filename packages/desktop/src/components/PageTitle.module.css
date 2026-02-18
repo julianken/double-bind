@@ -49,11 +49,11 @@
 }
 
 .title--editable:hover {
-  background-color: var(--bg-hover);
+  background-color: var(--surface-overlay);
 }
 
 .title--editable:focus {
-  background-color: var(--bg-hover);
+  background-color: var(--surface-overlay);
 }
 
 .title--editable:focus-visible {
