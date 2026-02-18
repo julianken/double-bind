@@ -1,22 +1,14 @@
 /**
  * Sidebar Layout Styles
  *
- * Main navigation sidebar with page list, search, and graph sections.
+ * Three-mode sidebar: open (full), rail (icons only), closed (hidden by AppShell).
+ * The AppShell <aside> handles data-sidebar-mode and width constraints.
+ * This file styles the internal content only.
  */
 
 /* ============================================================================
- * Sidebar Container
+ * Content wrapper (open mode)
  * ============================================================================ */
-
-.sidebar {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  background-color: var(--surface-recessed);
-  overflow: hidden;
-  flex-shrink: 0;
-}
 
 .content {
   display: flex;
@@ -34,60 +26,19 @@
 }
 
 /* ============================================================================
- * Section Headers
+ * Rail mode wrapper
  * ============================================================================ */
 
-.sectionHeader {
+.rail {
   display: flex;
+  flex-direction: column;
+  height: 100%;
   align-items: center;
-  justify-content: space-between;
-  padding: var(--space-2) var(--space-3);
-  font-size: var(--text-xs);
-  font-weight: var(--font-semibold);
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-wider);
+  overflow: hidden;
 }
 
 /* ============================================================================
- * Quick Capture
- * ============================================================================ */
-
-.quickCapture {
-  padding: 0 var(--space-3);
-  margin-bottom: var(--space-2);
-}
-
-.quickCaptureInput {
-  width: 100%;
-  padding: var(--space-2);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-md);
-  background-color: var(--surface-base);
-  color: var(--text-primary);
-  font-size: var(--text-sm);
-  font-family: inherit;
-  resize: none;
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
-}
-
-.quickCaptureInput::placeholder {
-  color: var(--text-muted);
-}
-
-.quickCaptureInput:focus {
-  outline: none;
-  border-color: var(--accent-interactive);
-  box-shadow: 0 0 0 2px var(--accent-subtle);
-}
-
-.quickCaptureInput:disabled {
-  background-color: var(--surface-elevated);
-  cursor: not-allowed;
-}
-
-/* ============================================================================
- * Action Buttons
+ * Action Buttons (open mode)
  * ============================================================================ */
 
 .newPageButton,
@@ -120,80 +71,6 @@
   cursor: not-allowed;
 }
 
-.newPageButton--primary {
-  background-color: var(--accent-interactive);
-  border-color: var(--accent-interactive);
-  color: white;
-}
-
-.newPageButton--primary:hover:not(:disabled) {
-  background-color: var(--accent-hover);
-  border-color: var(--accent-hover);
-}
-
-/* ============================================================================
- * Graph Section
- * ============================================================================ */
-
-.graphSection {
-  display: flex;
-  flex-direction: column;
-  flex-shrink: 0;
-  height: 200px;
-  border-top: 1px solid var(--border-default);
-  margin-top: var(--space-2);
-}
-
-.graphToggle {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--space-2) var(--space-3);
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: var(--text-xs);
-  font-weight: var(--font-medium);
-  color: var(--text-secondary);
-  text-align: left;
-  transition: background-color var(--transition-fast);
-}
-
-.graphToggle:hover {
-  background-color: var(--surface-overlay);
-}
-
-.graphToggleIcon {
-  transition: transform var(--transition-normal);
-}
-
-.graphToggleIcon--collapsed {
-  transform: rotate(-90deg);
-}
-
-.graphContent {
-  display: flex;
-  flex: 1;
-  min-height: 0;
-  justify-content: center;
-  align-items: center;
-  padding: var(--space-2) 0;
-}
-
-.graphEmpty,
-.graphLoading,
-.graphIsolated {
-  display: flex;
-  flex: 1;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-3);
-  color: var(--text-muted);
-  font-size: var(--text-xs);
-  text-align: center;
-}
-
 /* ============================================================================
  * Resize Handle
  * ============================================================================ */
@@ -218,7 +95,7 @@
 }
 
 /* ============================================================================
- * Footer
+ * Footer (open mode)
  * ============================================================================ */
 
 .footer {
