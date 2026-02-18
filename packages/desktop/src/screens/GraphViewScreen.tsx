@@ -210,6 +210,11 @@ export function GraphViewScreen(_props: GraphViewScreenProps): ReactElement {
   // Ref to the ForceGraph2D instance — used for coordinate conversion in lasso selection
   const graphViewRef = useRef<GraphViewRef>(undefined);
 
+  // Track last known mouse position so HoverPreviewPopover can be positioned correctly.
+  // onNodeHover only receives pageId — not mouse coordinates — so we capture position
+  // via a mousemove listener on the graph container div.
+  const mousePos = useRef({ x: 0, y: 0 });
+
   useEffect(() => {
     function updateDimensions() {
       if (containerRef.current) {
@@ -328,8 +333,9 @@ export function GraphViewScreen(_props: GraphViewScreenProps): ReactElement {
         setHoveredNode(null);
         return;
       }
-      // We need screen coordinates for the popover — track them via a separate ref
-      setHoveredNode({ pageId, screenX: 0, screenY: 0 });
+      // Use the last known mouse position captured by the mousemove listener
+      // on the graph container div — onNodeHover does not provide coordinates.
+      setHoveredNode({ pageId, screenX: mousePos.current.x, screenY: mousePos.current.y });
     },
     [setHoveredNode]
   );
@@ -390,7 +396,7 @@ export function GraphViewScreen(_props: GraphViewScreenProps): ReactElement {
         pinNode(nodeId, { x: 0, y: 0 });
       }
     },
-    onRemoveFromView: (nodeId) => {
+    onFindPath: (nodeId) => {
       // When a path source is set, right-clicking a target computes the path
       if (pathSourceId !== null) {
         const path = findShortestPath(pathSourceId, nodeId, data?.edges ?? []);
@@ -528,6 +534,7 @@ export function GraphViewScreen(_props: GraphViewScreenProps): ReactElement {
         className="graph-view-screen__container"
         data-testid="graph-container"
         style={{ flex: 1, position: 'relative', overflow: 'hidden' }}
+        onMouseMove={(e) => { mousePos.current = { x: e.clientX, y: e.clientY }; }}
       >
         <GraphView
           ref={graphViewRef}

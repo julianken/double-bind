@@ -67,14 +67,16 @@ export function findShortestPath(
 
   const adj = buildAdjacencyList(edges);
 
-  // BFS queue: each entry is the current node id
+  // BFS queue: each entry is the current node id.
+  // Use a head pointer instead of Array.shift() to keep BFS O(V+E).
+  let head = 0;
   const queue: string[] = [source];
   // Track visited nodes and their predecessors for path reconstruction
   const prev = new Map<string, string | null>();
   prev.set(source, null);
 
-  while (queue.length > 0) {
-    const current = queue.shift()!;
+  while (head < queue.length) {
+    const current = queue[head++]!;
 
     const neighbors = adj.get(current) ?? [];
     for (const neighbor of neighbors) {

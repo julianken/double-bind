@@ -24,8 +24,8 @@ export interface GraphNodeContextMenuCallbacks {
   onOpenInSidebar: (nodeId: string) => void;
   /** Pin the node to a fixed position */
   onPinNode: (nodeId: string) => void;
-  /** Remove the node from the current view (filter it out) */
-  onRemoveFromView: (nodeId: string) => void;
+  /** Start or complete a shortest-path query from/to this node */
+  onFindPath: (nodeId: string) => void;
   /** Whether the node is currently pinned (affects pin menu label) */
   isPinned?: (nodeId: string) => boolean;
 }
@@ -60,7 +60,7 @@ export interface UseGraphNodeContextMenuResult {
  *   onOpenPage: (id) => navigate(`/page/${id}`),
  *   onOpenInSidebar: (id) => openSidebar(id),
  *   onPinNode: (id) => pinNode(id, nodeX, nodeY),
- *   onRemoveFromView: (id) => removeNode(id),
+ *   onFindPath: (id) => startOrCompletePath(id),
  * });
  *
  * // In ForceGraph2D onNodeRightClick:
@@ -109,8 +109,8 @@ export function useGraphNodeContextMenu(
           separator: true,
         },
         {
-          label: 'Remove from view',
-          action: () => callbacks.onRemoveFromView(state.nodeId!),
+          label: 'Find path from here',
+          action: () => callbacks.onFindPath(state.nodeId!),
         },
       ]
     : [];
