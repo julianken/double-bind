@@ -61,7 +61,7 @@ export interface PageViewProps {
  * Check if the current platform uses Cmd key (macOS) or Ctrl key (Windows/Linux)
  */
 function isMacOS(): boolean {
-  return typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform);
+  return typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.userAgent);
 }
 
 // ============================================================================

@@ -1,12 +1,17 @@
 /**
  * CommandPalette - Global command palette component
  *
- * A keyboard-first command palette for quick access to application commands.
- * Triggered via Ctrl+P (Windows/Linux) or Cmd+P (macOS).
+ * A keyboard-first command palette for quick access to application commands
+ * and page navigation.
+ * Triggered via Ctrl+K or Ctrl+P (Windows/Linux) or Cmd+K/Cmd+P (macOS).
+ *
+ * Modes:
+ * - Page search (default): type page name → navigate. Prefix with `>` to switch to command mode.
+ * - Command mode: activated by `>` prefix. Shows existing commands list.
  *
  * Features:
- * - Fuzzy search matching for commands
- * - Grouped commands by category
+ * - Fuzzy search matching for both pages and commands
+ * - Grouped commands by category (command mode)
  * - Keyboard navigation (arrow keys, Enter, Escape)
  * - Modal overlay with backdrop dismissal
  * - Highlighted matching text in fuzzy search
@@ -21,9 +26,14 @@ import {
   useRef,
   useCallback,
   useMemo,
+  useContext,
   type KeyboardEvent as ReactKeyboardEvent,
 } from 'react';
+import type { Page } from '@double-bind/types';
+import { QueryClientContext } from '@tanstack/react-query';
 import { useAppStore } from '../stores/ui-store.js';
+import { useServicesOptional } from '../providers/ServiceProvider.js';
+import { useCozoQuery } from '../hooks/useCozoQuery.js';
 import styles from './CommandPalette.module.css';
 
 // ============================================================================
@@ -75,11 +85,14 @@ interface FuzzyMatchResult {
   matches: Array<{ start: number; end: number }>;
 }
 
-// ============================================================================
-// Constants
-// ============================================================================
-
-const PLACEHOLDER_TEXT = 'Type a command...';
+/**
+ * Page fuzzy match result with highlighted segments
+ */
+interface PageMatchResult {
+  page: Page;
+  score: number;
+  matches: Array<{ start: number; end: number }>;
+}
 
 // ============================================================================
 // Icons
@@ -304,6 +317,35 @@ function fuzzySearchCommands(query: string, commands: Command[]): FuzzyMatchResu
   return results.sort((a, b) => b.score - a.score);
 }
 
+/**
+ * Fuzzy search pages and return sorted results
+ */
+function fuzzySearchPages(query: string, pages: Page[]): PageMatchResult[] {
+  if (!query.trim()) {
+    return pages.map((page) => ({
+      page,
+      score: 0,
+      matches: [],
+    }));
+  }
+
+  const results: PageMatchResult[] = [];
+
+  for (const page of pages) {
+    const titleMatch = fuzzyMatch(query, page.title);
+    if (titleMatch) {
+      results.push({
+        page,
+        score: titleMatch.score,
+        matches: titleMatch.matches,
+      });
+    }
+  }
+
+  // Sort by score (descending)
+  return results.sort((a, b) => b.score - a.score);
+}
+
 // ============================================================================
 // Highlight Component
 // ============================================================================
@@ -347,6 +389,43 @@ function HighlightedText({
   }
 
   return <>{parts}</>;
+}
+
+// ============================================================================
+// Relative Time Utility
+// ============================================================================
+
+/**
+ * Formats a timestamp as a relative time string.
+ * Examples: "just now", "5m ago", "2h ago", "3d ago", "Jan 15"
+ */
+function formatRelativeTime(timestamp: number): string {
+  const now = Date.now();
+  const diff = now - timestamp;
+
+  if (diff < 60_000) {
+    return 'just now';
+  }
+
+  if (diff < 3_600_000) {
+    const minutes = Math.floor(diff / 60_000);
+    return `${minutes}m ago`;
+  }
+
+  if (diff < 86_400_000) {
+    const hours = Math.floor(diff / 3_600_000);
+    return `${hours}h ago`;
+  }
+
+  if (diff < 604_800_000) {
+    const days = Math.floor(diff / 86_400_000);
+    return `${days}d ago`;
+  }
+
+  const date = new Date(timestamp);
+  const month = date.toLocaleDateString('en-US', { month: 'short' });
+  const day = date.getDate();
+  return `${month} ${day}`;
 }
 
 // ============================================================================
@@ -439,7 +518,10 @@ export function createDefaultCommands(
 // ============================================================================
 
 /**
- * CommandPalette component for global command access.
+ * CommandPalette component for global command access and page navigation.
+ *
+ * Default mode is page search: type a page name and press Enter to navigate.
+ * Prefix query with `>` to switch to command mode.
  *
  * @example
  * ```tsx
@@ -476,6 +558,13 @@ export function CommandPalette({
   const isOpen = externalIsOpen ?? storeIsOpen;
   const onClose = externalOnClose ?? togglePalette;
 
+  // Services for page data (optional: may be null in test environments without ServiceProvider)
+  const services = useServicesOptional();
+  const pageService = services?.pageService;
+
+  // QueryClient availability check (null in unit test environments without QueryClientProvider)
+  const queryClientAvailable = !!useContext(QueryClientContext);
+
   // State
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -485,6 +574,22 @@ export function CommandPalette({
   const listRef = useRef<HTMLDivElement>(null);
   const selectedRef = useRef<HTMLDivElement>(null);
 
+  // Determine mode: command mode when query starts with '>'
+  const isCommandMode = query.startsWith('>');
+  const searchQuery = isCommandMode ? query.slice(1).trimStart() : query;
+
+  // Placeholder text reflects current mode
+  const placeholderText = isCommandMode ? 'Type a command...' : 'Search pages...';
+
+  // Page data query (disabled when pageService or QueryClientProvider is not available)
+  const queryFn = useCallback(
+    () => (pageService ? pageService.getAllPages({ limit: 500 }) : Promise.resolve([])),
+    [pageService]
+  );
+  const { data: pages } = useCozoQuery(['pages'], queryFn, {
+    enabled: !!pageService && queryClientAvailable,
+  });
+
   // Default commands
   const defaultCommands = useMemo(
     () => createDefaultCommands(navigateToPage, toggleSidebar, closeRightPanel),
@@ -493,26 +598,34 @@ export function CommandPalette({
 
   const commands = externalCommands ?? defaultCommands;
 
-  // Filtered and sorted results
-  const searchResults = useMemo(() => fuzzySearchCommands(query, commands), [query, commands]);
+  // Page search results
+  const pageResults = useMemo(() => {
+    if (isCommandMode) return [];
+    const activePage = (pages ?? []).filter((p) => !p.isDeleted);
+    return fuzzySearchPages(searchQuery, activePage);
+  }, [isCommandMode, pages, searchQuery]);
 
-  // Flatten results for selection
-  const flatResults = searchResults;
+  // Command search results
+  const commandResults = useMemo(() => {
+    if (!isCommandMode) return [];
+    return fuzzySearchCommands(searchQuery, commands);
+  }, [isCommandMode, searchQuery, commands]);
 
-  // Group results by section
-  const groupedResults = useMemo(() => {
+  // Total flat result count for selection bounds
+  const totalResults = isCommandMode ? commandResults.length : pageResults.length;
+
+  // Group command results by section
+  const groupedCommandResults = useMemo(() => {
     const groups: Record<string, FuzzyMatchResult[]> = {};
-
-    for (const result of searchResults) {
+    for (const result of commandResults) {
       const section = result.command.section;
       if (!groups[section]) {
         groups[section] = [];
       }
       groups[section].push(result);
     }
-
     return groups;
-  }, [searchResults]);
+  }, [commandResults]);
 
   // Reset state when opening
   useEffect(() => {
@@ -525,6 +638,11 @@ export function CommandPalette({
       });
     }
   }, [isOpen]);
+
+  // Reset selection index when results change
+  useEffect(() => {
+    setSelectedIndex(0);
+  }, [isCommandMode, searchQuery]);
 
   // Scroll selected item into view
   useEffect(() => {
@@ -546,7 +664,7 @@ export function CommandPalette({
       switch (event.key) {
         case 'ArrowDown':
           event.preventDefault();
-          setSelectedIndex((prev) => Math.min(prev + 1, flatResults.length - 1));
+          setSelectedIndex((prev) => Math.min(prev + 1, totalResults - 1));
           break;
 
         case 'ArrowUp':
@@ -556,9 +674,16 @@ export function CommandPalette({
 
         case 'Enter':
           event.preventDefault();
-          if (flatResults[selectedIndex]) {
-            flatResults[selectedIndex].command.action();
-            onClose();
+          if (isCommandMode) {
+            if (commandResults[selectedIndex]) {
+              commandResults[selectedIndex].command.action();
+              onClose();
+            }
+          } else {
+            if (pageResults[selectedIndex]) {
+              navigateToPage('page/' + pageResults[selectedIndex].page.pageId);
+              onClose();
+            }
           }
           break;
 
@@ -573,7 +698,7 @@ export function CommandPalette({
           break;
       }
     },
-    [flatResults, selectedIndex, onClose]
+    [isCommandMode, commandResults, pageResults, selectedIndex, onClose, navigateToPage, totalResults]
   );
 
   // Handle backdrop click
@@ -595,13 +720,22 @@ export function CommandPalette({
     [onClose]
   );
 
+  // Handle page result selection
+  const handlePageClick = useCallback(
+    (page: Page) => {
+      navigateToPage('page/' + page.pageId);
+      onClose();
+    },
+    [navigateToPage, onClose]
+  );
+
   // Handle input change
   const handleInputChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     setQuery(event.target.value);
     setSelectedIndex(0);
   }, []);
 
-  // Global keyboard listener for Ctrl+P
+  // Global keyboard listener for Ctrl+P (Ctrl+K is handled in useGlobalShortcuts)
   useEffect(() => {
     function handleGlobalKeyDown(event: KeyboardEvent) {
       const isCtrlOrCmd = event.ctrlKey || event.metaKey;
@@ -621,8 +755,8 @@ export function CommandPalette({
     return null;
   }
 
-  // Calculate flat index for each result to track selection
-  let currentFlatIndex = 0;
+  // Calculate flat index for command results (used in section rendering)
+  let currentCommandFlatIndex = 0;
 
   return (
     <div
@@ -645,14 +779,18 @@ export function CommandPalette({
             value={query}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
-            placeholder={PLACEHOLDER_TEXT}
+            placeholder={placeholderText}
             className={styles.input}
-            aria-label="Search commands"
+            aria-label={isCommandMode ? 'Search commands' : 'Search pages'}
             aria-controls="command-list"
             aria-activedescendant={
-              flatResults[selectedIndex]
-                ? `command-${flatResults[selectedIndex].command.id}`
-                : undefined
+              isCommandMode
+                ? (commandResults[selectedIndex]
+                    ? `command-${commandResults[selectedIndex].command.id}`
+                    : undefined)
+                : (pageResults[selectedIndex]
+                    ? `page-${pageResults[selectedIndex].page.pageId}`
+                    : undefined)
             }
             data-testid={`${testId}-input`}
             autoComplete="off"
@@ -660,35 +798,39 @@ export function CommandPalette({
             autoCapitalize="off"
             spellCheck="false"
           />
+          {isCommandMode && (
+            <span className={styles.modeIndicator} data-testid={`${testId}-mode-indicator`}>
+              commands
+            </span>
+          )}
         </div>
 
-        {/* Command List */}
+        {/* Results List */}
         <div
           ref={listRef}
           id="command-list"
           className={styles.listContainer}
           role="listbox"
-          aria-label="Commands"
+          aria-label={isCommandMode ? 'Commands' : 'Pages'}
           data-testid={`${testId}-list`}
         >
-          {flatResults.length === 0 ? (
-            <div className={styles.emptyState} data-testid={`${testId}-empty`}>
-              No commands found for &quot;{query}&quot;
-            </div>
-          ) : (
-            Object.entries(groupedResults).map(([section, results]) => (
-              <div key={section} role="group" aria-labelledby={`section-${section}`}>
+          {/* Page search mode */}
+          {!isCommandMode && (
+            pageResults.length === 0 ? (
+              <div className={styles.emptyState} data-testid={`${testId}-empty`}>
+                {searchQuery ? `No pages found for "${searchQuery}"` : 'No pages available'}
+              </div>
+            ) : (
+              <div role="group" aria-labelledby="section-pages">
                 <div
-                  id={`section-${section}`}
+                  id="section-pages"
                   className={styles.sectionHeader}
-                  data-testid={`${testId}-section-${section.toLowerCase()}`}
+                  data-testid={`${testId}-section-pages`}
                 >
-                  {section}
+                  Pages
                 </div>
-                {results.map((result) => {
-                  const index = currentFlatIndex++;
+                {pageResults.map((result, index) => {
                   const isSelected = index === selectedIndex;
-
                   const itemClasses = [
                     styles.commandItem,
                     isSelected && styles['commandItem--selected'],
@@ -696,33 +838,91 @@ export function CommandPalette({
 
                   return (
                     <div
-                      key={result.command.id}
+                      key={result.page.pageId}
                       ref={isSelected ? selectedRef : null}
-                      id={`command-${result.command.id}`}
+                      id={`page-${result.page.pageId}`}
                       role="option"
                       aria-selected={isSelected}
+                      tabIndex={isSelected ? 0 : -1}
                       className={itemClasses}
-                      onClick={() => handleCommandClick(result.command)}
+                      onClick={() => handlePageClick(result.page)}
                       onMouseEnter={() => setSelectedIndex(index)}
-                      data-testid={`${testId}-item-${result.command.id}`}
+                      data-testid={`${testId}-page-${result.page.pageId}`}
                     >
-                      {result.command.icon && (
-                        <span className={styles.commandIcon}>{result.command.icon}</span>
-                      )}
+                      <span className={styles.commandIcon}>
+                        <PageIcon />
+                      </span>
                       <div className={styles.commandContent}>
                         <div className={styles.commandName}>
-                          <HighlightedText text={result.command.name} matches={result.matches} />
+                          <HighlightedText text={result.page.title} matches={result.matches} />
                         </div>
-                        <div className={styles.commandDesc}>{result.command.description}</div>
                       </div>
-                      {result.command.shortcut && (
-                        <span className={styles.shortcut}>{result.command.shortcut}</span>
-                      )}
+                      <span className={styles.pageTimestamp}>
+                        {formatRelativeTime(result.page.updatedAt)}
+                      </span>
                     </div>
                   );
                 })}
               </div>
-            ))
+            )
+          )}
+
+          {/* Command mode */}
+          {isCommandMode && (
+            commandResults.length === 0 ? (
+              <div className={styles.emptyState} data-testid={`${testId}-empty`}>
+                {searchQuery ? `No commands found for "${searchQuery}"` : 'No commands available'}
+              </div>
+            ) : (
+              Object.entries(groupedCommandResults).map(([section, results]) => (
+                <div key={section} role="group" aria-labelledby={`section-${section}`}>
+                  <div
+                    id={`section-${section}`}
+                    className={styles.sectionHeader}
+                    data-testid={`${testId}-section-${section.toLowerCase()}`}
+                  >
+                    {section}
+                  </div>
+                  {results.map((result) => {
+                    const index = currentCommandFlatIndex++;
+                    const isSelected = index === selectedIndex;
+
+                    const itemClasses = [
+                      styles.commandItem,
+                      isSelected && styles['commandItem--selected'],
+                    ].filter(Boolean).join(' ');
+
+                    return (
+                      <div
+                        key={result.command.id}
+                        ref={isSelected ? selectedRef : null}
+                        id={`command-${result.command.id}`}
+                        role="option"
+                        aria-selected={isSelected}
+                        tabIndex={isSelected ? 0 : -1}
+                        className={itemClasses}
+                        onClick={() => handleCommandClick(result.command)}
+                        onMouseEnter={() => setSelectedIndex(index)}
+                        data-testid={`${testId}-item-${result.command.id}`}
+                      >
+                        {result.command.icon && (
+                          <span className={styles.commandIcon}>{result.command.icon}</span>
+                        )}
+                        <div className={styles.commandContent}>
+                          <div className={styles.commandName}>
+                            <HighlightedText text={result.command.name} matches={result.matches} />
+                          </div>
+                          <div className={styles.commandDesc}>{result.command.description}</div>
+                        </div>
+                        {result.command.shortcut && (
+                          <span className={styles.shortcut}>{result.command.shortcut}</span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ))
+            )
           )}
         </div>
 
@@ -738,6 +938,11 @@ export function CommandPalette({
           <span>
             <kbd className={styles.kbd}>Esc</kbd> close
           </span>
+          {!isCommandMode && (
+            <span>
+              <kbd className={styles.kbd}>&gt;</kbd> commands
+            </span>
+          )}
         </div>
       </div>
     </div>
