@@ -23,6 +23,8 @@
       {
         "label": "settings",
         "title": "Settings",
+        "hiddenTitle": true,
+        "titleBarStyle": "Overlay",
         "url": "settings.html",
         "visible": false,
         "width": 760,

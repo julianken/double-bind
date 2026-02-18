@@ -1,25 +1,8 @@
-/**
- * Focus Ring Mixin
- *
- * Reusable focus indicator pattern using CSS custom properties.
- * Animates --focus-ring-width and --focus-ring-opacity via @property
- * for smooth, composable focus transitions.
- *
- * Usage: @import './mixins/focus-ring.css';
- * Apply .focus-ring or use the selector pattern directly.
- */
-
-.focus-ring {
-  outline: none;
-  box-shadow:
-    0 0 0 var(--focus-ring-width, 0px) var(--ring-color, var(--accent-interactive));
-  transition:
-    box-shadow var(--spring-snappy),
-    outline-offset var(--spring-snappy);
-}
-
 .focus-ring:focus-visible {
-  --focus-ring-width: var(--ring-width, 2px);
-  outline: var(--ring-width, 2px) solid var(--ring-color, var(--accent-interactive));
-  outline-offset: var(--ring-offset, 2px);
+  outline: var(--ring-width) solid var(--ring-color);
+  outline-offset: var(--ring-offset);
+}
+.focus-ring-inset:focus-visible {
+  outline: var(--ring-width) solid var(--ring-color);
+  outline-offset: calc(var(--ring-offset) * -1);
 }

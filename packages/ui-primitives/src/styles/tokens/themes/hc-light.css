@@ -27,8 +27,8 @@
   -webkit-font-smoothing: subpixel-antialiased;
 
   /* Status colors — deep, high-chroma for maximum contrast on white */
-  --error:   var(--color-error-700);
-  --warning: var(--color-warning-700);
-  --success: var(--color-success-700);
+  --error:   oklch(40% 0.24  25);
+  --warning: oklch(44% 0.20  75);
+  --success: oklch(38% 0.20 145);
   --info:    var(--accent-interactive);
 }
