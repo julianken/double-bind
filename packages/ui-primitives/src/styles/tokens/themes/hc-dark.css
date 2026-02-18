@@ -1,1 +1,29 @@
-/* Phase 2 */
+[data-theme="hc-dark"] {
+  --surface-base:     oklch(5% 0 0);
+  --surface-recessed: oklch(3% 0 0);
+  --surface-elevated: oklch(10% 0 0);
+  --surface-overlay:  oklch(8% 0 0);
+  --surface-inset:    oklch(3% 0 0);
+
+  --text-primary:     oklch(100% 0 0);
+  --text-secondary:   oklch(90% 0 0);
+  --text-muted:       oklch(80% 0 0);
+  --text-subtle:      oklch(70% 0 0);
+  --text-disabled:    oklch(50% 0 0);
+  --text-accent:      oklch(100% 0 0);
+  --text-code:        oklch(90% 0 0);
+
+  --border-default:   oklch(100% 0 0);
+  --border-strong:    oklch(100% 0 0);
+  --border-focus:     oklch(100% 0 0);
+  --border-accent:    oklch(100% 0 0);
+
+  --accent-interactive: oklch(75% 0.175 283);
+  --accent-hover:       oklch(85% 0.175 283);
+  --accent-pressed:     oklch(90% 0.175 283);
+  --accent-subtle:      oklch(75% 0.175 283 / 15%);
+  --accent-emphasis:    oklch(75% 0.175 283 / 30%);
+
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}

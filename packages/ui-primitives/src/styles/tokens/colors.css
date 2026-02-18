@@ -1,30 +1,20 @@
 /**
- * Color Tokens - Design System Foundation
+ * Color Tokens - Deprecated Aliases
  *
- * Semantic color palette with light/dark theme support.
- * Uses CSS custom properties for runtime theme switching.
+ * These aliases maintain backward compatibility during the migration
+ * to the new 3-tier token system. DO NOT add new references to these.
+ * They will be removed in Phase 5.
  */
 
 :root {
-  /* Semantic colors - Light theme */
-  --bg-primary: #ffffff;
-  --bg-secondary: #f9fafb;
-  --bg-tertiary: #f3f4f6;
-  --bg-active: #e5e7eb;
-  --bg-hover: #f3f4f6;
+  --bg-primary:    var(--surface-base);
+  --bg-secondary:  var(--surface-recessed);
+  --bg-tertiary:   var(--surface-elevated);
+  --bg-active:     var(--surface-overlay);
+  --bg-hover:      var(--surface-overlay);
 
-  --text-primary: #111827;
-  --text-secondary: #374151;
-  --text-muted: #6b7280;
-  --text-disabled: #9ca3af;
-
-  --border-default: #e5e7eb;
-  --border-subtle: #f3f4f6;
-  --border-strong: #d1d5db;
-
-  --accent-primary: #3b82f6;
-  --accent-hover: #2563eb;
-  --accent-muted: #dbeafe;
+  --accent-primary: var(--accent-interactive);
+  --accent-muted:   var(--accent-subtle);
 
   --error: #ef4444;
   --warning: #f59e0b;
@@ -32,22 +22,6 @@
 }
 
 [data-theme="dark"] {
-  --bg-primary: #0f172a;
-  --bg-secondary: #1e293b;
-  --bg-tertiary: #334155;
-  --bg-active: #475569;
-  --bg-hover: #334155;
-
-  --text-primary: #f8fafc;
-  --text-secondary: #e2e8f0;
-  --text-muted: #94a3b8;
-  --text-disabled: #64748b;
-
-  --border-default: #334155;
-  --border-subtle: #1e293b;
-  --border-strong: #475569;
-
-  --accent-primary: #60a5fa;
-  --accent-hover: #3b82f6;
-  --accent-muted: #1e3a5f;
+  --accent-primary: var(--accent-interactive);
+  --accent-muted:   var(--accent-subtle);
 }
