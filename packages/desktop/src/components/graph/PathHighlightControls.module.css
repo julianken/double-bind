@@ -1,0 +1,135 @@
+/**
+ * PathHighlightControls Component Styles
+ */
+
+.panel {
+  background-color: var(--surface-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3);
+  min-width: 200px;
+  max-width: 280px;
+  box-shadow: 0 2px 8px oklch(0% 0 0 / 10%);
+}
+
+/* ============================================================================
+ * Header
+ * ============================================================================ */
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-2);
+}
+
+.title {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.clearButton {
+  padding: 2px var(--space-2);
+  border: 1px solid var(--border-default);
+  background: transparent;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  font-family: inherit;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.clearButton:hover {
+  background-color: var(--surface-overlay);
+  color: var(--text-primary);
+}
+
+/* ============================================================================
+ * Body
+ * ============================================================================ */
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.hint {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.label {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  min-width: 44px;
+  flex-shrink: 0;
+}
+
+/* ============================================================================
+ * Source Info
+ * ============================================================================ */
+
+.sourceInfo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+/* ============================================================================
+ * Path Result
+ * ============================================================================ */
+
+.pathInfo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1-5);
+}
+
+.pathRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.nodeChip {
+  font-size: var(--text-xs);
+  color: var(--text-primary);
+  background-color: var(--surface-overlay);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-sm);
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hopCount {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--accent-interactive);
+  font-variant-numeric: tabular-nums;
+}
+
+.intermediates {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* ============================================================================
+ * No Path State
+ * ============================================================================ */
+
+.noPath {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  font-style: italic;
+  margin: 0;
+}
