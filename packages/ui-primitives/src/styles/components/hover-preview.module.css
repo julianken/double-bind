@@ -1,0 +1,14 @@
+.container {
+  position: absolute;
+  z-index: var(--z-popover);
+  background: var(--surface-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-popover);
+  padding: var(--space-3) var(--space-4);
+  max-width: 320px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--hover-preview-duration) var(--ease-out);
+}
+.container[data-visible="true"] { opacity: 1; }

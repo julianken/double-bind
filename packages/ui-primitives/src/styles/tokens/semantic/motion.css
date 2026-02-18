@@ -19,6 +19,32 @@
   --spring-sheet:            220ms cubic-bezier(0.32, 0.72, 0, 1);
   --spring-menu:             120ms var(--ease-out);
   --spring-peek:             var(--duration-moderate) var(--ease-spring-settle);
+
+  /* Resize handle */
+  --spring-resize:           80ms var(--ease-out);
+
+  /* Hover preview card */
+  --spring-preview-in:       150ms var(--ease-spring-gentle);
+  --spring-preview-out:      100ms var(--ease-out);
+
+  /* Cross-fade for content transitions */
+  --spring-crossfade:        var(--duration-fast) var(--ease-in-out);
+
+  /* Hover preview — unified at 300ms/150ms across sidebar, editor, graph */
+  --hover-preview-delay:      300ms;
+  --hover-preview-duration:   150ms;
+
+  /* Editor block dimming (focus mode) */
+  --focus-mode-dim-duration:  200ms;
+
+  /* Settings window entry/exit */
+  --spring-dialog-enter:  180ms var(--ease-out);
+  --spring-dialog-exit:   120ms var(--ease-out);
+
+  /* Graph */
+  --graph-zoom-duration:   300ms;
+  --graph-zoom-ease:       var(--ease-out);
+  --graph-filter-duration: 200ms;
 }
 
 /* Reduced motion gate — wrap all bounce/overshoot in this */
@@ -41,5 +67,36 @@
     --spring-palette:        150ms var(--ease-out);
     --spring-snappy:         0ms var(--ease-out);
     --spring-bouncy:         0ms var(--ease-out);
+    --spring-resize:         0ms var(--ease-out);
+    --spring-preview-in:     0ms var(--ease-out);
+    --spring-preview-out:    0ms var(--ease-out);
+    --spring-crossfade:      0ms var(--ease-out);
   }
+}
+
+/* User-controlled reduced-motion override — AFTER the @media block */
+[data-reduced-motion="on"] {
+  --ease-spring-overshoot:   var(--ease-out);
+  --ease-spring-bouncy:      var(--ease-out);
+  --spring-palette:          150ms var(--ease-out);
+  --spring-snappy:           0ms   var(--ease-out);
+  --spring-bouncy:           0ms   var(--ease-out);
+  --spring-sidebar:          0ms   var(--ease-out);
+  --spring-dialog-enter:     0ms   var(--ease-out);
+  --spring-dialog-exit:      0ms   var(--ease-out);
+  --hover-preview-delay:     0ms;
+  --hover-preview-duration:  0ms;
+  --focus-mode-dim-duration: 0ms;
+  --graph-zoom-duration:     0ms;
+  --graph-filter-duration:   0ms;
+}
+
+/* User explicitly overrides OS reduced-motion preference */
+[data-reduced-motion="off"] {
+  --ease-spring-overshoot: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  --ease-spring-bouncy: linear(
+    0, 0.004 1.8%, 0.025 3.5%, 0.099 7.1%, 0.539 17%,
+    0.721 21.8%, 0.829 25.4%, 1.026 35.6%, 1.05 41.2%,
+    1.024 47.3%, 1 100%
+  );
 }

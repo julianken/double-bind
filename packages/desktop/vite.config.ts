@@ -23,6 +23,12 @@ export default defineConfig({
     emptyOutDir: true,
     // Generate source maps for debugging
     sourcemap: true,
+    rollupOptions: {
+      input: {
+        main: resolve(__dirname, 'index.html'),
+        settings: resolve(__dirname, 'settings.html'),
+      },
+    },
   },
 
   // Resolve aliases for cleaner imports

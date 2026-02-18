@@ -1,0 +1,8 @@
+.focus-ring:focus-visible {
+  outline: var(--ring-width) solid var(--ring-color);
+  outline-offset: var(--ring-offset);
+}
+.focus-ring-inset:focus-visible {
+  outline: var(--ring-width) solid var(--ring-color);
+  outline-offset: calc(var(--ring-offset) * -1);
+}
