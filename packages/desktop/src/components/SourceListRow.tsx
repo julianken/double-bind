@@ -12,6 +12,7 @@
  */
 
 import { memo, useCallback } from 'react';
+import { usePageContextMenu } from '../hooks/usePageContextMenu.js';
 import styles from './SourceListRow.module.css';
 
 // ============================================================================
@@ -103,6 +104,7 @@ function TrashIcon() {
  * Memoized to prevent re-renders when sibling rows update.
  */
 export const SourceListRow = memo(function SourceListRow({
+  pageId,
   title,
   isActive = false,
   isStarred = false,
@@ -110,6 +112,8 @@ export const SourceListRow = memo(function SourceListRow({
   onStar,
   onDelete,
 }: SourceListRowProps) {
+  const { showContextMenu } = usePageContextMenu(pageId);
+
   const handleStar = useCallback(
     (event: React.MouseEvent) => {
       event.stopPropagation();
@@ -145,6 +149,7 @@ export const SourceListRow = memo(function SourceListRow({
       data-testid="source-list-row"
       className={rowClasses}
       onClick={onClick}
+      onContextMenu={showContextMenu}
       onKeyDown={handleKeyDown}
       tabIndex={0}
     >

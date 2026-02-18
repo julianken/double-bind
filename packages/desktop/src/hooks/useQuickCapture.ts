@@ -5,7 +5,7 @@
  * Real implementation will connect to PageService when available.
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 
 // ============================================================================
 // Types
@@ -41,10 +41,12 @@ export interface UseQuickCaptureResult {
  */
 export function useQuickCapture(): UseQuickCaptureResult {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const isSubmittingRef = useRef(false);
 
   const handleSubmit = useCallback((text: string) => {
-    if (!text.trim() || isSubmitting) return;
+    if (!text.trim() || isSubmittingRef.current) return;
 
+    isSubmittingRef.current = true;
     setIsSubmitting(true);
 
     // TODO: Connect to PageService.createBlock() or similar in follow-up issue
@@ -52,9 +54,10 @@ export function useQuickCapture(): UseQuickCaptureResult {
     // Simulate async completion for future real implementation
     // Using setTimeout to maintain the async contract without actual I/O
     setTimeout(() => {
+      isSubmittingRef.current = false;
       setIsSubmitting(false);
     }, 0);
-  }, [isSubmitting]);
+  }, []); // stable callback — ref guards against stale closure on isSubmitting
 
   return { handleSubmit, isSubmitting };
 }
