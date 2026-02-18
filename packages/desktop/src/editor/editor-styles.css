@@ -17,10 +17,48 @@
 /* Match StaticBlockContent vertical padding so text doesn't shift on focus */
 .ProseMirror {
   padding: var(--space-1) 0;
+  font-family: var(--font-content);
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+  letter-spacing: var(--tracking-body);
+  font-optical-sizing: auto;
+  caret-color: var(--accent-primary, #6366F1);
 }
 
 .ProseMirror:focus {
   outline: none;
+}
+
+.ProseMirror h1 {
+  font-size: var(--text-h1);
+  line-height: var(--leading-h1);
+  letter-spacing: var(--tracking-heading);
+  font-weight: var(--font-bold);
+}
+
+.ProseMirror h2 {
+  font-size: var(--text-h2);
+  line-height: var(--leading-h2);
+  letter-spacing: var(--tracking-heading);
+  font-weight: var(--font-semibold);
+}
+
+.ProseMirror h3 {
+  font-size: var(--text-h3);
+  line-height: var(--leading-h3);
+  letter-spacing: var(--tracking-h3);
+  font-weight: var(--font-medium);
+}
+
+[data-theme="dark"] .ProseMirror h1,
+[data-theme="dim"]  .ProseMirror h1  { font-weight: var(--font-semibold); }
+[data-theme="dark"] .ProseMirror h2,
+[data-theme="dim"]  .ProseMirror h2  { font-weight: var(--font-medium); }
+
+.ProseMirror code {
+  font-family: var(--font-mono);
+  font-size: 0.875em;
+  font-feature-settings: 'ss01' 1;
 }
 
 /* Page links: blue underlined text */

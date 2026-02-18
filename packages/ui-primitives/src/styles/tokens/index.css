@@ -10,7 +10,7 @@
 
 /* Tier 1: Primitives */
 @import './primitives/motion.css';
-/* Other primitives imported in Phase 1 and 2 */
+@import './primitives/typography.css';
 
 /* Existing flat token files remain — do not remove yet */
 @import './colors.css';
