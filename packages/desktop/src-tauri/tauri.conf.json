@@ -19,6 +19,17 @@
         "height": 800,
         "minWidth": 800,
         "minHeight": 600
+      },
+      {
+        "label": "settings",
+        "title": "Settings",
+        "hiddenTitle": true,
+        "titleBarStyle": "Overlay",
+        "url": "settings.html",
+        "visible": false,
+        "width": 760,
+        "height": 540,
+        "resizable": false
       }
     ],
     "security": {

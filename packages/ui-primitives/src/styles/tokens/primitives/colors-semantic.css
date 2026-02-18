@@ -1,1 +1,11 @@
-/* Phase 2 */
+:root {
+  /* Semantic status primitives — OKLCH, P3-capable */
+  --color-error-500:   oklch(56% 0.22  25);
+  --color-warning-500: oklch(72% 0.17  75);
+  --color-success-500: oklch(62% 0.16 145);
+
+  /* Alpha variants for tinted backgrounds */
+  --color-error-500-a12:   oklch(56% 0.22  25 / 12%);
+  --color-warning-500-a12: oklch(72% 0.17  75 / 12%);
+  --color-success-500-a12: oklch(62% 0.16 145 / 12%);
+}
