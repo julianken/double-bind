@@ -15,7 +15,6 @@ import {
   forwardRef,
   memo,
   useCallback,
-  useState,
 } from 'react';
 import type { BlockId } from '@double-bind/types';
 
@@ -55,43 +54,29 @@ export interface InlineBlockRefProps {
   className?: string;
 }
 
-// CSS custom properties for theming
+// CSS custom properties for theming — prefer design tokens, fall back to raw values
 const cssVars = {
-  color: 'var(--db-inline-ref-color, #2563eb)',
-  colorHover: 'var(--db-inline-ref-color-hover, #1d4ed8)',
-  colorMissing: 'var(--db-inline-ref-color-missing, #9ca3af)',
-  backgroundColor: 'var(--db-inline-ref-bg, transparent)',
-  backgroundColorHover: 'var(--db-inline-ref-bg-hover, rgba(37, 99, 235, 0.08))',
+  color: 'var(--accent-primary, var(--db-inline-ref-color, #2563eb))',
+  bg: 'var(--accent-muted, var(--db-inline-ref-bg, rgba(37, 99, 235, 0.08)))',
+  colorMissing: 'var(--text-muted, var(--db-inline-ref-color-missing, #9ca3af))',
 } as const;
 
-// Inline styles for the component (no external CSS dependencies)
+// Inline styles match editor-styles.css .highlight-block-ref to prevent
+// layout shift when switching between static and editor modes.
 const styles = {
   base: {
     display: 'inline',
     color: cssVars.color,
+    backgroundColor: cssVars.bg,
     textDecoration: 'none',
-    // Use non-shorthand properties to avoid React warnings when mixing
-    borderTopStyle: 'none',
-    borderLeftStyle: 'none',
-    borderRightStyle: 'none',
-    borderBottomWidth: '1px',
-    borderBottomStyle: 'solid',
-    borderBottomColor: 'transparent',
     cursor: 'pointer',
-    borderRadius: '2px',
+    borderRadius: 'var(--radius-sm, 2px)',
     padding: '0 2px',
-    margin: '0 1px',
-    transition: 'all 0.15s ease',
+    margin: '0',
+    border: 'none',
     fontFamily: 'inherit',
     fontSize: 'inherit',
     lineHeight: 'inherit',
-    // Reset button styles using non-shorthand
-    backgroundColor: 'transparent',
-  } satisfies CSSProperties,
-
-  hover: {
-    borderBottomColor: cssVars.color,
-    backgroundColor: cssVars.backgroundColorHover,
   } satisfies CSSProperties,
 
   missing: {
@@ -99,6 +84,7 @@ const styles = {
     textDecoration: 'line-through',
     cursor: 'not-allowed',
     opacity: 0.7,
+    backgroundColor: 'transparent',
   } satisfies CSSProperties,
 
   brackets: {
@@ -141,8 +127,6 @@ export const InlineBlockRef = memo(
     { blockId, content, onClick, onHover, exists = true, className },
     ref
   ) {
-    const [isHovered, setIsHovered] = useState(false);
-
     const handleClick = useCallback(
       (event: MouseEvent<HTMLButtonElement>) => {
         event.preventDefault();
@@ -168,12 +152,10 @@ export const InlineBlockRef = memo(
     );
 
     const handleMouseEnter = useCallback(() => {
-      setIsHovered(true);
       onHover?.(blockId);
     }, [blockId, onHover]);
 
     const handleMouseLeave = useCallback(() => {
-      setIsHovered(false);
       onHover?.(null);
     }, [onHover]);
 
@@ -183,7 +165,6 @@ export const InlineBlockRef = memo(
     // Combine styles based on state
     const combinedStyles: CSSProperties = {
       ...styles.base,
-      ...(exists && isHovered ? styles.hover : {}),
       ...(!exists ? styles.missing : {}),
     };
 
