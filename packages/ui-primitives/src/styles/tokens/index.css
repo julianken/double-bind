@@ -5,6 +5,14 @@
  * Usage: @import '@double-bind/ui-primitives/styles/tokens';
  */
 
+/* Tier 0: @property registrations — must be first */
+@import './semantic/properties.css';
+
+/* Tier 1: Primitives */
+@import './primitives/motion.css';
+/* Other primitives imported in Phase 1 and 2 */
+
+/* Existing flat token files remain — do not remove yet */
 @import './colors.css';
 @import './typography.css';
 @import './spacing.css';
