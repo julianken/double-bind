@@ -28,13 +28,13 @@
   --ring-offset: 2px;
   --ring-color: var(--accent-primary);
 
-  /* Transitions */
-  --transition-fast: 100ms ease;
-  --transition-normal: 150ms ease;
-  --transition-slow: 200ms ease;
-  --transition-slower: 300ms ease;
+  /* Legacy transition aliases — now composed from motion primitives */
+  --transition-fast:   var(--duration-instant) var(--ease-out);
+  --transition-normal: var(--duration-fast) var(--ease-out);
+  --transition-slow:   var(--duration-moderate) var(--ease-out);
+  --transition-slower: var(--duration-deliberate) var(--ease-out);
 
-  /* Animation timing */
+  /* Animation timing — now defined in primitives/motion.css, kept as aliases */
   --ease-in: cubic-bezier(0.4, 0, 1, 1);
   --ease-out: cubic-bezier(0, 0, 0.2, 1);
   --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
