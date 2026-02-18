@@ -37,7 +37,8 @@ export interface AppStore {
 
   // === Focus ===
   focusedBlockId: string | null;
-  setFocusedBlock: (blockId: string | null) => void;
+  focusClickCoords: { left: number; top: number } | null;
+  setFocusedBlock: (blockId: string | null, clickCoords?: { left: number; top: number }) => void;
 
   // === Selection ===
   selectedBlockIds: Set<string>;
@@ -87,7 +88,9 @@ const store = create<AppStore>()(
 
       // === Focus ===
       focusedBlockId: null,
-      setFocusedBlock: (blockId: string | null) => set({ focusedBlockId: blockId }),
+      focusClickCoords: null,
+      setFocusedBlock: (blockId: string | null, clickCoords?: { left: number; top: number }) =>
+        set({ focusedBlockId: blockId, focusClickCoords: clickCoords ?? null }),
 
       // === Selection ===
       selectedBlockIds: new Set(),

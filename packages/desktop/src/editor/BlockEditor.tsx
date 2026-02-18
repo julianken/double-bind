@@ -14,7 +14,7 @@
  */
 
 import { useRef, useEffect, useCallback, type CSSProperties } from 'react';
-import { EditorState, type Transaction } from 'prosemirror-state';
+import { EditorState, TextSelection, type Transaction } from 'prosemirror-state';
 import { EditorView } from 'prosemirror-view';
 import { history } from 'prosemirror-history';
 import { baseKeymap } from 'prosemirror-commands';
@@ -22,6 +22,7 @@ import { keymap } from 'prosemirror-keymap';
 import type { BlockService } from '@double-bind/core';
 import type { BlockId, PageId } from '@double-bind/types';
 
+import { useAppStore } from '../stores/ui-store.js';
 import { schema } from './schema.js';
 import './editor-styles.css';
 import { textToDoc, docToText } from './serialization.js';
@@ -488,9 +489,26 @@ export function BlockEditor({
 
     viewRef.current = view;
 
-    // Auto-focus if requested
+    // Auto-focus if requested, placing cursor at click position when available
     if (autoFocus) {
-      view.focus();
+      const coords = useAppStore.getState().focusClickCoords;
+      if (coords) {
+        // Defer until after browser layout so posAtCoords can map screen coords to doc position
+        requestAnimationFrame(() => {
+          if (!viewRef.current) return;
+          viewRef.current.focus();
+          const pos = viewRef.current.posAtCoords(coords);
+          if (pos) {
+            const tr = viewRef.current.state.tr.setSelection(
+              TextSelection.near(viewRef.current.state.doc.resolve(pos.pos))
+            );
+            viewRef.current.dispatch(tr);
+          }
+          useAppStore.setState({ focusClickCoords: null });
+        });
+      } else {
+        view.focus();
+      }
     }
 
     // Cleanup on unmount

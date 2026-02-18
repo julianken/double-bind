@@ -111,7 +111,7 @@ export interface StaticBlockContentProps {
   /**
    * Callback when the content area is clicked (to activate editing)
    */
-  onClick?: () => void;
+  onClick?: (e?: React.MouseEvent) => void;
 
   /**
    * Callback when a page link is clicked
@@ -863,9 +863,12 @@ export const StaticBlockContent = memo(function StaticBlockContent({
   onPageLinkHover,
   onBlockRefHover,
 }: StaticBlockContentProps) {
-  const handleClick = useCallback(() => {
-    onClick?.();
-  }, [onClick]);
+  const handleClick = useCallback(
+    (e: React.MouseEvent) => {
+      onClick?.(e);
+    },
+    [onClick]
+  );
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -998,9 +1001,16 @@ function BlockNodeComponent({ blockId, depth = 0, previousBlockId, nextBlockId }
   }, [block?.pageId, blockId]);
 
   // Handle activating this block for editing
-  const handleActivate = useCallback(() => {
-    setFocusedBlock(blockId);
-  }, [blockId, setFocusedBlock]);
+  const handleActivate = useCallback(
+    (e?: React.MouseEvent) => {
+      if (e) {
+        setFocusedBlock(blockId, { left: e.clientX, top: e.clientY });
+      } else {
+        setFocusedBlock(blockId);
+      }
+    },
+    [blockId, setFocusedBlock]
+  );
 
   // Handle collapse toggle
   const handleToggleCollapse = useCallback(async () => {
