@@ -11,7 +11,8 @@ export { Breadcrumb, type BreadcrumbProps } from './Breadcrumb.js';
 export { StatusBar, type StatusBarProps } from './StatusBar.js';
 export { RightPanel, type RightPanelProps } from './RightPanel.js';
 
-export { Sidebar, QuickCapture, SidebarFooter, type SidebarProps } from './Sidebar.js';
+export { Sidebar, SidebarFooter, type SidebarProps } from './Sidebar.js';
+export { QuickCapture, type QuickCaptureProps } from '../components/QuickCapture.js';
 export { PageList, type PageListProps } from '../components/PageList.js';
 
 // Re-export SearchBar from components for convenience
