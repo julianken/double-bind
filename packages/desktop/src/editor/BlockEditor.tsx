@@ -13,7 +13,7 @@
  * @see docs/frontend/state-management.md for ProseMirror state ownership
  */
 
-import { useRef, useEffect, useCallback, type CSSProperties } from 'react';
+import { useRef, useEffect, useCallback, Fragment, type CSSProperties } from 'react';
 import { EditorState, TextSelection, type Transaction } from 'prosemirror-state';
 import { EditorView } from 'prosemirror-view';
 import { history } from 'prosemirror-history';
@@ -36,6 +36,10 @@ import {
 } from './plugins/index.js';
 import { highlightReferencesPlugin } from './plugins/highlight-references.js';
 import { typingIsolationPlugin } from './plugins/typing-isolation.js';
+import { createSlashCommandPlugin } from './plugins/slash-commands.js';
+import { createHoverPreviewPlugin } from './plugins/hover-preview.js';
+import { SlashCommandMenu } from '../components/SlashCommandMenu.js';
+import { HoverPreview } from '../components/HoverPreview.js';
 
 /**
  * Props for the BlockEditor component.
@@ -420,6 +424,10 @@ export function BlockEditor({
       highlightReferencesPlugin(),
       // Suppress non-editor transitions during active typing
       typingIsolationPlugin(),
+      // Slash command menu: dispatches CustomEvents for React components to handle
+      createSlashCommandPlugin(),
+      // Hover preview: dispatches CustomEvents when hovering over page links
+      createHoverPreviewPlugin(),
     ];
 
     if (useServiceMode) {
@@ -535,13 +543,21 @@ export function BlockEditor({
   }, [readOnly]);
 
   return (
-    <div
-      ref={editorRef}
-      className={`block-editor ${className || ''}`}
-      style={style}
-      data-testid={testId || `block-editor-${blockId}`}
-      data-block-id={blockId}
-    />
+    <Fragment>
+      <div
+        ref={editorRef}
+        className={`block-editor ${className || ''}`}
+        style={style}
+        data-testid={testId || `block-editor-${blockId}`}
+        data-block-id={blockId}
+      />
+      {/* SlashCommandMenu and HoverPreview are mounted alongside the editor.
+          They are positioned via fixed/absolute CSS using coordinates from
+          the ProseMirror plugin CustomEvents. Both components self-manage
+          open/close state via document-level event listeners. */}
+      <SlashCommandMenu />
+      <HoverPreview />
+    </Fragment>
   );
 }
 
