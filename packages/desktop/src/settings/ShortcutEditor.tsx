@@ -8,6 +8,7 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useSettingsStore } from '../stores/settings-store.js';
 import styles from './ShortcutEditor.module.css';
 
 // ============================================================================
@@ -77,6 +78,7 @@ export interface ShortcutEditorProps {
 export function ShortcutEditor({ action, chord, defaultChord, onChange }: ShortcutEditorProps) {
   const [recording, setRecording] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const customBindings = useSettingsStore((state) => state.customBindings);
 
   const displayChord = chord ?? defaultChord ?? 'Unbound';
   const isCustom = chord !== null;
@@ -88,6 +90,15 @@ export function ShortcutEditor({ action, chord, defaultChord, onChange }: Shortc
   const stopRecording = useCallback(() => {
     setRecording(false);
   }, []);
+
+  // Exit recording mode when customBindings is reset to empty (e.g. resetToDefaults).
+  // This prevents the next keydown (from dismissing the confirm dialog) from writing
+  // a new binding after a reset.
+  useEffect(() => {
+    if (recording && Object.keys(customBindings).length === 0) {
+      stopRecording();
+    }
+  }, [customBindings, recording, stopRecording]);
 
   // Capture keys while in recording mode
   useEffect(() => {

@@ -25,8 +25,7 @@ export async function openSettingsWindow(): Promise<void> {
     const settingsWindow = await Window.getByLabel('settings');
 
     if (!settingsWindow) {
-      console.warn('[settings-window] Settings window not found in Tauri window list.');
-      return;
+      return; // Window not available — silently return
     }
 
     // Show the window if it is hidden, then bring it to the front.

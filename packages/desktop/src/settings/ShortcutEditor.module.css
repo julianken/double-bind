@@ -74,8 +74,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 18px;
+  width: 44px;
+  height: 44px;
   padding: 0;
   background: transparent;
   border: none;
@@ -83,6 +83,7 @@
   cursor: pointer;
   border-radius: var(--radius-sm);
   transition: color var(--transition-fast);
+  margin: -13px; /* Pull the visual hit area back to not affect layout */
 }
 
 .resetButton:hover {

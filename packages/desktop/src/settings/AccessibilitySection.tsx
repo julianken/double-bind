@@ -1,16 +1,16 @@
 /**
- * AccessibilitySection - Reduced motion, high contrast, font scale, focus rings.
+ * AccessibilitySection - Reduced motion, high contrast, and focus ring settings.
  *
  * Acceptance criteria:
  * - Reduced Motion toggle sets `data-reduced-motion` on html
- * - Font scale slider updates `--font-scale` in both windows
+ *
+ * Note: Font scale is in the Appearance section.
  */
 
 import { useSettingsStore } from '../stores/settings-store.js';
-import type { AccessibilityOverride, FontScale } from '../stores/settings-store.js';
+import type { AccessibilityOverride } from '../stores/settings-store.js';
 import { SettingRow } from './SettingRow.js';
 import { SettingToggle } from './SettingToggle.js';
-import { SettingSlider } from './SettingSlider.js';
 import { SegmentedButton } from './SegmentedButton.js';
 import styles from './AccessibilitySection.module.css';
 
@@ -25,11 +25,9 @@ export function AccessibilitySection() {
     reducedMotion,
     highContrast,
     animateFocusRings,
-    fontScale,
     setReducedMotion,
     setHighContrast,
     setAnimateFocusRings,
-    setFontScale,
   } = useSettingsStore();
 
   return (
@@ -79,21 +77,9 @@ export function AccessibilitySection() {
           />
         </SettingRow>
 
-        <SettingRow
-          label="Font Scale"
-          description="Scales all UI text proportionally. Applies to both windows immediately."
-          htmlFor="a11y-font-scale"
-        >
-          <SettingSlider
-            id="a11y-font-scale"
-            value={fontScale}
-            min={0.8}
-            max={1.2}
-            step={0.1}
-            onChange={(v) => setFontScale(v as FontScale)}
-            formatValue={(v) => `${Math.round(v * 100)}%`}
-          />
-        </SettingRow>
+        <p className={styles.note}>
+          To adjust font scaling, see the Font Scale setting in the Appearance section.
+        </p>
       </div>
     </div>
   );
