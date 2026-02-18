@@ -145,7 +145,7 @@ const MAX_HISTORY_SIZE = 50;
 // Zustand store creation
 const store = create<AppStore>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       // === Sidebar ===
       sidebarMode: 'open',
       sidebarOpen: true, // derived; kept for compat
@@ -171,16 +171,9 @@ const store = create<AppStore>()(
       setSidebarWidth: (width: number) => set({ sidebarWidth: width }),
 
       // DEPRECATED shim → calls cycleSidebarMode()
-      toggleSidebar: () =>
-        set((state) => {
-          const next: Record<SidebarMode, SidebarMode> = {
-            open: 'rail',
-            rail: 'closed',
-            closed: 'open',
-          };
-          const mode = next[state.sidebarMode];
-          return { sidebarMode: mode, sidebarOpen: mode === 'open' };
-        }),
+      toggleSidebar: () => {
+        get().cycleSidebarMode();
+      },
 
       // === Right Panel ===
       rightPanelOpen: false,
