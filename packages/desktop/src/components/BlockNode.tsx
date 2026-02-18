@@ -257,7 +257,17 @@ export function BulletHandle({
       data-has-children={hasChildren}
       data-collapsed={isCollapsed}
     >
-      <span className={styles.bulletIcon}>{hasChildren ? (isCollapsed ? '▸' : '▾') : '•'}</span>
+      <span className={styles.bulletIcon}>
+        {hasChildren ? (
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor" aria-hidden="true">
+            <path d="M2.5 1.5L7.5 5L2.5 8.5Z" />
+          </svg>
+        ) : (
+          <svg width="6" height="6" viewBox="0 0 6 6" aria-hidden="true">
+            <circle cx="3" cy="3" r="3" fill="currentColor" />
+          </svg>
+        )}
+      </span>
     </button>
   );
 }

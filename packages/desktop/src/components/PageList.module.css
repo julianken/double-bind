@@ -32,12 +32,12 @@
 }
 
 .item:hover {
-  background-color: var(--bg-hover);
+  background-color: var(--surface-overlay);
 }
 
 .item:focus {
   outline: none;
-  background-color: var(--bg-hover);
+  background-color: var(--surface-overlay);
 }
 
 .item:focus-visible {
@@ -46,11 +46,11 @@
 }
 
 .item--active {
-  background-color: var(--bg-active);
+  background-color: var(--surface-overlay);
 }
 
 .item--active:hover {
-  background-color: var(--bg-active);
+  background-color: var(--surface-overlay);
 }
 
 /* ============================================================================

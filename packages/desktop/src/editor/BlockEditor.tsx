@@ -35,6 +35,7 @@ import {
   type BlockService as KeymapBlockService,
 } from './plugins/index.js';
 import { highlightReferencesPlugin } from './plugins/highlight-references.js';
+import { typingIsolationPlugin } from './plugins/typing-isolation.js';
 
 /**
  * Props for the BlockEditor component.
@@ -417,6 +418,8 @@ export function BlockEditor({
       createInputRulesPlugin(schema),
       // Highlight [[page links]], ((block refs)), and #tags
       highlightReferencesPlugin(),
+      // Suppress non-editor transitions during active typing
+      typingIsolationPlugin(),
     ];
 
     if (useServiceMode) {

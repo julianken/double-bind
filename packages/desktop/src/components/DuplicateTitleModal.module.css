@@ -30,7 +30,7 @@
 .container {
   width: 100%;
   max-width: 400px;
-  background-color: var(--bg-primary);
+  background-color: var(--surface-base);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-xl);
   border: 1px solid var(--border-default);
@@ -95,7 +95,7 @@
 }
 
 .primaryButton {
-  background-color: var(--accent-primary);
+  background-color: var(--accent-interactive);
   color: var(--accent-foreground);
   border: none;
 }
@@ -116,7 +116,7 @@
 }
 
 .secondaryButton:hover {
-  background-color: var(--bg-hover);
+  background-color: var(--surface-overlay);
   color: var(--text-primary);
 }
 

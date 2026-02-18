@@ -13,7 +13,7 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  background-color: var(--bg-secondary);
+  background-color: var(--surface-recessed);
   overflow: hidden;
   flex-shrink: 0;
 }
@@ -63,7 +63,7 @@
   padding: var(--space-2);
   border: 1px solid var(--border-default);
   border-radius: var(--radius-md);
-  background-color: var(--bg-primary);
+  background-color: var(--surface-base);
   color: var(--text-primary);
   font-size: var(--text-sm);
   font-family: inherit;
@@ -77,12 +77,12 @@
 
 .quickCaptureInput:focus {
   outline: none;
-  border-color: var(--accent-primary);
-  box-shadow: 0 0 0 2px var(--accent-muted);
+  border-color: var(--accent-interactive);
+  box-shadow: 0 0 0 2px var(--accent-subtle);
 }
 
 .quickCaptureInput:disabled {
-  background-color: var(--bg-tertiary);
+  background-color: var(--surface-elevated);
   cursor: not-allowed;
 }
 
@@ -100,7 +100,7 @@
   padding: var(--space-2) var(--space-3);
   border: 1px solid var(--border-default);
   border-radius: var(--radius-md);
-  background-color: var(--bg-primary);
+  background-color: var(--surface-base);
   color: var(--text-secondary);
   font-size: var(--text-sm);
   font-weight: var(--font-medium);
@@ -110,7 +110,7 @@
 
 .newPageButton:hover:not(:disabled),
 .graphViewButton:hover {
-  background-color: var(--bg-hover);
+  background-color: var(--surface-overlay);
   border-color: var(--border-strong);
   color: var(--text-primary);
 }
@@ -121,8 +121,8 @@
 }
 
 .newPageButton--primary {
-  background-color: var(--accent-primary);
-  border-color: var(--accent-primary);
+  background-color: var(--accent-interactive);
+  border-color: var(--accent-interactive);
   color: white;
 }
 
@@ -161,7 +161,7 @@
 }
 
 .graphToggle:hover {
-  background-color: var(--bg-hover);
+  background-color: var(--surface-overlay);
 }
 
 .graphToggleIcon {
@@ -210,7 +210,7 @@
 }
 
 .resizeHandle:hover {
-  background-color: var(--accent-primary);
+  background-color: var(--accent-interactive);
 }
 
 .resizeHandle:active {
@@ -247,7 +247,7 @@
   justify-content: center;
   height: 100%;
   padding: var(--space-4);
-  background-color: var(--bg-secondary);
+  background-color: var(--surface-recessed);
 }
 
 .errorTitle {
@@ -266,7 +266,7 @@
 
 .errorButton {
   padding: var(--space-2) var(--space-4);
-  background-color: var(--accent-primary);
+  background-color: var(--accent-interactive);
   color: white;
   border: none;
   border-radius: var(--radius-md);

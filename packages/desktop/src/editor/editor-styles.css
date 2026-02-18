@@ -17,32 +17,74 @@
 /* Match StaticBlockContent vertical padding so text doesn't shift on focus */
 .ProseMirror {
   padding: var(--space-1) 0;
+  font-family: var(--font-content);
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+  letter-spacing: var(--tracking-body);
+  font-optical-sizing: auto;
+  caret-color: var(--accent-interactive, #6366F1);
 }
 
 .ProseMirror:focus {
   outline: none;
 }
 
-/* Page links: blue underlined text */
+.ProseMirror h1 {
+  font-size: var(--text-h1);
+  line-height: var(--leading-h1);
+  letter-spacing: var(--tracking-heading);
+  font-weight: var(--font-bold);
+}
+
+.ProseMirror h2 {
+  font-size: var(--text-h2);
+  line-height: var(--leading-h2);
+  letter-spacing: var(--tracking-heading);
+  font-weight: var(--font-semibold);
+}
+
+.ProseMirror h3 {
+  font-size: var(--text-h3);
+  line-height: var(--leading-h3);
+  letter-spacing: var(--tracking-h3);
+  font-weight: var(--font-medium);
+}
+
+[data-theme="dark"] .ProseMirror h1,
+[data-theme="dim"]  .ProseMirror h1  { font-weight: var(--font-semibold); }
+[data-theme="dark"] .ProseMirror h2,
+[data-theme="dim"]  .ProseMirror h2  { font-weight: var(--font-medium); }
+
+.ProseMirror code {
+  font-family: var(--font-mono);
+  font-size: 0.875em;
+  font-feature-settings: 'ss01' 1;
+  background-color: var(--surface-elevated);
+  border-radius: 3px;
+  padding: 0.1em 0.3em;
+  color: var(--text-secondary);
+}
+
+/* Page links: accent-colored underlined text */
 .ProseMirror .highlight-page-link,
 .ProseMirror .page-link {
-  color: #2563eb;
+  color: var(--accent-interactive);
   text-decoration: underline;
   cursor: pointer;
 }
 
-/* Block references: purple with subtle background */
+/* Block references: accent with subtle background */
 .ProseMirror .highlight-block-ref,
 .ProseMirror .block-ref {
-  color: #7c3aed;
-  background-color: rgba(124, 58, 237, 0.08);
-  border-radius: 2px;
+  color: var(--accent-interactive);
+  background-color: var(--accent-subtle);
+  border-radius: var(--radius-sm);
   padding: 0 2px;
 }
 
-/* Tags: green with medium weight */
+/* Tags: accent-colored with medium weight */
 .ProseMirror .highlight-tag,
 .ProseMirror .tag {
-  color: #059669;
-  font-weight: 500;
+  color: var(--accent-interactive);
+  font-weight: var(--font-medium);
 }

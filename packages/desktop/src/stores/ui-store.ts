@@ -19,8 +19,8 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 // ============================================================================
 
 export type RightPanelContent = 'backlinks' | 'properties' | 'graph' | null;
-export type ThemePreference = 'light' | 'dark' | 'system';
-export type ResolvedTheme = 'light' | 'dark';
+export type ThemePreference = 'light' | 'dark' | 'dim' | 'sepia' | 'hc-light' | 'hc-dark' | 'system';
+export type ResolvedTheme = 'light' | 'dark' | 'dim' | 'sepia' | 'hc-light' | 'hc-dark';
 
 export interface AppStore {
   // === Sidebar ===
