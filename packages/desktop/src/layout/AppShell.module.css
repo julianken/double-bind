@@ -1,7 +1,8 @@
 /**
  * AppShell Layout Styles
  *
- * Three-column layout with navigation toolbar and status bar.
+ * Three-column layout with AppToolbar and StatusBar.
+ * Navigation toolbar rules have moved to AppToolbar.module.css (DBB-442).
  */
 
 /* ============================================================================
@@ -13,49 +14,6 @@
   flex-direction: column;
   height: 100vh;
   background-color: var(--surface-base);
-}
-
-/* ============================================================================
- * Navigation Toolbar
- * ============================================================================ */
-
-.navToolbar {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-  /* Left padding makes room for macOS traffic lights in overlay mode */
-  padding: var(--space-1) var(--space-3) var(--space-1) 80px;
-  height: var(--header-height);
-  min-height: var(--header-height);
-  border-bottom: 1px solid var(--border-default);
-  background-color: var(--surface-recessed);
-  flex-shrink: 0;
-}
-
-.navButton {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  border: none;
-  border-radius: var(--radius-md);
-  background-color: transparent;
-  color: var(--text-secondary);
-  cursor: pointer;
-  font-size: var(--text-base);
-  transition: background-color var(--transition-fast), color var(--transition-fast);
-}
-
-.navButton:hover:not(:disabled) {
-  background-color: var(--surface-overlay);
-  color: var(--text-primary);
-}
-
-.navButton:disabled {
-  color: var(--text-disabled);
-  cursor: default;
 }
 
 /* ============================================================================
@@ -89,6 +47,12 @@
   border-right: none;
 }
 
+.sidebar--rail {
+  width: 48px;
+  min-width: 48px;
+  max-width: 48px;
+}
+
 /* ============================================================================
  * Main Content
  * ============================================================================ */
@@ -99,43 +63,6 @@
   overflow: auto;
   min-width: 0; /* Prevent flex item from overflowing */
   background-color: var(--surface-base);
-}
-
-/* ============================================================================
- * Right Panel
- * ============================================================================ */
-
-.rightPanel {
-  height: 100%;
-  overflow: hidden;
-  flex-shrink: 0;
-  border-left: 1px solid var(--border-default);
-  background-color: var(--surface-recessed);
-  transition: width var(--transition-slow), min-width var(--transition-slow), max-width var(--transition-slow);
-}
-
-.rightPanel--closed {
-  width: 0;
-  min-width: 0;
-  max-width: 0;
-  border-left: none;
-}
-
-/* ============================================================================
- * Status Bar
- * ============================================================================ */
-
-.statusBar {
-  height: 24px;
-  min-height: 24px;
-  border-top: 1px solid var(--border-default);
-  display: flex;
-  align-items: center;
-  padding: 0 var(--space-3);
-  font-size: var(--text-xs);
-  color: var(--text-muted);
-  background-color: var(--surface-recessed);
-  flex-shrink: 0;
 }
 
 /* ============================================================================
