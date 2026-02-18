@@ -90,7 +90,7 @@ export function AppToolbar({ className }: AppToolbarProps) {
       </div>
 
       {/* Center zone: breadcrumb */}
-      <div className={styles.centerZone}>
+      <div className={styles.centerZone} data-tauri-no-drag>
         <Breadcrumb />
       </div>
 
