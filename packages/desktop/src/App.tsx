@@ -12,6 +12,7 @@
 import { useContext } from 'react';
 import { useGlobalShortcuts } from './hooks/useGlobalShortcuts.js';
 import { useSettingsSync } from './hooks/useSettingsSync.js';
+import { useSidebarQuietMode } from './hooks/useSidebarQuietMode.js';
 import { Router, type Route } from './components/Router.js';
 import { CommandPalette } from './components/CommandPalette.js';
 import { useAppStore } from './stores/ui-store.js';
@@ -252,6 +253,8 @@ export function App() {
   useGlobalShortcuts();
   // Sync settings changes from the settings window to this window
   useSettingsSync();
+  // Sidebar quiet mode: dim sidebar while user is typing in an editor
+  useSidebarQuietMode();
 
   return (
     <>

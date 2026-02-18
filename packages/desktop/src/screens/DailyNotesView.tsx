@@ -18,7 +18,7 @@
  * ['dailyNote', 'withBlocks', '2025-02-08'] that's stable from first render.
  */
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useEffect } from 'react';
 import {
   DndContext,
   closestCenter,
@@ -38,6 +38,8 @@ import { invalidateQueries } from '../hooks/useCozoQuery.js';
 import type { RouteComponentProps } from '../components/Router.js';
 import { BlockNode } from '../components/BlockNode.js';
 import { createDragEndHandler } from '../utils/createDragEndHandler.js';
+import { useAppStore } from '../stores/ui-store.js';
+import { useTypewriterScroll } from '../hooks/useTypewriterScroll.js';
 import styles from './DailyNotesView.module.css';
 
 // ============================================================================
@@ -97,6 +99,7 @@ export { getTodayISODate };
  */
 export function DailyNotesView(_props: DailyNotesViewProps): React.ReactElement {
   const { blockService } = useServices();
+  const setCurrentPageMeta = useAppStore((state) => state.setCurrentPageMeta);
 
   // DnD sensors: pointer (mouse/touch) + keyboard for accessibility
   const sensors = useSensors(
@@ -126,6 +129,20 @@ export function DailyNotesView(_props: DailyNotesViewProps): React.ReactElement 
     () => createDragEndHandler(rootBlocks, blockService),
     [rootBlocks, blockService]
   );
+
+  // Sync page metadata to AppStore so StatusBar / store consumers stay current.
+  // routeType is 'daily-notes' to distinguish from regular page views.
+  useEffect(() => {
+    setCurrentPageMeta({
+      title: dailyNote?.title ?? null,
+      blockCount: blocks?.length ?? null,
+      routeType: 'daily-notes',
+    });
+  }, [dailyNote?.title, blocks?.length, setCurrentPageMeta]);
+
+  // Typewriter scroll: scroll the active block to vertical center when
+  // typewriterEnabled is true. Shared with PageView via useTypewriterScroll.
+  useTypewriterScroll();
 
   // Create first block when clicking empty state
   const handleCreateFirstBlock = useCallback(async () => {

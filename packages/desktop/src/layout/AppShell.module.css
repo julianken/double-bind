@@ -37,6 +37,7 @@
   flex-shrink: 0;
   border-right: 1px solid var(--border-default);
   background-color: var(--surface-recessed);
+  /* Width transition is now also handled in the quiet-mode selector pairs below */
   transition: width var(--transition-slow), min-width var(--transition-slow), max-width var(--transition-slow);
 }
 
@@ -51,6 +52,26 @@
   width: 48px;
   min-width: 48px;
   max-width: 48px;
+}
+
+/* ============================================================================
+ * Sidebar Quiet Mode (DBB-449)
+ *
+ * When the user is actively typing in an editor, the sidebar dims so that
+ * visual attention stays on the content area. Opacity recovers after 1500ms
+ * of idle — triggered by useSidebarQuietMode hook via data-sidebar-quiet attr.
+ * ============================================================================ */
+
+.sidebar[data-sidebar-quiet="true"] {
+  opacity: 0.5;
+  transition: opacity var(--transition-slow, 400ms ease);
+  pointer-events: none;
+}
+
+.sidebar:not([data-sidebar-quiet="true"]) {
+  opacity: 1;
+  transition: opacity var(--transition-slow, 400ms ease), width var(--transition-slow), min-width var(--transition-slow), max-width var(--transition-slow);
+  pointer-events: auto;
 }
 
 /* ============================================================================
