@@ -12,7 +12,7 @@
   display: flex;
   flex-direction: column;
   height: 100vh;
-  background-color: var(--bg-primary);
+  background-color: var(--surface-base);
 }
 
 /* ============================================================================
@@ -28,7 +28,7 @@
   height: var(--header-height);
   min-height: var(--header-height);
   border-bottom: 1px solid var(--border-default);
-  background-color: var(--bg-secondary);
+  background-color: var(--surface-recessed);
   flex-shrink: 0;
 }
 
@@ -49,7 +49,7 @@
 }
 
 .navButton:hover:not(:disabled) {
-  background-color: var(--bg-hover);
+  background-color: var(--surface-overlay);
   color: var(--text-primary);
 }
 
@@ -78,7 +78,7 @@
   overflow: hidden;
   flex-shrink: 0;
   border-right: 1px solid var(--border-default);
-  background-color: var(--bg-secondary);
+  background-color: var(--surface-recessed);
   transition: width var(--transition-slow), min-width var(--transition-slow), max-width var(--transition-slow);
 }
 
@@ -98,7 +98,7 @@
   height: 100%;
   overflow: auto;
   min-width: 0; /* Prevent flex item from overflowing */
-  background-color: var(--bg-primary);
+  background-color: var(--surface-base);
 }
 
 /* ============================================================================
@@ -110,7 +110,7 @@
   overflow: hidden;
   flex-shrink: 0;
   border-left: 1px solid var(--border-default);
-  background-color: var(--bg-secondary);
+  background-color: var(--surface-recessed);
   transition: width var(--transition-slow), min-width var(--transition-slow), max-width var(--transition-slow);
 }
 
@@ -134,7 +134,7 @@
   padding: 0 var(--space-3);
   font-size: var(--text-xs);
   color: var(--text-muted);
-  background-color: var(--bg-secondary);
+  background-color: var(--surface-recessed);
   flex-shrink: 0;
 }
 

@@ -1,0 +1,45 @@
+/**
+ * Semantic Motion Tokens
+ *
+ * Spring presets composed from primitives.
+ * Component-specific motion shortcuts.
+ * Reduced-motion overrides for accessibility (WCAG 2.3.3).
+ */
+
+:root {
+  /* Spring presets */
+  --spring-gentle:  var(--duration-deliberate) var(--ease-spring-gentle);
+  --spring-snappy:  200ms var(--ease-spring-snappy);
+  --spring-bouncy:  var(--duration-moderate) var(--ease-spring-bouncy);
+
+  /* Component-specific springs */
+  --spring-palette:          180ms var(--ease-spring-overshoot);
+  --spring-palette-keyboard: 140ms var(--ease-spring-overshoot);
+  --spring-sidebar:          var(--spring-gentle);
+  --spring-sheet:            220ms cubic-bezier(0.32, 0.72, 0, 1);
+  --spring-menu:             120ms var(--ease-out);
+  --spring-peek:             var(--duration-moderate) var(--ease-spring-settle);
+}
+
+/* Reduced motion gate — wrap all bounce/overshoot in this */
+@media (prefers-reduced-motion: no-preference) {
+  :root {
+    --ease-spring-overshoot: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    --ease-spring-bouncy: linear(
+      0, 0.004 1.8%, 0.025 3.5%, 0.099 7.1%, 0.539 17%,
+      0.721 21.8%, 0.829 25.4%, 1.026 35.6%, 1.05 41.2%,
+      1.024 47.3%, 1 100%
+    );
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    /* Override overshoot/bouncy springs with instant or fade-only */
+    --ease-spring-overshoot: var(--ease-out);
+    --ease-spring-bouncy:    var(--ease-out);
+    --spring-palette:        150ms var(--ease-out);
+    --spring-snappy:         0ms var(--ease-out);
+    --spring-bouncy:         0ms var(--ease-out);
+  }
+}

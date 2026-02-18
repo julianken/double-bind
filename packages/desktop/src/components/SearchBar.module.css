@@ -14,15 +14,15 @@
   gap: var(--space-2);
   margin: 0 var(--space-3) var(--space-2);
   padding: var(--space-2) var(--space-3);
-  background-color: var(--bg-tertiary);
+  background-color: var(--surface-elevated);
   border-radius: var(--radius-md);
   border: 1px solid transparent;
   transition: border-color var(--transition-fast), background-color var(--transition-fast);
 }
 
 .container:focus-within {
-  border-color: var(--accent-primary);
-  background-color: var(--bg-primary);
+  border-color: var(--accent-interactive);
+  background-color: var(--surface-base);
 }
 
 /* ============================================================================
@@ -79,7 +79,7 @@
 .shortcut {
   font-size: var(--text-xs);
   color: var(--text-muted);
-  background-color: var(--bg-active);
+  background-color: var(--surface-overlay);
   padding: 2px var(--space-1-5);
   border-radius: var(--radius-sm);
   font-family: var(--font-mono);
@@ -105,7 +105,7 @@
 }
 
 .clearButton:hover {
-  background-color: var(--bg-active);
+  background-color: var(--surface-overlay);
   color: var(--text-primary);
 }
 

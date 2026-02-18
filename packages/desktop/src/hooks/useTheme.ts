@@ -19,6 +19,9 @@ function getSystemTheme(): ResolvedTheme {
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
 
+/** All valid resolved theme values */
+const VALID_THEMES: ResolvedTheme[] = ['light', 'dark', 'dim', 'sepia', 'hc-light', 'hc-dark'];
+
 /**
  * Resolve the actual theme to apply based on preference
  */
@@ -110,7 +113,7 @@ export function initializeTheme(): void {
     if (stored) {
       const parsed = JSON.parse(stored);
       const preference = parsed?.state?.themePreference as ThemePreference | undefined;
-      if (preference && ['light', 'dark', 'system'].includes(preference)) {
+      if (preference && [...VALID_THEMES, 'system'].includes(preference)) {
         applyTheme(resolveTheme(preference));
         return;
       }

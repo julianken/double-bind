@@ -13,5 +13,8 @@
  *   @import '@double-bind/ui-primitives/styles';
  */
 
-@import './tokens/index.css';
-@import './base/index.css';
+@layer reset, tokens, base, components, utilities, overrides;
+
+@import './base/reset.css' layer(reset);
+@import './tokens/index.css' layer(tokens);
+@import './base/globals.css' layer(base);

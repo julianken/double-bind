@@ -1,0 +1,28 @@
+[data-theme="hc-light"] {
+  --surface-base:     oklch(100% 0 0);
+  --surface-recessed: oklch(97% 0 0);
+  --surface-elevated: oklch(100% 0 0);
+  --surface-overlay:  oklch(97% 0 0);
+  --surface-inset:    oklch(95% 0 0);
+
+  --text-primary:     oklch(0% 0 0);
+  --text-secondary:   oklch(15% 0 0);
+  --text-muted:       oklch(25% 0 0);
+  --text-subtle:      oklch(35% 0 0);
+  --text-disabled:    oklch(55% 0 0);
+  --text-accent:      oklch(0% 0 0);
+  --text-code:        oklch(15% 0 0);
+
+  --border-default:   oklch(0% 0 0);
+  --border-strong:    oklch(0% 0 0);
+  --border-focus:     oklch(0% 0 0);
+  --border-accent:    oklch(0% 0 0);
+
+  --accent-interactive: oklch(40% 0.175 283);
+  --accent-hover:       oklch(30% 0.175 283);
+  --accent-pressed:     oklch(25% 0.175 283);
+  --accent-subtle:      oklch(40% 0.175 283 / 12%);
+  --accent-emphasis:    oklch(40% 0.175 283 / 25%);
+
+  -webkit-font-smoothing: subpixel-antialiased;
+}

@@ -1,0 +1,35 @@
+@property --accent-hue {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 283;
+}
+
+@property --surface-base {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: oklch(98% 0.002 264);
+}
+
+@property --sidebar-width {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 260px;
+}
+
+@property --content-max-width {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 720px;
+}
+
+@property --focus-ring-width {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+
+@property --focus-ring-opacity {
+  syntax: '<number>';
+  inherits: false;
+  initial-value: 0;
+}

@@ -15,7 +15,6 @@ import {
   forwardRef,
   memo,
   useCallback,
-  useState,
 } from 'react';
 import type { PageId } from '@double-bind/types';
 
@@ -54,43 +53,27 @@ export interface InlinePageLinkProps {
   className?: string;
 }
 
-// CSS custom properties for theming
+// CSS custom properties for theming — prefer design tokens, fall back to raw values
 const cssVars = {
-  color: 'var(--db-inline-link-color, #2563eb)',
-  colorHover: 'var(--db-inline-link-color-hover, #1d4ed8)',
-  colorMissing: 'var(--db-inline-link-color-missing, #9ca3af)',
-  backgroundColor: 'var(--db-inline-link-bg, transparent)',
-  backgroundColorHover: 'var(--db-inline-link-bg-hover, rgba(37, 99, 235, 0.08))',
+  color: 'var(--accent-interactive, var(--db-inline-link-color, #2563eb))',
+  colorMissing: 'var(--text-muted, var(--db-inline-link-color-missing, #9ca3af))',
 } as const;
 
-// Inline styles for the component (no external CSS dependencies)
+// Inline styles match editor-styles.css .highlight-page-link to prevent
+// layout shift when switching between static and editor modes.
 const styles = {
   base: {
     display: 'inline',
     color: cssVars.color,
-    textDecoration: 'none',
-    // Use non-shorthand properties to avoid React warnings when mixing
-    borderTopStyle: 'none',
-    borderLeftStyle: 'none',
-    borderRightStyle: 'none',
-    borderBottomWidth: '1px',
-    borderBottomStyle: 'solid',
-    borderBottomColor: 'transparent',
+    textDecoration: 'underline',
     cursor: 'pointer',
-    borderRadius: '2px',
-    padding: '0 2px',
-    margin: '0 1px',
-    transition: 'all 0.15s ease',
+    padding: '0',
+    margin: '0',
+    border: 'none',
     fontFamily: 'inherit',
     fontSize: 'inherit',
     lineHeight: 'inherit',
-    // Reset button styles using non-shorthand
     backgroundColor: 'transparent',
-  } satisfies CSSProperties,
-
-  hover: {
-    borderBottomColor: cssVars.color,
-    backgroundColor: cssVars.backgroundColorHover,
   } satisfies CSSProperties,
 
   missing: {
@@ -141,8 +124,6 @@ export const InlinePageLink = memo(
     { pageId, title, onClick, onHover, exists = true, className },
     ref
   ) {
-    const [isHovered, setIsHovered] = useState(false);
-
     const handleClick = useCallback(
       (event: MouseEvent<HTMLButtonElement>) => {
         event.preventDefault();
@@ -168,19 +149,16 @@ export const InlinePageLink = memo(
     );
 
     const handleMouseEnter = useCallback(() => {
-      setIsHovered(true);
       onHover?.(pageId);
     }, [pageId, onHover]);
 
     const handleMouseLeave = useCallback(() => {
-      setIsHovered(false);
       onHover?.(null);
     }, [onHover]);
 
     // Combine styles based on state
     const combinedStyles: CSSProperties = {
       ...styles.base,
-      ...(exists && isHovered ? styles.hover : {}),
       ...(!exists ? styles.missing : {}),
     };
 

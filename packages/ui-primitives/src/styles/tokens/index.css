@@ -5,7 +5,31 @@
  * Usage: @import '@double-bind/ui-primitives/styles/tokens';
  */
 
-@import './colors.css';
+/* Tier 0: @property registrations — must be first */
+@import './semantic/properties.css';
+
+/* Tier 1: Primitives */
+@import './primitives/motion.css';
+@import './primitives/typography.css';
+
+/* Tier 1.5: Semantic motion (composed from primitives) */
+@import './semantic/motion.css';
+
+/* Tier 1: Color primitives */
+@import './primitives/colors-gray.css';
+@import './primitives/colors-accent.css';
+@import './primitives/colors-alpha.css';
+
+/* Tier 2: Theme mappings */
+@import './themes/light.css';
+@import './themes/dark.css';
+@import './themes/dim.css';
+@import './themes/sepia.css';
+@import './themes/hc-light.css';
+@import './themes/hc-dark.css';
+
+/* Remaining flat token files — spacing, effects, layout, typography still define
+ * tokens used across the codebase and are not purely alias files. */
 @import './typography.css';
 @import './spacing.css';
 @import './effects.css';

@@ -5,11 +5,52 @@
  * Import after reset.css and tokens.
  */
 
+@font-face {
+  font-family: 'Inter';
+  src: url('/src/assets/fonts/inter/InterVariable.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: block;
+}
+
+@font-face {
+  font-family: 'Inter';
+  src: url('/src/assets/fonts/inter/InterVariable-Italic.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: italic;
+  font-display: block;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('/src/assets/fonts/jetbrains-mono/JetBrainsMonoVariable.woff2') format('woff2');
+  font-weight: 100 800;
+  font-style: normal;
+  font-display: block;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('/src/assets/fonts/jetbrains-mono/JetBrainsMonoVariable-Italic.woff2') format('woff2');
+  font-weight: 100 800;
+  font-style: italic;
+  font-display: block;
+}
+
 html {
-  font-family: var(--font-sans);
+  font-family: var(--font-ui);
   font-size: 16px;
   color: var(--text-primary);
-  background-color: var(--bg-primary);
+  background-color: var(--surface-base);
+  font-optical-sizing: auto;
+  font-feature-settings:
+    'kern' 1,
+    'liga' 1,
+    'calt' 1,
+    'cv05' 1,
+    'cv08' 1,
+    'ss01' 1,
+    'tnum' 1;
 }
 
 body {
@@ -18,9 +59,24 @@ body {
   line-height: var(--leading-normal);
 }
 
+/* Font smoothing — light themes use subpixel for crispness, dark themes use grayscale */
+:root,
+[data-theme="light"],
+[data-theme="sepia"],
+[data-theme="hc-light"] {
+  -webkit-font-smoothing: subpixel-antialiased;
+}
+
+[data-theme="dark"],
+[data-theme="dim"],
+[data-theme="hc-dark"] {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
 /* Selection styling */
 ::selection {
-  background-color: var(--accent-muted);
+  background-color: var(--accent-subtle);
   color: var(--text-primary);
 }
 
@@ -60,6 +116,12 @@ body {
 * {
   scrollbar-width: thin;
   scrollbar-color: var(--border-strong) transparent;
+}
+
+/* Typing isolation — ProseMirror plugin sets/clears data-typing on <html> */
+[data-typing="true"] *:not(.ProseMirror):not(.ProseMirror *) {
+  transition-duration: 0ms !important;
+  animation-duration: 0ms !important;
 }
 
 /* Reduced motion preference */
