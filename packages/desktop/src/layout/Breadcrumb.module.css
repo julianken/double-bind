@@ -1,0 +1,21 @@
+/**
+ * Breadcrumb Styles
+ *
+ * Typography for current page/route context display in the toolbar.
+ */
+
+/* ============================================================================
+ * Breadcrumb Text
+ * ============================================================================ */
+
+.breadcrumb {
+  display: block;
+  font-size: var(--text-body);
+  font-weight: var(--font-medium);
+  color: var(--text-primary);
+  /* Prevent overflow with ellipsis truncation */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
