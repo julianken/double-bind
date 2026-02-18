@@ -28,7 +28,8 @@ export function cleanupTest(queryClient?: QueryClient): void {
 export function resetAppStore(): void {
   useAppStore.setState({
     // Sidebar
-    sidebarOpen: true,
+    sidebarMode: 'open',
+    sidebarOpen: true, // derived boolean; keep in sync with sidebarMode
     sidebarWidth: 240,
     // Right Panel
     rightPanelOpen: false,

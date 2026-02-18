@@ -102,7 +102,8 @@ describe('Sidebar', () => {
 
     // Reset store to initial state
     useAppStore.setState({
-      sidebarOpen: true,
+      sidebarMode: 'open',
+      sidebarOpen: true, // derived boolean; keep in sync with sidebarMode
       sidebarWidth: 240,
       rightPanelOpen: false,
       rightPanelContent: null,
@@ -145,7 +146,7 @@ describe('Sidebar', () => {
     });
 
     it('does not render when sidebarOpen is false', () => {
-      useAppStore.setState({ sidebarOpen: false });
+      useAppStore.setState({ sidebarMode: 'closed', sidebarOpen: false });
 
       renderWithProvider(<Sidebar />);
 
@@ -255,7 +256,7 @@ describe('Sidebar', () => {
     });
 
     it('opens sidebar with Ctrl+\\ when closed', () => {
-      useAppStore.setState({ sidebarOpen: false });
+      useAppStore.setState({ sidebarMode: 'closed', sidebarOpen: false });
       renderWithProvider(<Sidebar />);
 
       // Initially closed
@@ -266,7 +267,7 @@ describe('Sidebar', () => {
         fireEvent.keyDown(document, { key: '\\', ctrlKey: true });
       });
 
-      // Should be open
+      // Should be open (closed → open in cycle)
       expect(useAppStore.getState().sidebarOpen).toBe(true);
     });
 
