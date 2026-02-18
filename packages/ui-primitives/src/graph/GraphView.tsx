@@ -17,8 +17,10 @@ import {
   forwardRef,
   memo,
   useCallback,
+  useEffect,
   useMemo,
   useRef,
+  useState,
   useImperativeHandle,
 } from 'react';
 import ForceGraph2D, {
@@ -52,6 +54,43 @@ function resolveOklchCommunityColor(communityId: number): string {
   const idx = Math.abs(communityId) % COMMUNITY_CSS_TOKENS.length;
   const live = readCssToken(COMMUNITY_CSS_TOKENS[idx]!);
   return live !== '' ? live : (COMMUNITY_FALLBACK[idx] ?? COMMUNITY_FALLBACK[0]!);
+}
+
+// ============================================================================
+// Theme Reactivity
+// ============================================================================
+
+/**
+ * Returns a `themeKey` string ('dark' | 'light') that updates whenever the
+ * `data-theme` attribute on `document.documentElement` changes.
+ *
+ * Passing `themeKey` as the `key` prop on ForceGraph2D forces a full canvas
+ * remount on theme change, ensuring OKLCH CSS tokens are re-read at paint time.
+ */
+function useGraphThemeKey(): string {
+  const [themeKey, setThemeKey] = useState<string>(() => {
+    if (typeof document === 'undefined') return 'light';
+    return document.documentElement.getAttribute('data-theme') ?? 'light';
+  });
+
+  useEffect(() => {
+    if (typeof document === 'undefined' || typeof MutationObserver === 'undefined') return;
+
+    const observer = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        if (mutation.attributeName === 'data-theme') {
+          const next = document.documentElement.getAttribute('data-theme') ?? 'light';
+          setThemeKey(next);
+          break;
+        }
+      }
+    });
+
+    observer.observe(document.documentElement, { attributes: true });
+    return () => observer.disconnect();
+  }, []);
+
+  return themeKey;
 }
 
 // PageId is a string type, define locally to avoid build dependency issues
@@ -90,9 +129,10 @@ export interface GraphViewProps {
 
   /**
    * Callback fired when a node is clicked.
-   * Typically used for navigation.
+   * Receives the pageId and the originating MouseEvent.
+   * Check event.shiftKey to detect shift+click for path highlighting.
    */
-  onNodeClick: (pageId: PageId) => void;
+  onNodeClick: (pageId: PageId, event: MouseEvent) => void;
 
   /**
    * Callback fired when a node is hovered.
@@ -359,6 +399,10 @@ export const GraphView = memo(
     // Expose graph methods via ref
     useImperativeHandle(ref, () => graphRef.current);
 
+    // Force canvas remount when the theme changes so OKLCH CSS tokens are
+    // re-read at paint time (canvas rendering bypasses React reconciliation).
+    const themeKey = useGraphThemeKey();
+
     // Transform nodes to internal format
     const graphData = useMemo(() => {
       const internalNodes: InternalNode[] = nodes.map((node) => ({
@@ -458,12 +502,13 @@ export const GraphView = memo(
       [highlightedNodeId, sizeByPageRank, pageRankRange]
     );
 
-    // Handle node click
+    // Handle node click — forward the native MouseEvent so callers can inspect
+    // event.shiftKey for path-highlighting interactions.
     const handleNodeClick = useCallback(
-      (node: InternalNode) => {
+      (node: InternalNode, event: MouseEvent) => {
         const nodeId = node.id;
         if (typeof nodeId === 'string') {
-          onNodeClick(nodeId as PageId);
+          onNodeClick(nodeId as PageId, event);
         }
       },
       [onNodeClick]
@@ -611,6 +656,7 @@ export const GraphView = memo(
         data-testid="graph-view"
       >
         <ForceGraph2D
+          key={themeKey}
           ref={graphRef}
           width={width}
           height={height}

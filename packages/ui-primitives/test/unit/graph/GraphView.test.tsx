@@ -24,7 +24,7 @@ let mockLastProps: {
     nodes: Array<{ id: string; title: string; pageRank?: number; community?: number }>;
     links: Array<{ source: string; target: string }>;
   };
-  onNodeClick?: (node: object) => void;
+  onNodeClick?: (node: object, event: MouseEvent) => void;
   onNodeHover?: (node: object | null) => void;
   nodeCanvasObject?: (node: object, ctx: object, scale: number) => void;
   nodePointerAreaPaint?: (node: object, color: string, ctx: object) => void;
@@ -47,7 +47,7 @@ vi.mock('react-force-graph-2d', () => {
       nodes: Array<{ id: string; title: string }>;
       links: Array<{ source: string; target: string }>;
     };
-    onNodeClick?: (node: object) => void;
+    onNodeClick?: (node: object, event: MouseEvent) => void;
     onNodeHover?: (node: object | null) => void;
     nodeCanvasObject?: (node: object, ctx: object, scale: number) => void;
     nodePointerAreaPaint?: (node: object, color: string, ctx: object) => void;
@@ -75,7 +75,7 @@ vi.mock('react-force-graph-2d', () => {
           <button
             key={node.id}
             data-testid={`node-${node.id}`}
-            onClick={() => onNodeClick?.(node)}
+            onClick={(e) => onNodeClick?.(node, e.nativeEvent)}
             onMouseEnter={() => onNodeHover?.(node)}
             onMouseLeave={() => onNodeHover?.(null)}
           >
@@ -246,7 +246,8 @@ describe('GraphView', () => {
 
       fireEvent.click(screen.getByTestId('node-node-2'));
 
-      expect(onNodeClick).toHaveBeenCalledWith('node-2');
+      // onNodeClick signature is (pageId, event) — verify the pageId is correct
+      expect(onNodeClick).toHaveBeenCalledWith('node-2', expect.any(MouseEvent));
     });
 
     it('handles clicks on different nodes', () => {
@@ -257,8 +258,9 @@ describe('GraphView', () => {
       fireEvent.click(screen.getByTestId('node-node-3'));
 
       expect(onNodeClick).toHaveBeenCalledTimes(2);
-      expect(onNodeClick).toHaveBeenNthCalledWith(1, 'node-1');
-      expect(onNodeClick).toHaveBeenNthCalledWith(2, 'node-3');
+      // onNodeClick signature is (pageId, event) — verify both pageIds are correct
+      expect(onNodeClick).toHaveBeenNthCalledWith(1, 'node-1', expect.any(MouseEvent));
+      expect(onNodeClick).toHaveBeenNthCalledWith(2, 'node-3', expect.any(MouseEvent));
     });
   });
 
