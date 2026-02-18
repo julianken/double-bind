@@ -277,7 +277,7 @@ export function SearchBar({
           aria-hidden="true"
           data-testid="search-bar-shortcut"
         >
-          {navigator.platform.includes('Mac') ? '\u2318K' : 'Ctrl+K'}
+          {/Mac|iPhone|iPad/.test(navigator.userAgent) ? '\u2318K' : 'Ctrl+K'}
         </span>
       )}
 

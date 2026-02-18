@@ -583,7 +583,7 @@ export function CommandPalette({
 
   // Page data query (disabled when pageService or QueryClientProvider is not available)
   const queryFn = useCallback(
-    () => (pageService ? pageService.getAllPages({ limit: 20 }) : Promise.resolve([])),
+    () => (pageService ? pageService.getAllPages({ limit: 500 }) : Promise.resolve([])),
     [pageService]
   );
   const { data: pages } = useCozoQuery(['pages'], queryFn, {
@@ -843,6 +843,7 @@ export function CommandPalette({
                       id={`page-${result.page.pageId}`}
                       role="option"
                       aria-selected={isSelected}
+                      tabIndex={isSelected ? 0 : -1}
                       className={itemClasses}
                       onClick={() => handlePageClick(result.page)}
                       onMouseEnter={() => setSelectedIndex(index)}
@@ -898,6 +899,7 @@ export function CommandPalette({
                         id={`command-${result.command.id}`}
                         role="option"
                         aria-selected={isSelected}
+                        tabIndex={isSelected ? 0 : -1}
                         className={itemClasses}
                         onClick={() => handleCommandClick(result.command)}
                         onMouseEnter={() => setSelectedIndex(index)}

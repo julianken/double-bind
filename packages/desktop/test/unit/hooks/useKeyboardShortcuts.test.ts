@@ -49,11 +49,18 @@ function fireKeyboardEvent(
 }
 
 /**
- * Mock navigator.platform for platform detection
+ * Mock navigator.userAgent for platform detection
+ * Maps legacy platform strings to realistic userAgent values:
+ * - 'MacIntel' -> macOS userAgent containing 'Mac'
+ * - 'Win32' -> Windows userAgent not matching Mac/iPhone/iPad
  */
 function mockPlatform(platform: string) {
-  Object.defineProperty(navigator, 'platform', {
-    value: platform,
+  const userAgent =
+    platform === 'MacIntel'
+      ? 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
+      : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36';
+  Object.defineProperty(navigator, 'userAgent', {
+    value: userAgent,
     configurable: true,
   });
 }

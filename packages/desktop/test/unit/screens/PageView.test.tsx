@@ -602,10 +602,10 @@ describe('PageView', () => {
     it('Cmd+B toggles backlinks visibility (macOS)', async () => {
       const services = createMockServices();
 
-      // Mock navigator.platform to simulate macOS
-      const originalPlatform = Object.getOwnPropertyDescriptor(Navigator.prototype, 'platform');
-      Object.defineProperty(Navigator.prototype, 'platform', {
-        value: 'MacIntel',
+      // Mock navigator.userAgent to simulate macOS
+      const originalUserAgent = Object.getOwnPropertyDescriptor(Navigator.prototype, 'userAgent');
+      Object.defineProperty(Navigator.prototype, 'userAgent', {
+        value: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
         configurable: true,
       });
 
@@ -629,9 +629,9 @@ describe('PageView', () => {
         // Backlinks content should be hidden
         expect(screen.queryByTestId('backlinks-content')).toBeNull();
       } finally {
-        // Restore original platform
-        if (originalPlatform) {
-          Object.defineProperty(Navigator.prototype, 'platform', originalPlatform);
+        // Restore original userAgent
+        if (originalUserAgent) {
+          Object.defineProperty(Navigator.prototype, 'userAgent', originalUserAgent);
         }
       }
     });
