@@ -17,9 +17,18 @@
   align-items: flex-start;
   justify-content: center;
   padding-top: 15vh;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  opacity: 0;
+  animation: backdrop-in 200ms var(--ease-out) forwards;
 }
 
-[data-theme="dark"] .backdrop {
+@keyframes backdrop-in {
+  to { opacity: 1; }
+}
+
+[data-theme="dark"] .backdrop,
+[data-theme="dim"] .backdrop {
   background-color: rgba(0, 0, 0, 0.7);
 }
 
@@ -35,6 +44,18 @@
   box-shadow: var(--shadow-xl);
   border: 1px solid var(--border-default);
   overflow: hidden;
+  animation: palette-in 180ms var(--ease-spring-overshoot, cubic-bezier(0.175, 0.885, 0.32, 1.275)) forwards;
+}
+
+@keyframes palette-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
 }
 
 /* ============================================================================

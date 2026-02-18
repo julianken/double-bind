@@ -70,6 +70,11 @@
   cursor: grabbing;
 }
 
+.bulletHandle:focus-visible {
+  outline: var(--ring-width) solid var(--ring-color);
+  outline-offset: 2px;
+}
+
 .bulletHandle[data-has-children="true"] {
   color: var(--text-secondary);
 }
