@@ -11,6 +11,7 @@
 
 import { useContext } from 'react';
 import { useGlobalShortcuts } from './hooks/useGlobalShortcuts.js';
+import { useSettingsSync } from './hooks/useSettingsSync.js';
 import { Router, type Route } from './components/Router.js';
 import { CommandPalette } from './components/CommandPalette.js';
 import { useAppStore } from './stores/ui-store.js';
@@ -249,6 +250,8 @@ const routes: Route[] = [
 export function App() {
   // Register global keyboard shortcuts
   useGlobalShortcuts();
+  // Sync settings changes from the settings window to this window
+  useSettingsSync();
 
   return (
     <>

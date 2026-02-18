@@ -10,6 +10,7 @@
 
 import { useEffect, useCallback } from 'react';
 import { useAppStore, type ThemePreference, type ResolvedTheme } from '../stores/ui-store.js';
+import { useSettingsStore } from '../stores/settings-store.js';
 
 /**
  * Get the system's preferred color scheme
@@ -60,8 +61,13 @@ function applyTheme(theme: ResolvedTheme): void {
  * ```
  */
 export function useTheme() {
-  const themePreference = useAppStore((state) => state.themePreference);
-  const setThemePreference = useAppStore((state) => state.setThemePreference);
+  // Prefer SettingsStore as the source of truth for themePreference.
+  // AppStore.themePreference is a deprecated shim (see ui-store.ts).
+  const settingsTheme = useSettingsStore((state) => state.themePreference);
+  const appTheme = useAppStore((state) => state.themePreference);
+  const themePreference = settingsTheme ?? appTheme;
+  const setSettingsThemePreference = useSettingsStore((state) => state.setThemePreference);
+  const setAppThemePreference = useAppStore((state) => state.setThemePreference);
 
   // Compute resolved theme
   const resolvedTheme = resolveTheme(themePreference);
@@ -88,9 +94,12 @@ export function useTheme() {
 
   const setTheme = useCallback(
     (preference: ThemePreference) => {
-      setThemePreference(preference);
+      // Write to both stores; SettingsStore is source of truth, AppStore is
+      // the deprecated shim kept for backwards compat.
+      setSettingsThemePreference(preference);
+      setAppThemePreference(preference);
     },
-    [setThemePreference]
+    [setSettingsThemePreference, setAppThemePreference]
   );
 
   return {
