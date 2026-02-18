@@ -1,0 +1,68 @@
+/**
+ * ContextMenu Component Styles
+ */
+
+.menu {
+  position: fixed;
+  z-index: 2000;
+  background-color: var(--surface-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  padding: var(--space-1);
+  box-shadow:
+    0 8px 24px oklch(0% 0 0 / 18%),
+    0 2px 6px oklch(0% 0 0 / 10%);
+  min-width: 160px;
+  animation: scaleIn 80ms ease-out;
+  transform-origin: top left;
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ============================================================================
+ * Menu Items
+ * ============================================================================ */
+
+.item {
+  display: block;
+  width: 100%;
+  padding: var(--space-1-5) var(--space-3);
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  font-family: inherit;
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+  white-space: nowrap;
+}
+
+.item:hover:not(:disabled) {
+  background-color: var(--surface-overlay);
+}
+
+.itemDisabled {
+  color: var(--text-disabled);
+  cursor: not-allowed;
+}
+
+/* ============================================================================
+ * Separator
+ * ============================================================================ */
+
+.separator {
+  height: 1px;
+  background-color: var(--border-default);
+  margin: var(--space-1) var(--space-2);
+}

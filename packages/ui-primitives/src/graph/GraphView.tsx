@@ -27,6 +27,33 @@ import ForceGraph2D, {
   type LinkObject,
 } from 'react-force-graph-2d';
 
+// ---------------------------------------------------------------------------
+// OKLCH community color helpers (inline — avoids cross-package import)
+// ---------------------------------------------------------------------------
+
+/** Read a CSS custom property from the document root. Returns '' if unavailable. */
+function readCssToken(name: string): string {
+  if (typeof document === 'undefined') return '';
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
+const COMMUNITY_CSS_TOKENS = [
+  '--graph-c0', '--graph-c1', '--graph-c2', '--graph-c3',
+  '--graph-c4', '--graph-c5', '--graph-c6', '--graph-c7',
+] as const;
+
+const COMMUNITY_FALLBACK: readonly string[] = [
+  'oklch(62% 0.14 283)', 'oklch(62% 0.15 30)',  'oklch(62% 0.15 145)',
+  'oklch(62% 0.14 330)', 'oklch(62% 0.14 80)',  'oklch(62% 0.14 200)',
+  'oklch(62% 0.14 250)', 'oklch(62% 0.15 10)',
+];
+
+function resolveOklchCommunityColor(communityId: number): string {
+  const idx = Math.abs(communityId) % COMMUNITY_CSS_TOKENS.length;
+  const live = readCssToken(COMMUNITY_CSS_TOKENS[idx]!);
+  return live !== '' ? live : (COMMUNITY_FALLBACK[idx] ?? COMMUNITY_FALLBACK[0]!);
+}
+
 // PageId is a string type, define locally to avoid build dependency issues
 type PageId = string;
 
@@ -74,6 +101,12 @@ export interface GraphViewProps {
   onNodeHover?: (pageId: PageId | null) => void;
 
   /**
+   * Callback fired when a node is right-clicked.
+   * Receives the pageId and mouse event coordinates.
+   */
+  onNodeRightClick?: (pageId: PageId, x: number, y: number) => void;
+
+  /**
    * ID of the node to highlight (e.g., currently focused page).
    * Highlighted nodes render with a different color and size.
    */
@@ -113,20 +146,61 @@ export interface GraphViewProps {
    * Optional CSS class name for the container.
    */
   className?: string;
+
+  /**
+   * Set of node IDs that are part of the active path highlight.
+   * These nodes are rendered with a distinct style.
+   */
+  pathNodeIds?: Set<PageId>;
+
+  /**
+   * Set of edge keys ("source->target") that are part of the active path.
+   * These edges are rendered thicker with a glow.
+   */
+  pathEdgeKeys?: Set<string>;
+
+  /**
+   * Set of node IDs that have been lasso-selected.
+   * These nodes are rendered with a selection ring.
+   */
+  selectedNodeIds?: Set<PageId>;
+
+  /**
+   * Encoding mode that determines the coloring strategy.
+   * - 'primary'  — community OKLCH colors (default)
+   * - 'orphan'   — highlight disconnected nodes
+   * - 'recency'  — color by last-modified (requires lastModifiedAt on nodes)
+   */
+  encodingMode?: 'primary' | 'orphan' | 'recency';
+
+  /**
+   * Degree map: node ID → number of connections.
+   * Required for 'orphan' encoding mode.
+   */
+  degreeMap?: Map<PageId, number>;
 }
 
 // ============================================================================
 // Constants
 // ============================================================================
 
-/** Default node color */
-const DEFAULT_NODE_COLOR = '#6366f1'; // indigo-500
+/** Default node color (OKLCH indigo) */
+const DEFAULT_NODE_COLOR = 'oklch(62% 0.14 283)';
 
-/** Highlighted node color */
-const HIGHLIGHT_NODE_COLOR = '#f59e0b'; // amber-500
+/** Highlighted node color (OKLCH amber) */
+const HIGHLIGHT_NODE_COLOR = 'oklch(68% 0.20 55)';
+
+/** Path node glow color */
+const PATH_NODE_COLOR = 'oklch(65% 0.22 145)'; // emerald
+
+/** Orphan node color (isolated nodes) */
+const ORPHAN_NODE_COLOR = 'oklch(62% 0.18 25)';
 
 /** Edge color */
-const EDGE_COLOR = '#475569'; // slate-600
+const EDGE_COLOR = 'oklch(55% 0.04 265 / 60%)';
+
+/** Path edge color (highlighted) */
+const PATH_EDGE_COLOR = 'oklch(65% 0.22 145)';
 
 /** Node label color */
 const LABEL_COLOR = '#94a3b8'; // slate-400
@@ -148,20 +222,6 @@ const ARROW_LENGTH = 4.5;
 
 /** Curvature for bidirectional links to separate arrows */
 const BIDIRECTIONAL_CURVATURE = 0.15;
-
-/** Community color palette (categorical) */
-const COMMUNITY_COLORS: readonly string[] = [
-  '#6366f1', // indigo
-  '#22c55e', // green
-  '#f59e0b', // amber
-  '#ec4899', // pink
-  '#3b82f6', // blue
-  '#a855f7', // purple
-  '#14b8a6', // teal
-  '#f97316', // orange
-  '#84cc16', // lime
-  '#06b6d4', // cyan
-] as const;
 
 // ============================================================================
 // Helper Functions
@@ -278,6 +338,7 @@ export const GraphView = memo(
       edges,
       onNodeClick,
       onNodeHover,
+      onNodeRightClick,
       highlightedNodeId,
       colorByCommunity = false,
       sizeByPageRank = false,
@@ -285,6 +346,11 @@ export const GraphView = memo(
       width = 800,
       height = 600,
       className,
+      pathNodeIds,
+      pathEdgeKeys,
+      selectedNodeIds,
+      encodingMode = 'primary',
+      degreeMap,
     },
     ref
   ) {
@@ -325,24 +391,47 @@ export const GraphView = memo(
       };
     }, [nodes, sizeByPageRank]);
 
-    // Get node color based on community or highlight status
+    // Get node color based on encoding mode, community, highlight, and path status
     const getNodeColor = useCallback(
       (node: InternalNode): string => {
-        const nodeId = node.id;
-        // Highlighted node takes precedence
+        const nodeId = node.id as string;
+
+        // Highlighted node takes precedence over everything
         if (highlightedNodeId && nodeId === highlightedNodeId) {
           return HIGHLIGHT_NODE_COLOR;
         }
 
-        // Color by community if enabled
+        // Path-highlighted node (secondary emphasis)
+        if (pathNodeIds?.has(nodeId)) {
+          return PATH_NODE_COLOR;
+        }
+
+        // Encoding mode: orphan — highlight disconnected nodes
+        if (encodingMode === 'orphan') {
+          const degree = degreeMap?.get(nodeId) ?? 0;
+          if (degree === 0) return ORPHAN_NODE_COLOR;
+          return degree <= 2
+            ? readCssToken('--graph-low-connect') || 'oklch(64% 0.15 55)'
+            : readCssToken('--graph-well-connect') || 'oklch(60% 0.14 145)';
+        }
+
+        // Encoding mode: recency — use warm/cold gradient based on community
+        // (Full recency requires lastModifiedAt data; use community as proxy here)
+        if (encodingMode === 'recency') {
+          if (node.community !== undefined) {
+            return resolveOklchCommunityColor(node.community);
+          }
+          return readCssToken('--graph-recency-cold') || 'oklch(60% 0.10 230)';
+        }
+
+        // Primary mode: color by community (OKLCH)
         if (colorByCommunity && node.community !== undefined) {
-          const colorIndex = node.community % COMMUNITY_COLORS.length;
-          return COMMUNITY_COLORS[colorIndex] ?? DEFAULT_NODE_COLOR;
+          return resolveOklchCommunityColor(node.community);
         }
 
         return DEFAULT_NODE_COLOR;
       },
-      [highlightedNodeId, colorByCommunity]
+      [highlightedNodeId, colorByCommunity, pathNodeIds, encodingMode, degreeMap]
     );
 
     // Get node radius based on PageRank or highlight status
@@ -397,13 +486,49 @@ export const GraphView = memo(
       [onNodeHover]
     );
 
-    // Custom node canvas rendering
+    // Handle node right-click
+    const handleNodeRightClick = useCallback(
+      (node: InternalNode, event: MouseEvent) => {
+        if (!onNodeRightClick) return;
+        const nodeId = node.id;
+        if (typeof nodeId === 'string') {
+          onNodeRightClick(nodeId as PageId, event.clientX, event.clientY);
+        }
+      },
+      [onNodeRightClick]
+    );
+
+    // Custom node canvas rendering — supports path glow, selection ring, OKLCH colors
     const nodeCanvasObject = useCallback(
       (node: InternalNode, ctx: CanvasRenderingContext2D, globalScale: number) => {
         const { x = 0, y = 0, title } = node;
+        const nodeId = node.id as string;
 
         const radius = getNodeRadius(node);
         const color = getNodeColor(node);
+        const isSelected = selectedNodeIds?.has(nodeId) ?? false;
+        const isOnPath = pathNodeIds?.has(nodeId) ?? false;
+
+        // Draw path glow (drawn first, behind the node)
+        if (isOnPath) {
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(x, y, radius + 4, 0, 2 * Math.PI);
+          ctx.fillStyle = 'oklch(65% 0.22 145 / 30%)';
+          ctx.fill();
+          ctx.restore();
+        }
+
+        // Draw selection ring
+        if (isSelected) {
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(x, y, radius + 3, 0, 2 * Math.PI);
+          ctx.strokeStyle = 'oklch(60% 0.18 250 / 80%)';
+          ctx.lineWidth = 2 / globalScale;
+          ctx.stroke();
+          ctx.restore();
+        }
 
         // Draw node circle
         ctx.beginPath();
@@ -421,7 +546,7 @@ export const GraphView = memo(
           ctx.fillText(title, x, y + radius + fontSize);
         }
       },
-      [getNodeColor, getNodeRadius, labelColor]
+      [getNodeColor, getNodeRadius, labelColor, selectedNodeIds, pathNodeIds]
     );
 
     // Custom node pointer area (for click/hover detection)
@@ -443,6 +568,42 @@ export const GraphView = memo(
       return node.title;
     }, []);
 
+    // Determine edge color — highlighted path edges get a distinct color
+    const getLinkColor = useCallback(
+      (link: InternalLink): string => {
+        if (pathEdgeKeys && pathEdgeKeys.size > 0) {
+          const source = typeof link.source === 'object' ? (link.source as InternalNode).id : link.source;
+          const target = typeof link.target === 'object' ? (link.target as InternalNode).id : link.target;
+          if (
+            pathEdgeKeys.has(`${source as string}->${target as string}`) ||
+            pathEdgeKeys.has(`${target as string}->${source as string}`)
+          ) {
+            return PATH_EDGE_COLOR;
+          }
+        }
+        return EDGE_COLOR;
+      },
+      [pathEdgeKeys]
+    );
+
+    // Determine edge width — path edges are thicker
+    const getLinkWidth = useCallback(
+      (link: InternalLink): number => {
+        if (pathEdgeKeys && pathEdgeKeys.size > 0) {
+          const source = typeof link.source === 'object' ? (link.source as InternalNode).id : link.source;
+          const target = typeof link.target === 'object' ? (link.target as InternalNode).id : link.target;
+          if (
+            pathEdgeKeys.has(`${source as string}->${target as string}`) ||
+            pathEdgeKeys.has(`${target as string}->${source as string}`)
+          ) {
+            return 2.5;
+          }
+        }
+        return 1;
+      },
+      [pathEdgeKeys]
+    );
+
     return (
       <div
         className={className}
@@ -460,13 +621,14 @@ export const GraphView = memo(
           nodePointerAreaPaint={nodePointerAreaPaint}
           onNodeClick={handleNodeClick}
           onNodeHover={handleNodeHover}
-          linkColor={() => EDGE_COLOR}
-          linkWidth={1}
+          onNodeRightClick={handleNodeRightClick}
+          linkColor={getLinkColor}
+          linkWidth={getLinkWidth}
           linkDirectionalArrowLength={ARROW_LENGTH}
           linkDirectionalArrowRelPos={(link: InternalLink) =>
             calculateArrowPosition(link, getNodeRadius)
           }
-          linkDirectionalArrowColor={() => EDGE_COLOR}
+          linkDirectionalArrowColor={getLinkColor}
           linkCurvature={(link: InternalLink) => {
             // For bidirectional links, curve slightly to separate the arrows
             return link.isBidirectional ? BIDIRECTIONAL_CURVATURE : 0;
