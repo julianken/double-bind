@@ -129,6 +129,7 @@ export function AppShell({
   const typewriterEnabled = useAppStore((state) => state.typewriterEnabled);
   const blockDimmingEnabled = useAppStore((state) => state.blockDimmingEnabled);
   const windowFocused = useAppStore((state) => state.windowFocused);
+  const sidebarQuiet = useAppStore((state) => state.sidebarQuiet);
 
   // Sidebar width depends on mode
   const sidebarStyle =
@@ -174,6 +175,7 @@ export function AppShell({
           style={sidebarStyle}
           data-testid="app-shell-sidebar"
           data-sidebar-mode={sidebarMode}
+          data-sidebar-quiet={sidebarQuiet ? 'true' : undefined}
           aria-label="Sidebar"
         >
           <ErrorBoundary

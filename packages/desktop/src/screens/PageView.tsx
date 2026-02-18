@@ -18,6 +18,7 @@
 import { useCallback, useMemo, useState, useEffect } from 'react';
 import type { BlockId, PageId } from '@double-bind/types';
 import type { PageWithBlocks } from '@double-bind/core';
+import { useTypewriterScroll } from '../hooks/useTypewriterScroll.js';
 import {
   DndContext,
   closestCenter,
@@ -244,6 +245,11 @@ export function PageView({ pageId }: PageViewProps) {
       routeType: 'page',
     });
   }, [data?.page.title, data?.blocks.length, setCurrentPageMeta]);
+
+  // Typewriter scroll: when typewriterEnabled, scroll the active block to
+  // vertical center on each focus change. Extracted to a shared hook so
+  // DailyNotesView can reuse the same behaviour.
+  useTypewriterScroll();
 
   // Handle drag-and-drop reordering of root-level blocks.
   // Uses the shared createDragEndHandler so nested levels (in BlockNode)

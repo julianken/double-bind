@@ -13,6 +13,8 @@
  * - Ctrl+K (or Cmd+K on Mac): Open command palette
  * - Ctrl+Shift+K (or Cmd+Shift+K on Mac): Focus quick capture
  * - Ctrl+, (or Cmd+, on Mac): Open settings window
+ * - Ctrl+Shift+F (or Cmd+Shift+F on Mac): Toggle focus mode
+ * - Ctrl+Shift+T (or Cmd+Shift+T on Mac): Toggle typewriter mode
  *
  * See docs/frontend/keyboard-first.md for the full shortcut documentation.
  */
@@ -43,6 +45,8 @@ function isCtrlKey(event: KeyboardEvent, key: string): boolean {
  * - Ctrl+K (or Cmd+K on Mac): Open command palette
  * - Ctrl+Shift+K (or Cmd+Shift+K on Mac): Focus quick capture
  * - Ctrl+, (or Cmd+, on Mac): Open settings window
+ * - Ctrl+Shift+F (or Cmd+Shift+F on Mac): Toggle focus mode
+ * - Ctrl+Shift+T (or Cmd+Shift+T on Mac): Toggle typewriter mode
  *
  * These shortcuts work anywhere in the app and are not blocked by
  * editor focus or other components.
@@ -109,6 +113,20 @@ export function useGlobalShortcuts(): void {
       if (isCtrlKey(event, ',')) {
         event.preventDefault();
         void openSettingsWindow();
+        return;
+      }
+
+      // Ctrl+Shift+F - Toggle focus mode
+      if (isCtrlKey(event, 'f') && event.shiftKey) {
+        event.preventDefault();
+        useAppStore.getState().toggleFocusMode();
+        return;
+      }
+
+      // Ctrl+Shift+T - Toggle typewriter mode
+      if (isCtrlKey(event, 't') && event.shiftKey) {
+        event.preventDefault();
+        useAppStore.getState().toggleTypewriter();
         return;
       }
     }
