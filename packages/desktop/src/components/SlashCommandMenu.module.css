@@ -1,0 +1,116 @@
+/**
+ * SlashCommandMenu Component Styles
+ *
+ * Floating block-type picker that appears below the cursor after typing `/`.
+ * Uses fixed positioning based on coordinates from the ProseMirror plugin.
+ */
+
+/* ============================================================================
+ * Menu Container
+ * ============================================================================ */
+
+.slashMenu {
+  z-index: var(--z-popover, 900);
+  min-width: 240px;
+  max-width: 320px;
+  max-height: 320px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+
+  background-color: var(--surface-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg, 0 8px 24px rgba(0, 0, 0, 0.16));
+
+  /* Entrance animation */
+  animation: slashMenuEnter 100ms ease-out;
+}
+
+@keyframes slashMenuEnter {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ============================================================================
+ * Header
+ * ============================================================================ */
+
+.slashMenuHeader {
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-xs, 0.75rem);
+  font-weight: var(--font-semibold, 600);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+/* ============================================================================
+ * Menu List
+ * ============================================================================ */
+
+.slashMenuList {
+  list-style: none;
+  margin: 0;
+  padding: var(--space-1) 0;
+  overflow-y: auto;
+  flex: 1;
+}
+
+/* ============================================================================
+ * Menu Items
+ * ============================================================================ */
+
+.slashMenuItem {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+  user-select: none;
+}
+
+.slashMenuItem:hover,
+.slashMenuItem--active {
+  background-color: var(--surface-overlay);
+}
+
+.slashMenuItem--active {
+  background-color: var(--accent-subtle, rgba(var(--accent-rgb, 59 130 246) / 0.1));
+}
+
+.slashMenuItemLabel {
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium, 500);
+  color: var(--text-primary);
+  flex-shrink: 0;
+}
+
+.slashMenuItemDescription {
+  font-size: var(--text-xs, 0.75rem);
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+
+.slashMenuItemShortcut {
+  font-size: var(--text-xs, 0.75rem);
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  background-color: var(--surface-base);
+  padding: 0.1em 0.35em;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
