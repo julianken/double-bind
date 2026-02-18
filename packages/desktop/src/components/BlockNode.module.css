@@ -102,6 +102,7 @@
   align-items: flex-start;
   gap: var(--space-2);
   padding: var(--space-1) 0;
+  min-height: var(--block-min-height, 24px);
   cursor: text;
   font-size: var(--text-base);
   line-height: var(--leading-normal);
@@ -110,13 +111,8 @@
   transition: background-color var(--transition-fast);
 }
 
-.staticContent:hover {
-  background-color: var(--bg-hover);
-}
-
 .staticContent:focus {
   outline: none;
-  background-color: var(--bg-hover);
 }
 
 .staticContent:focus-visible {

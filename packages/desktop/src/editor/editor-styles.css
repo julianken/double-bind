@@ -14,6 +14,15 @@
  * visual appearance for consistency.
  * ================================================================ */
 
+/* Match StaticBlockContent vertical padding so text doesn't shift on focus */
+.ProseMirror {
+  padding: var(--space-1) 0;
+}
+
+.ProseMirror:focus {
+  outline: none;
+}
+
 /* Page links: blue underlined text */
 .ProseMirror .highlight-page-link,
 .ProseMirror .page-link {
