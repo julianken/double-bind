@@ -5,7 +5,7 @@
  *
  * Features:
  * - Search icon and placeholder text ("Search pages and blocks...")
- * - Keyboard shortcut to focus (Ctrl+K / Cmd+K on macOS)
+ * - Sidebar quiet mode: suppresses sidebar activity while search is focused
  * - Debounced search calls (300ms delay via useSearch hook)
  * - Minimum query length hint (shows when query is 1 character)
  * - Inline loading indicator during search
@@ -16,7 +16,7 @@
  * @see docs/frontend/keyboard-first.md for keyboard shortcuts
  */
 
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useRef } from 'react';
 import { useSearch } from '../hooks/useSearch.js';
 import { useAppStore } from '../stores/ui-store.js';
 import styles from './SearchBar.module.css';
@@ -163,10 +163,13 @@ export function SearchBar({
   onSearch,
   onClear,
   placeholder = SEARCH_PLACEHOLDER,
-  enableGlobalShortcut = true,
+  // enableGlobalShortcut kept for API compatibility; Ctrl+K is now handled in useGlobalShortcuts
+  enableGlobalShortcut: _enableGlobalShortcut = true,
 }: SearchBarProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const navigateToPage = useAppStore((state) => state.navigateToPage);
+
+  const setSidebarQuiet = useAppStore((state) => state.setSidebarQuiet);
 
   const { query, setQuery, isLoading, clearSearch, showMinLengthHint } = useSearch({
     onResults: () => {
@@ -219,23 +222,14 @@ export function SearchBar({
     [query, navigateToPage]
   );
 
-  // Global keyboard shortcut: Ctrl+K / Cmd+K to focus search
-  useEffect(() => {
-    if (!enableGlobalShortcut) return;
+  // Sidebar quiet mode: suppress sidebar activity while search has focus
+  const handleFocus = useCallback(() => {
+    setSidebarQuiet(true);
+  }, [setSidebarQuiet]);
 
-    function handleGlobalKeyDown(event: KeyboardEvent) {
-      const isCtrlOrCmd = event.ctrlKey || event.metaKey;
-
-      if (isCtrlOrCmd && event.key.toLowerCase() === 'k') {
-        event.preventDefault();
-        inputRef.current?.focus();
-        inputRef.current?.select();
-      }
-    }
-
-    window.addEventListener('keydown', handleGlobalKeyDown);
-    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  }, [enableGlobalShortcut]);
+  const handleBlur = useCallback(() => {
+    setSidebarQuiet(false);
+  }, [setSidebarQuiet]);
 
   return (
     <form
@@ -256,6 +250,8 @@ export function SearchBar({
         value={query}
         onChange={handleChange}
         onKeyDown={handleKeyDown}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
         placeholder={placeholder}
         aria-label="Search pages and blocks"
         data-testid="search-bar-input"

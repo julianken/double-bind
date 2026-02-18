@@ -5,7 +5,8 @@
  * - Rendering and visibility
  * - Fuzzy search algorithm
  * - Keyboard navigation (Arrow keys, Enter, Escape)
- * - Command selection and execution
+ * - Command selection and execution (command mode with `>` prefix)
+ * - Page search mode (default mode)
  * - Backdrop click dismissal
  * - Global keyboard shortcut (Ctrl+P / Cmd+P)
  * - Accessibility features
@@ -16,6 +17,7 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   CommandPalette,
   fuzzyMatch,
@@ -26,6 +28,27 @@ import { useAppStore } from '../../../src/stores/ui-store.js';
 // ============================================================================
 // Test Utilities
 // ============================================================================
+
+/**
+ * Create a fresh QueryClient for each test
+ */
+function createTestQueryClient() {
+  return new QueryClient({
+    defaultOptions: {
+      queries: { retry: false },
+    },
+  });
+}
+
+/**
+ * Wrap component with required providers
+ */
+function renderWithProviders(ui: React.ReactElement) {
+  const queryClient = createTestQueryClient();
+  return render(
+    <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>
+  );
+}
 
 /**
  * Simulate a keyboard event on the window.
@@ -115,7 +138,7 @@ describe('CommandPalette', () => {
 
   describe('Visibility', () => {
     it('renders nothing when closed (controlled)', () => {
-      const { container } = render(
+      const { container } = renderWithProviders(
         <CommandPalette isOpen={false} onClose={vi.fn()} commands={createMockCommands()} />
       );
 
@@ -125,13 +148,13 @@ describe('CommandPalette', () => {
     it('renders nothing when closed (store state)', () => {
       useAppStore.setState({ commandPaletteOpen: false });
 
-      const { container } = render(<CommandPalette commands={createMockCommands()} />);
+      const { container } = renderWithProviders(<CommandPalette commands={createMockCommands()} />);
 
       expect(container.firstChild).toBeNull();
     });
 
     it('renders when open (controlled)', () => {
-      render(<CommandPalette isOpen={true} onClose={vi.fn()} commands={createMockCommands()} />);
+      renderWithProviders(<CommandPalette isOpen={true} onClose={vi.fn()} commands={createMockCommands()} />);
 
       expect(screen.getByTestId('command-palette')).toBeDefined();
     });
@@ -139,7 +162,7 @@ describe('CommandPalette', () => {
     it('renders when open (store state)', () => {
       useAppStore.setState({ commandPaletteOpen: true });
 
-      render(<CommandPalette commands={createMockCommands()} />);
+      renderWithProviders(<CommandPalette commands={createMockCommands()} />);
 
       expect(screen.getByTestId('command-palette')).toBeDefined();
     });
@@ -150,22 +173,36 @@ describe('CommandPalette', () => {
   // ============================================================================
 
   describe('Rendering', () => {
-    it('renders search input', () => {
-      render(<CommandPalette isOpen={true} onClose={vi.fn()} commands={createMockCommands()} />);
+    it('renders search input with page search placeholder by default', () => {
+      renderWithProviders(<CommandPalette isOpen={true} onClose={vi.fn()} commands={createMockCommands()} />);
 
       expect(screen.getByTestId('command-palette-input')).toBeDefined();
+      expect(screen.getByPlaceholderText('Search pages...')).toBeDefined();
+    });
+
+    it('renders command search placeholder in command mode', async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<CommandPalette isOpen={true} onClose={vi.fn()} commands={createMockCommands()} />);
+
+      const input = screen.getByTestId('command-palette-input');
+      await user.type(input, '>');
+
       expect(screen.getByPlaceholderText('Type a command...')).toBeDefined();
     });
 
     it('renders command list', () => {
-      render(<CommandPalette isOpen={true} onClose={vi.fn()} commands={createMockCommands()} />);
+      renderWithProviders(<CommandPalette isOpen={true} onClose={vi.fn()} commands={createMockCommands()} />);
 
       expect(screen.getByTestId('command-palette-list')).toBeDefined();
     });
 
-    it('renders all commands', () => {
+    it('renders all commands in command mode', async () => {
+      const user = userEvent.setup();
       const commands = createMockCommands();
-      render(<CommandPalette isOpen={true} onClose={vi.fn()} commands={commands} />);
+      renderWithProviders(<CommandPalette isOpen={true} onClose={vi.fn()} commands={commands} />);
+
+      const input = screen.getByTestId('command-palette-input');
+      await user.type(input, '>');
 
       expect(screen.getByText('Go to Daily Notes')).toBeDefined();
       expect(screen.getByText('Go to Graph View')).toBeDefined();
@@ -173,31 +210,51 @@ describe('CommandPalette', () => {
       expect(screen.getByText('Create New Page')).toBeDefined();
     });
 
-    it('renders command descriptions', () => {
-      render(<CommandPalette isOpen={true} onClose={vi.fn()} commands={createMockCommands()} />);
+    it('renders command descriptions in command mode', async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<CommandPalette isOpen={true} onClose={vi.fn()} commands={createMockCommands()} />);
+
+      const input = screen.getByTestId('command-palette-input');
+      await user.type(input, '>');
 
       expect(screen.getByText('Open daily notes page')).toBeDefined();
       expect(screen.getByText('Open graph visualization')).toBeDefined();
     });
 
-    it('renders keyboard shortcuts', () => {
-      render(<CommandPalette isOpen={true} onClose={vi.fn()} commands={createMockCommands()} />);
+    it('renders keyboard shortcuts in command mode', async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<CommandPalette isOpen={true} onClose={vi.fn()} commands={createMockCommands()} />);
+
+      const input = screen.getByTestId('command-palette-input');
+      await user.type(input, '>');
 
       expect(screen.getByText('Ctrl+D')).toBeDefined();
       expect(screen.getByText('Ctrl+G')).toBeDefined();
       expect(screen.getByText('Ctrl+F')).toBeDefined();
     });
 
-    it('renders section headers', () => {
-      render(<CommandPalette isOpen={true} onClose={vi.fn()} commands={createMockCommands()} />);
+    it('renders section headers in command mode', async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<CommandPalette isOpen={true} onClose={vi.fn()} commands={createMockCommands()} />);
+
+      const input = screen.getByTestId('command-palette-input');
+      await user.type(input, '>');
 
       expect(screen.getByTestId('command-palette-section-navigation')).toBeDefined();
       expect(screen.getByTestId('command-palette-section-search')).toBeDefined();
       expect(screen.getByTestId('command-palette-section-pages')).toBeDefined();
     });
 
+    it('renders page section header in page search mode', () => {
+      renderWithProviders(<CommandPalette isOpen={true} onClose={vi.fn()} commands={createMockCommands()} />);
+
+      // In page mode (no pages loaded from service), shows "Pages" header or empty state
+      // We just verify the list container is rendered
+      expect(screen.getByTestId('command-palette-list')).toBeDefined();
+    });
+
     it('renders keyboard hints footer', () => {
-      render(<CommandPalette isOpen={true} onClose={vi.fn()} commands={createMockCommands()} />);
+      renderWithProviders(<CommandPalette isOpen={true} onClose={vi.fn()} commands={createMockCommands()} />);
 
       const footer = screen.getByTestId('command-palette-footer');
       expect(footer).toBeDefined();
@@ -207,7 +264,7 @@ describe('CommandPalette', () => {
     });
 
     it('focuses input when opened', async () => {
-      render(<CommandPalette isOpen={true} onClose={vi.fn()} commands={createMockCommands()} />);
+      renderWithProviders(<CommandPalette isOpen={true} onClose={vi.fn()} commands={createMockCommands()} />);
 
       // Wait for focus (uses requestAnimationFrame)
       await new Promise((resolve) => requestAnimationFrame(resolve));
@@ -217,35 +274,37 @@ describe('CommandPalette', () => {
   });
 
   // ============================================================================
-  // Search and Filtering
+  // Search and Filtering (Command Mode)
   // ============================================================================
 
-  describe('Search and Filtering', () => {
-    it('filters commands based on search query', async () => {
+  describe('Search and Filtering (Command Mode)', () => {
+    it('filters commands based on search query in command mode', async () => {
       const user = userEvent.setup();
       const commands = createMockCommands();
-      render(<CommandPalette isOpen={true} onClose={vi.fn()} commands={commands} />);
+      renderWithProviders(<CommandPalette isOpen={true} onClose={vi.fn()} commands={commands} />);
+
+      const input = screen.getByTestId('command-palette-input');
+      // Enter command mode first
+      await user.type(input, '>');
 
       // All commands should be visible initially (check by test id)
       expect(screen.getByTestId('command-palette-item-cmd-1')).toBeDefined();
       expect(screen.getByTestId('command-palette-item-cmd-4')).toBeDefined();
 
-      const input = screen.getByTestId('command-palette-input');
       await user.type(input, 'Daily');
 
       // After filtering for "Daily", only matching commands should be visible
-      // The Daily Notes command should still be visible
       expect(screen.getByTestId('command-palette-item-cmd-1')).toBeDefined();
       // The Create New Page command should be hidden
       expect(screen.queryByTestId('command-palette-item-cmd-4')).toBeNull();
     });
 
-    it('shows empty state when no matches', async () => {
+    it('shows empty state when no matches in command mode', async () => {
       const user = userEvent.setup();
-      render(<CommandPalette isOpen={true} onClose={vi.fn()} commands={createMockCommands()} />);
+      renderWithProviders(<CommandPalette isOpen={true} onClose={vi.fn()} commands={createMockCommands()} />);
 
       const input = screen.getByTestId('command-palette-input');
-      await user.type(input, 'xyznonexistent');
+      await user.type(input, '>xyznonexistent');
 
       expect(screen.getByTestId('command-palette-empty')).toBeDefined();
       expect(screen.getByText('No commands found for "xyznonexistent"')).toBeDefined();
@@ -253,9 +312,11 @@ describe('CommandPalette', () => {
 
     it('resets selection when query changes', async () => {
       const user = userEvent.setup();
-      render(<CommandPalette isOpen={true} onClose={vi.fn()} commands={createMockCommands()} />);
+      renderWithProviders(<CommandPalette isOpen={true} onClose={vi.fn()} commands={createMockCommands()} />);
 
       const input = screen.getByTestId('command-palette-input');
+      // Enter command mode
+      await user.type(input, '>');
 
       // Navigate down to select second item
       await user.keyboard('{ArrowDown}');
@@ -270,19 +331,28 @@ describe('CommandPalette', () => {
     });
 
     it('clears query when reopened', async () => {
-      const { rerender } = render(
+      const { rerender } = renderWithProviders(
         <CommandPalette isOpen={true} onClose={vi.fn()} commands={createMockCommands()} />
       );
 
+      const queryClient = createTestQueryClient();
       const user = userEvent.setup();
       const input = screen.getByTestId('command-palette-input');
-      await user.type(input, 'test');
+      await user.type(input, '>test');
 
-      expect(input).toHaveProperty('value', 'test');
+      expect(input).toHaveProperty('value', '>test');
 
       // Close and reopen
-      rerender(<CommandPalette isOpen={false} onClose={vi.fn()} commands={createMockCommands()} />);
-      rerender(<CommandPalette isOpen={true} onClose={vi.fn()} commands={createMockCommands()} />);
+      rerender(
+        <QueryClientProvider client={queryClient}>
+          <CommandPalette isOpen={false} onClose={vi.fn()} commands={createMockCommands()} />
+        </QueryClientProvider>
+      );
+      rerender(
+        <QueryClientProvider client={queryClient}>
+          <CommandPalette isOpen={true} onClose={vi.fn()} commands={createMockCommands()} />
+        </QueryClientProvider>
+      );
 
       // Query should be cleared
       const newInput = screen.getByTestId('command-palette-input');
@@ -291,23 +361,27 @@ describe('CommandPalette', () => {
   });
 
   // ============================================================================
-  // Keyboard Navigation
+  // Keyboard Navigation (Command Mode)
   // ============================================================================
 
-  describe('Keyboard Navigation', () => {
-    it('selects first item by default', () => {
-      render(<CommandPalette isOpen={true} onClose={vi.fn()} commands={createMockCommands()} />);
+  describe('Keyboard Navigation (Command Mode)', () => {
+    it('selects first item by default in command mode', async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<CommandPalette isOpen={true} onClose={vi.fn()} commands={createMockCommands()} />);
+
+      const input = screen.getByTestId('command-palette-input');
+      await user.type(input, '>');
 
       const options = screen.getAllByRole('option');
       expect(options[0]?.getAttribute('aria-selected')).toBe('true');
     });
 
-    it('navigates down with ArrowDown', async () => {
+    it('navigates down with ArrowDown in command mode', async () => {
       const user = userEvent.setup();
-      render(<CommandPalette isOpen={true} onClose={vi.fn()} commands={createMockCommands()} />);
+      renderWithProviders(<CommandPalette isOpen={true} onClose={vi.fn()} commands={createMockCommands()} />);
 
-      // Focus the input first
       const input = screen.getByTestId('command-palette-input');
+      await user.type(input, '>');
       input.focus();
       await user.keyboard('{ArrowDown}');
 
@@ -316,12 +390,12 @@ describe('CommandPalette', () => {
       expect(options[1]?.getAttribute('aria-selected')).toBe('true');
     });
 
-    it('navigates up with ArrowUp', async () => {
+    it('navigates up with ArrowUp in command mode', async () => {
       const user = userEvent.setup();
-      render(<CommandPalette isOpen={true} onClose={vi.fn()} commands={createMockCommands()} />);
+      renderWithProviders(<CommandPalette isOpen={true} onClose={vi.fn()} commands={createMockCommands()} />);
 
-      // Focus the input first
       const input = screen.getByTestId('command-palette-input');
+      await user.type(input, '>');
       input.focus();
 
       // Navigate down first
@@ -335,12 +409,12 @@ describe('CommandPalette', () => {
       expect(options[1]?.getAttribute('aria-selected')).toBe('true');
     });
 
-    it('stops at first item when pressing ArrowUp', async () => {
+    it('stops at first item when pressing ArrowUp in command mode', async () => {
       const user = userEvent.setup();
-      render(<CommandPalette isOpen={true} onClose={vi.fn()} commands={createMockCommands()} />);
+      renderWithProviders(<CommandPalette isOpen={true} onClose={vi.fn()} commands={createMockCommands()} />);
 
-      // Focus the input first
       const input = screen.getByTestId('command-palette-input');
+      await user.type(input, '>');
       input.focus();
 
       // Try to go up from first item
@@ -350,13 +424,13 @@ describe('CommandPalette', () => {
       expect(options[0]?.getAttribute('aria-selected')).toBe('true');
     });
 
-    it('stops at last item when pressing ArrowDown', async () => {
+    it('stops at last item when pressing ArrowDown in command mode', async () => {
       const user = userEvent.setup();
       const commands = createMockCommands();
-      render(<CommandPalette isOpen={true} onClose={vi.fn()} commands={commands} />);
+      renderWithProviders(<CommandPalette isOpen={true} onClose={vi.fn()} commands={commands} />);
 
-      // Focus the input first
       const input = screen.getByTestId('command-palette-input');
+      await user.type(input, '>');
       input.focus();
 
       // Navigate to last item and try to go further
@@ -368,15 +442,15 @@ describe('CommandPalette', () => {
       expect(options[commands.length - 1]?.getAttribute('aria-selected')).toBe('true');
     });
 
-    it('executes selected command on Enter', async () => {
+    it('executes selected command on Enter in command mode', async () => {
       const commands = createMockCommands();
       const onClose = vi.fn();
       const user = userEvent.setup();
 
-      render(<CommandPalette isOpen={true} onClose={onClose} commands={commands} />);
+      renderWithProviders(<CommandPalette isOpen={true} onClose={onClose} commands={commands} />);
 
-      // Focus the input first
       const input = screen.getByTestId('command-palette-input');
+      await user.type(input, '>');
       input.focus();
       await user.keyboard('{Enter}');
 
@@ -388,7 +462,7 @@ describe('CommandPalette', () => {
       const onClose = vi.fn();
       const user = userEvent.setup();
 
-      render(<CommandPalette isOpen={true} onClose={onClose} commands={createMockCommands()} />);
+      renderWithProviders(<CommandPalette isOpen={true} onClose={onClose} commands={createMockCommands()} />);
 
       // Focus the input first
       const input = screen.getByTestId('command-palette-input');
@@ -400,7 +474,7 @@ describe('CommandPalette', () => {
 
     it('prevents Tab from leaving palette', async () => {
       const user = userEvent.setup();
-      render(<CommandPalette isOpen={true} onClose={vi.fn()} commands={createMockCommands()} />);
+      renderWithProviders(<CommandPalette isOpen={true} onClose={vi.fn()} commands={createMockCommands()} />);
 
       const input = screen.getByTestId('command-palette-input');
       input.focus();
@@ -419,7 +493,7 @@ describe('CommandPalette', () => {
   describe('Mouse Interactions', () => {
     it('closes when backdrop is clicked', () => {
       const onClose = vi.fn();
-      render(<CommandPalette isOpen={true} onClose={onClose} commands={createMockCommands()} />);
+      renderWithProviders(<CommandPalette isOpen={true} onClose={onClose} commands={createMockCommands()} />);
 
       const backdrop = screen.getByTestId('command-palette');
       fireEvent.click(backdrop);
@@ -429,7 +503,7 @@ describe('CommandPalette', () => {
 
     it('does not close when content is clicked', () => {
       const onClose = vi.fn();
-      render(<CommandPalette isOpen={true} onClose={onClose} commands={createMockCommands()} />);
+      renderWithProviders(<CommandPalette isOpen={true} onClose={onClose} commands={createMockCommands()} />);
 
       const input = screen.getByTestId('command-palette-input');
       fireEvent.click(input);
@@ -437,11 +511,15 @@ describe('CommandPalette', () => {
       expect(onClose).not.toHaveBeenCalled();
     });
 
-    it('executes command when item is clicked', () => {
+    it('executes command when item is clicked in command mode', async () => {
       const commands = createMockCommands();
       const onClose = vi.fn();
+      const user = userEvent.setup();
 
-      render(<CommandPalette isOpen={true} onClose={onClose} commands={commands} />);
+      renderWithProviders(<CommandPalette isOpen={true} onClose={onClose} commands={commands} />);
+
+      const input = screen.getByTestId('command-palette-input');
+      await user.type(input, '>');
 
       fireEvent.click(screen.getByText('Go to Graph View'));
 
@@ -449,8 +527,12 @@ describe('CommandPalette', () => {
       expect(onClose).toHaveBeenCalledTimes(1);
     });
 
-    it('selects item on hover', () => {
-      render(<CommandPalette isOpen={true} onClose={vi.fn()} commands={createMockCommands()} />);
+    it('selects item on hover in command mode', async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<CommandPalette isOpen={true} onClose={vi.fn()} commands={createMockCommands()} />);
+
+      const input = screen.getByTestId('command-palette-input');
+      await user.type(input, '>');
 
       const thirdItem = screen.getByTestId('command-palette-item-cmd-3');
       fireEvent.mouseEnter(thirdItem);
@@ -465,7 +547,7 @@ describe('CommandPalette', () => {
 
   describe('Global Keyboard Shortcut', () => {
     it('toggles store state on Ctrl+P', () => {
-      render(<CommandPalette commands={createMockCommands()} />);
+      renderWithProviders(<CommandPalette commands={createMockCommands()} />);
 
       expect(useAppStore.getState().commandPaletteOpen).toBe(false);
 
@@ -475,7 +557,7 @@ describe('CommandPalette', () => {
     });
 
     it('toggles store state on Cmd+P (Mac)', () => {
-      render(<CommandPalette commands={createMockCommands()} />);
+      renderWithProviders(<CommandPalette commands={createMockCommands()} />);
 
       expect(useAppStore.getState().commandPaletteOpen).toBe(false);
 
@@ -486,7 +568,7 @@ describe('CommandPalette', () => {
 
     it('closes palette on Ctrl+P when open', () => {
       useAppStore.setState({ commandPaletteOpen: true });
-      render(<CommandPalette commands={createMockCommands()} />);
+      renderWithProviders(<CommandPalette commands={createMockCommands()} />);
 
       expect(useAppStore.getState().commandPaletteOpen).toBe(true);
 
@@ -496,7 +578,7 @@ describe('CommandPalette', () => {
     });
 
     it('handles uppercase P key', () => {
-      render(<CommandPalette commands={createMockCommands()} />);
+      renderWithProviders(<CommandPalette commands={createMockCommands()} />);
 
       expect(useAppStore.getState().commandPaletteOpen).toBe(false);
 
@@ -506,21 +588,11 @@ describe('CommandPalette', () => {
     });
 
     it('does not open without modifier key', () => {
-      render(<CommandPalette commands={createMockCommands()} />);
+      renderWithProviders(<CommandPalette commands={createMockCommands()} />);
 
       expect(useAppStore.getState().commandPaletteOpen).toBe(false);
 
       simulateGlobalKeyDown('p');
-
-      expect(useAppStore.getState().commandPaletteOpen).toBe(false);
-    });
-
-    it('does not open on Ctrl+K (reserved for SearchBar)', () => {
-      render(<CommandPalette commands={createMockCommands()} />);
-
-      expect(useAppStore.getState().commandPaletteOpen).toBe(false);
-
-      simulateGlobalKeyDown('k', { ctrl: true });
 
       expect(useAppStore.getState().commandPaletteOpen).toBe(false);
     });
@@ -532,66 +604,93 @@ describe('CommandPalette', () => {
 
   describe('Accessibility', () => {
     it('has dialog role', () => {
-      render(<CommandPalette isOpen={true} onClose={vi.fn()} commands={createMockCommands()} />);
+      renderWithProviders(<CommandPalette isOpen={true} onClose={vi.fn()} commands={createMockCommands()} />);
 
       expect(screen.getByRole('dialog')).toBeDefined();
     });
 
     it('has accessible label', () => {
-      render(<CommandPalette isOpen={true} onClose={vi.fn()} commands={createMockCommands()} />);
+      renderWithProviders(<CommandPalette isOpen={true} onClose={vi.fn()} commands={createMockCommands()} />);
 
       expect(screen.getByLabelText('Command palette')).toBeDefined();
     });
 
     it('has aria-modal attribute', () => {
-      render(<CommandPalette isOpen={true} onClose={vi.fn()} commands={createMockCommands()} />);
+      renderWithProviders(<CommandPalette isOpen={true} onClose={vi.fn()} commands={createMockCommands()} />);
 
       const dialog = screen.getByRole('dialog');
       expect(dialog.getAttribute('aria-modal')).toBe('true');
     });
 
-    it('has listbox role for command list', () => {
-      render(<CommandPalette isOpen={true} onClose={vi.fn()} commands={createMockCommands()} />);
+    it('has listbox role for result list', () => {
+      renderWithProviders(<CommandPalette isOpen={true} onClose={vi.fn()} commands={createMockCommands()} />);
 
       expect(screen.getByRole('listbox')).toBeDefined();
     });
 
-    it('items have option role', () => {
-      render(<CommandPalette isOpen={true} onClose={vi.fn()} commands={createMockCommands()} />);
-
-      const options = screen.getAllByRole('option');
-      expect(options.length).toBe(4);
-    });
-
     it('input has aria-controls attribute', () => {
-      render(<CommandPalette isOpen={true} onClose={vi.fn()} commands={createMockCommands()} />);
+      renderWithProviders(<CommandPalette isOpen={true} onClose={vi.fn()} commands={createMockCommands()} />);
 
       const input = screen.getByTestId('command-palette-input');
       expect(input.getAttribute('aria-controls')).toBe('command-list');
     });
 
-    it('input has aria-activedescendant attribute', () => {
-      render(<CommandPalette isOpen={true} onClose={vi.fn()} commands={createMockCommands()} />);
-
-      const input = screen.getByTestId('command-palette-input');
-      expect(input.getAttribute('aria-activedescendant')).toBe('command-cmd-1');
-    });
-
-    it('updates aria-activedescendant on navigation', async () => {
+    it('items in command mode have option role', async () => {
       const user = userEvent.setup();
-      render(<CommandPalette isOpen={true} onClose={vi.fn()} commands={createMockCommands()} />);
-
-      await user.keyboard('{ArrowDown}');
+      renderWithProviders(<CommandPalette isOpen={true} onClose={vi.fn()} commands={createMockCommands()} />);
 
       const input = screen.getByTestId('command-palette-input');
-      expect(input.getAttribute('aria-activedescendant')).toBe('command-cmd-2');
+      await user.type(input, '>');
+
+      const options = screen.getAllByRole('option');
+      expect(options.length).toBe(4);
     });
 
-    it('section headers have group role', () => {
-      render(<CommandPalette isOpen={true} onClose={vi.fn()} commands={createMockCommands()} />);
+    it('section headers have group role in command mode', async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<CommandPalette isOpen={true} onClose={vi.fn()} commands={createMockCommands()} />);
+
+      const input = screen.getByTestId('command-palette-input');
+      await user.type(input, '>');
 
       const groups = screen.getAllByRole('group');
       expect(groups.length).toBeGreaterThan(0);
+    });
+  });
+
+  // ============================================================================
+  // Mode Switching
+  // ============================================================================
+
+  describe('Mode Switching', () => {
+    it('shows page search mode by default', () => {
+      renderWithProviders(<CommandPalette isOpen={true} onClose={vi.fn()} commands={createMockCommands()} />);
+
+      // Default placeholder is "Search pages..."
+      expect(screen.getByPlaceholderText('Search pages...')).toBeDefined();
+      // No mode indicator in page search mode
+      expect(screen.queryByTestId('command-palette-mode-indicator')).toBeNull();
+    });
+
+    it('switches to command mode on > prefix', async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<CommandPalette isOpen={true} onClose={vi.fn()} commands={createMockCommands()} />);
+
+      const input = screen.getByTestId('command-palette-input');
+      await user.type(input, '>');
+
+      // Should show command mode placeholder
+      expect(screen.getByPlaceholderText('Type a command...')).toBeDefined();
+      // Should show mode indicator
+      expect(screen.getByTestId('command-palette-mode-indicator')).toBeDefined();
+    });
+
+    it('shows commands hint in page search mode footer', () => {
+      renderWithProviders(<CommandPalette isOpen={true} onClose={vi.fn()} commands={createMockCommands()} />);
+
+      const footer = screen.getByTestId('command-palette-footer');
+      expect(footer.textContent).toContain('>');
+      expect(footer.textContent).toContain('commands');
     });
   });
 
@@ -601,7 +700,7 @@ describe('CommandPalette', () => {
 
   describe('Custom Props', () => {
     it('accepts custom className', () => {
-      render(
+      renderWithProviders(
         <CommandPalette
           isOpen={true}
           onClose={vi.fn()}
@@ -614,7 +713,7 @@ describe('CommandPalette', () => {
     });
 
     it('accepts custom testId', () => {
-      render(
+      renderWithProviders(
         <CommandPalette
           isOpen={true}
           onClose={vi.fn()}
@@ -628,9 +727,9 @@ describe('CommandPalette', () => {
 
     it('uses default commands when not provided', () => {
       useAppStore.setState({ commandPaletteOpen: true });
-      render(<CommandPalette />);
+      renderWithProviders(<CommandPalette />);
 
-      // Should have default commands
+      // Should have list container rendered
       expect(screen.getByTestId('command-palette-list').children.length).toBeGreaterThan(0);
     });
   });

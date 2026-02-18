@@ -6,7 +6,8 @@
  * - Input behavior (typing, debouncing)
  * - Minimum length hint display
  * - Clear button functionality
- * - Keyboard shortcuts (Escape, Ctrl+K)
+ * - Keyboard shortcuts (Escape)
+ * - Sidebar quiet mode (focus/blur)
  * - Loading state display
  * - Navigation on search
  * - Accessibility features
@@ -374,71 +375,44 @@ describe('SearchBar', () => {
   });
 
   // ============================================================================
-  // Global Keyboard Shortcut
+  // Sidebar Quiet Mode
   // ============================================================================
 
-  describe('Global Keyboard Shortcut', () => {
-    it('focuses input on Ctrl+K', () => {
+  describe('Sidebar Quiet Mode', () => {
+    it('sets sidebarQuiet to true when input is focused', async () => {
+      const user = userEvent.setup();
+      render(<SearchBar />);
+
+      expect(useAppStore.getState().sidebarQuiet).toBe(false);
+
+      const input = screen.getByTestId('search-bar-input');
+      await user.click(input);
+
+      expect(useAppStore.getState().sidebarQuiet).toBe(true);
+    });
+
+    it('sets sidebarQuiet to false when input is blurred', async () => {
+      const user = userEvent.setup();
+      render(<SearchBar />);
+
+      const input = screen.getByTestId('search-bar-input');
+      await user.click(input);
+      expect(useAppStore.getState().sidebarQuiet).toBe(true);
+
+      await user.tab();
+      expect(useAppStore.getState().sidebarQuiet).toBe(false);
+    });
+
+    it('does not respond to Ctrl+K for focus (moved to useGlobalShortcuts)', () => {
       render(<SearchBar />);
 
       const input = screen.getByTestId('search-bar-input');
       expect(document.activeElement).not.toBe(input);
 
-      simulateKeyDown('k', { ctrl: true });
-
-      expect(document.activeElement).toBe(input);
-    });
-
-    it('focuses input on Cmd+K (Mac)', () => {
-      render(<SearchBar />);
-
-      const input = screen.getByTestId('search-bar-input');
-      expect(document.activeElement).not.toBe(input);
-
-      simulateKeyDown('k', { meta: true });
-
-      expect(document.activeElement).toBe(input);
-    });
-
-    it('handles uppercase K key', () => {
-      render(<SearchBar />);
-
-      const input = screen.getByTestId('search-bar-input');
-      simulateKeyDown('K', { ctrl: true });
-
-      expect(document.activeElement).toBe(input);
-    });
-
-    it('does not focus without modifier key', () => {
-      render(<SearchBar />);
-
-      const input = screen.getByTestId('search-bar-input');
-      simulateKeyDown('k');
-
-      expect(document.activeElement).not.toBe(input);
-    });
-
-    it('can be disabled via prop', () => {
-      render(<SearchBar enableGlobalShortcut={false} />);
-
-      const input = screen.getByTestId('search-bar-input');
+      // Ctrl+K no longer focuses the SearchBar; it opens the CommandPalette via useGlobalShortcuts
       simulateKeyDown('k', { ctrl: true });
 
       expect(document.activeElement).not.toBe(input);
-    });
-
-    it('removes event listener on unmount', () => {
-      const { unmount } = render(<SearchBar />);
-
-      unmount();
-
-      // Create a new input to verify the listener is removed
-      render(<SearchBar />);
-      const input = screen.getByTestId('search-bar-input');
-
-      // Should only respond to one listener
-      simulateKeyDown('k', { ctrl: true });
-      expect(document.activeElement).toBe(input);
     });
   });
 

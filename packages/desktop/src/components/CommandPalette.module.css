@@ -41,7 +41,7 @@
   max-width: 560px;
   background-color: var(--surface-base);
   border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-xl);
+  box-shadow: var(--shadow-floating);
   border: 1px solid var(--border-default);
   overflow: hidden;
   animation: palette-in 180ms var(--ease-spring-overshoot, cubic-bezier(0.175, 0.885, 0.32, 1.275)) forwards;
@@ -215,6 +215,33 @@
   border-radius: var(--radius-sm);
   border: 1px solid var(--border-default);
   margin-right: var(--space-1);
+}
+
+/* ============================================================================
+ * Page Result Timestamp
+ * ============================================================================ */
+
+.pageTimestamp {
+  flex-shrink: 0;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* ============================================================================
+ * Mode Indicator
+ * ============================================================================ */
+
+.modeIndicator {
+  flex-shrink: 0;
+  font-size: var(--text-xs);
+  font-family: var(--font-mono);
+  padding: var(--space-1) var(--space-2);
+  background-color: var(--accent-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--text-accent, var(--text-muted));
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 /* ============================================================================
