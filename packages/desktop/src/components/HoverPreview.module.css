@@ -1,0 +1,56 @@
+/**
+ * HoverPreview Component Styles (Stub)
+ *
+ * Floating card that appears when hovering over page links.
+ * Full visual design to be implemented in DBB-450.
+ */
+
+/* ============================================================================
+ * Card Container
+ * ============================================================================ */
+
+.hoverPreview {
+  z-index: var(--z-tooltip, 1000);
+  min-width: 200px;
+  max-width: 360px;
+  padding: var(--space-3);
+  background-color: var(--surface-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg, 0 8px 24px rgba(0, 0, 0, 0.16));
+  pointer-events: none;
+
+  /* Entrance animation */
+  animation: fadeIn 120ms ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ============================================================================
+ * Card Contents
+ * ============================================================================ */
+
+.hoverPreviewTitle {
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold, 600);
+  color: var(--text-primary);
+  margin-bottom: var(--space-1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hoverPreviewStub {
+  font-size: var(--text-xs, 0.75rem);
+  color: var(--text-muted);
+  font-style: italic;
+}

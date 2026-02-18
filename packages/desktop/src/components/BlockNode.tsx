@@ -38,6 +38,7 @@ import { useAppStore } from '../stores/ui-store.js';
 import { useServices } from '../providers/ServiceProvider.js';
 import { BlockEditor as RealBlockEditor } from '../editor/BlockEditor.js';
 import { createDragEndHandler } from '../utils/createDragEndHandler.js';
+import { DragHandle } from './DragHandle.js';
 import styles from './BlockNode.module.css';
 
 // ============================================================================
@@ -965,6 +966,11 @@ function BlockNodeComponent({ blockId, depth = 0, previousBlockId, nextBlockId }
   const setFocusedBlock = useAppStore((s) => s.setFocusedBlock);
   const navigateToPage = useAppStore((s) => s.navigateToPage);
 
+  // Focus mode dimming — non-active blocks are dimmed when focus mode is active
+  const focusModeActive = useAppStore((s) => s.focusModeActive);
+  const blockDimmingEnabled = useAppStore((s) => s.blockDimmingEnabled);
+  const isDimmed = focusModeActive && blockDimmingEnabled && focusedBlockId !== blockId;
+
   // DnD sensors: pointer (mouse/touch) + keyboard for accessibility
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -1020,6 +1026,24 @@ function BlockNodeComponent({ blockId, depth = 0, previousBlockId, nextBlockId }
       }
     },
     [blockId, setFocusedBlock]
+  );
+
+  // Handle right-click: fire a CustomEvent with blockId and mouse coords
+  const handleContextMenu = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      const event = new CustomEvent('block-context-menu', {
+        bubbles: true,
+        cancelable: true,
+        detail: {
+          blockId,
+          x: e.clientX,
+          y: e.clientY,
+        },
+      });
+      e.currentTarget.dispatchEvent(event);
+    },
+    [blockId]
   );
 
   // Handle collapse toggle
@@ -1099,7 +1123,11 @@ function BlockNodeComponent({ blockId, depth = 0, previousBlockId, nextBlockId }
     transition,
   };
 
-  const containerClasses = [styles.container, isDragging && styles['container--dragging']]
+  const containerClasses = [
+    styles.container,
+    isDragging && styles['container--dragging'],
+    isDimmed && styles['container--dimmed'],
+  ]
     .filter(Boolean)
     .join(' ');
 
@@ -1113,13 +1141,18 @@ function BlockNodeComponent({ blockId, depth = 0, previousBlockId, nextBlockId }
       data-block-id={blockId}
       data-testid="block-node"
       style={sortableStyle}
+      onContextMenu={handleContextMenu}
     >
       <div className={styles.row}>
+        {/* DragHandle: hidden by default, revealed on .row hover via CSS */}
+        <DragHandle
+          isDragging={isDragging}
+          dragProps={{ ...attributes, ...listeners }}
+        />
         <BulletHandle
           isCollapsed={block.isCollapsed}
           hasChildren={hasChildren}
           onToggleCollapse={handleToggleCollapse}
-          dragHandleProps={{ ...attributes, ...listeners }}
         />
         <div className={styles.content} data-testid="block-content">
           {isEditing ? (

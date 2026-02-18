@@ -28,6 +28,12 @@
   opacity: 0.5;
 }
 
+/* Focus mode: non-active blocks are dimmed to 40% */
+.container--dimmed {
+  opacity: 0.4;
+  transition: opacity var(--transition-normal);
+}
+
 /* ============================================================================
  * Block Row (Bullet + Content)
  * ============================================================================ */
@@ -38,6 +44,12 @@
   gap: var(--space-1);
   min-height: var(--block-min-height, 24px);
   padding: 0;
+  position: relative;
+}
+
+/* Reveal DragHandle when the block row is hovered */
+.row:hover [data-drag-handle] {
+  opacity: 1;
 }
 
 /* ============================================================================
