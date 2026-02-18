@@ -8,16 +8,33 @@ describe('useAppStore', () => {
 
     // Reset store to initial state before each test
     useAppStore.setState({
-      sidebarOpen: true,
+      sidebarMode: 'open',
+      sidebarOpen: true, // derived boolean; keep in sync with sidebarMode
       sidebarWidth: 240,
       rightPanelOpen: false,
       rightPanelContent: null,
+      rightPanelWidth: 300,
       focusedBlockId: null,
+      focusClickCoords: null,
       selectedBlockIds: new Set(),
       commandPaletteOpen: false,
       currentPageId: null,
+      currentPageTitle: null,
+      currentRouteType: null,
+      blockCount: null,
       pageHistory: [],
       historyIndex: -1,
+      scrollPositions: new Map(),
+      themePreference: 'system',
+      windowFocused: true,
+      isFullscreen: false,
+      saveState: 'idle',
+      quickCaptureFocused: false,
+      focusModeActive: false,
+      zoomedBlockId: null,
+      typewriterEnabled: false,
+      blockDimmingEnabled: false,
+      sidebarQuiet: false,
     });
   });
 
@@ -26,14 +43,59 @@ describe('useAppStore', () => {
   // ============================================================================
 
   describe('Sidebar', () => {
-    it('toggles sidebar open/closed', () => {
+    it('cycles sidebar mode: open → rail → closed → open', () => {
       const store = useAppStore.getState();
+      expect(store.sidebarMode).toBe('open');
       expect(store.sidebarOpen).toBe(true);
 
-      store.toggleSidebar();
+      store.cycleSidebarMode();
+      expect(useAppStore.getState().sidebarMode).toBe('rail');
       expect(useAppStore.getState().sidebarOpen).toBe(false);
 
+      useAppStore.getState().cycleSidebarMode();
+      expect(useAppStore.getState().sidebarMode).toBe('closed');
+      expect(useAppStore.getState().sidebarOpen).toBe(false);
+
+      useAppStore.getState().cycleSidebarMode();
+      expect(useAppStore.getState().sidebarMode).toBe('open');
+      expect(useAppStore.getState().sidebarOpen).toBe(true);
+    });
+
+    it('setSidebarMode updates sidebarMode and derived sidebarOpen', () => {
+      const store = useAppStore.getState();
+
+      store.setSidebarMode('rail');
+      expect(useAppStore.getState().sidebarMode).toBe('rail');
+      expect(useAppStore.getState().sidebarOpen).toBe(false);
+
+      useAppStore.getState().setSidebarMode('closed');
+      expect(useAppStore.getState().sidebarMode).toBe('closed');
+      expect(useAppStore.getState().sidebarOpen).toBe(false);
+
+      useAppStore.getState().setSidebarMode('open');
+      expect(useAppStore.getState().sidebarMode).toBe('open');
+      expect(useAppStore.getState().sidebarOpen).toBe(true);
+    });
+
+    it('toggleSidebar (deprecated shim) cycles sidebar mode', () => {
+      const store = useAppStore.getState();
+      // Start: open → sidebarOpen: true
+      expect(store.sidebarOpen).toBe(true);
+      expect(store.sidebarMode).toBe('open');
+
+      // First toggle: open → rail
+      store.toggleSidebar();
+      expect(useAppStore.getState().sidebarMode).toBe('rail');
+      expect(useAppStore.getState().sidebarOpen).toBe(false);
+
+      // Second toggle: rail → closed
       useAppStore.getState().toggleSidebar();
+      expect(useAppStore.getState().sidebarMode).toBe('closed');
+      expect(useAppStore.getState().sidebarOpen).toBe(false);
+
+      // Third toggle: closed → open
+      useAppStore.getState().toggleSidebar();
+      expect(useAppStore.getState().sidebarMode).toBe('open');
       expect(useAppStore.getState().sidebarOpen).toBe(true);
     });
 
@@ -80,6 +142,14 @@ describe('useAppStore', () => {
       const state = useAppStore.getState();
       expect(state.rightPanelContent).toBe(null);
       expect(state.rightPanelOpen).toBe(false);
+    });
+
+    it('sets right panel width', () => {
+      const store = useAppStore.getState();
+      expect(store.rightPanelWidth).toBe(300);
+
+      store.setRightPanelWidth(400);
+      expect(useAppStore.getState().rightPanelWidth).toBe(400);
     });
   });
 
@@ -338,6 +408,27 @@ describe('useAppStore', () => {
       useAppStore.getState().goForward();
       expect(useAppStore.getState().currentPageId).toBe('page-4');
     });
+
+    it('sets current page meta', () => {
+      const store = useAppStore.getState();
+      expect(store.currentPageTitle).toBe(null);
+      expect(store.blockCount).toBe(null);
+      expect(store.currentRouteType).toBe(null);
+
+      store.setCurrentPageMeta({ title: 'My Page', blockCount: 5, routeType: 'page' });
+      const state = useAppStore.getState();
+      expect(state.currentPageTitle).toBe('My Page');
+      expect(state.blockCount).toBe(5);
+      expect(state.currentRouteType).toBe('page');
+    });
+
+    it('sets and retrieves scroll positions', () => {
+      const store = useAppStore.getState();
+      store.navigateToPage('page-1');
+      store.setScrollPosition('page-1', 250);
+
+      expect(useAppStore.getState().scrollPositions.get('page-1')).toBe(250);
+    });
   });
 
   // ============================================================================
@@ -348,15 +439,19 @@ describe('useAppStore', () => {
     it('has correct default values', () => {
       const store = useAppStore.getState();
 
+      expect(store.sidebarMode).toBe('open');
       expect(store.sidebarOpen).toBe(true);
       expect(store.sidebarWidth).toBe(240);
       expect(store.rightPanelOpen).toBe(false);
       expect(store.rightPanelContent).toBe(null);
+      expect(store.rightPanelWidth).toBe(300);
       expect(store.focusedBlockId).toBe(null);
       expect(store.selectedBlockIds.size).toBe(0);
       expect(store.commandPaletteOpen).toBe(false);
       expect(store.currentPageId).toBe(null);
       expect(store.pageHistory).toEqual([]);
+      expect(store.typewriterEnabled).toBe(false);
+      expect(store.blockDimmingEnabled).toBe(false);
     });
   });
 
@@ -365,9 +460,19 @@ describe('useAppStore', () => {
   // ============================================================================
 
   describe('Persistence', () => {
-    it('persists sidebarOpen to localStorage', () => {
+    it('persists sidebarMode to localStorage', () => {
       const store = useAppStore.getState();
-      store.toggleSidebar();
+      store.setSidebarMode('rail');
+      expect(useAppStore.getState().sidebarMode).toBe('rail');
+
+      // Check localStorage was updated
+      const stored = JSON.parse(localStorage.getItem('double-bind-ui') || '{}');
+      expect(stored.state?.sidebarMode).toBe('rail');
+    });
+
+    it('persists sidebarOpen (compat) to localStorage', () => {
+      const store = useAppStore.getState();
+      store.setSidebarMode('rail');
       expect(useAppStore.getState().sidebarOpen).toBe(false);
 
       // Check localStorage was updated
@@ -384,6 +489,14 @@ describe('useAppStore', () => {
       expect(stored.state?.sidebarWidth).toBe(350);
     });
 
+    it('persists rightPanelWidth to localStorage', () => {
+      const store = useAppStore.getState();
+      store.setRightPanelWidth(400);
+
+      const stored = JSON.parse(localStorage.getItem('double-bind-ui') || '{}');
+      expect(stored.state?.rightPanelWidth).toBe(400);
+    });
+
     it('does not persist non-UI state to localStorage', () => {
       const store = useAppStore.getState();
       store.navigateToPage('page-1');
@@ -392,11 +505,90 @@ describe('useAppStore', () => {
 
       // Check localStorage only contains partialize'd fields
       const stored = JSON.parse(localStorage.getItem('double-bind-ui') || '{}');
+      expect(stored.state).toHaveProperty('sidebarMode');
       expect(stored.state).toHaveProperty('sidebarOpen');
       expect(stored.state).toHaveProperty('sidebarWidth');
       expect(stored.state).not.toHaveProperty('currentPageId');
       expect(stored.state).not.toHaveProperty('focusedBlockId');
       expect(stored.state).not.toHaveProperty('rightPanelOpen');
+    });
+  });
+
+  // ============================================================================
+  // Window State
+  // ============================================================================
+
+  describe('Window State', () => {
+    it('sets window focused state', () => {
+      const store = useAppStore.getState();
+      store.setWindowFocused(false);
+      expect(useAppStore.getState().windowFocused).toBe(false);
+
+      useAppStore.getState().setWindowFocused(true);
+      expect(useAppStore.getState().windowFocused).toBe(true);
+    });
+
+    it('sets save state', () => {
+      const store = useAppStore.getState();
+      expect(store.saveState).toBe('idle');
+
+      store.setSaveState('saving');
+      expect(useAppStore.getState().saveState).toBe('saving');
+
+      useAppStore.getState().setSaveState('saved');
+      expect(useAppStore.getState().saveState).toBe('saved');
+    });
+  });
+
+  // ============================================================================
+  // Editor / Focus Mode
+  // ============================================================================
+
+  describe('Editor / Focus Mode', () => {
+    it('toggles focus mode', () => {
+      const store = useAppStore.getState();
+      expect(store.focusModeActive).toBe(false);
+
+      store.toggleFocusMode();
+      expect(useAppStore.getState().focusModeActive).toBe(true);
+
+      useAppStore.getState().toggleFocusMode();
+      expect(useAppStore.getState().focusModeActive).toBe(false);
+    });
+
+    it('sets zoomed block', () => {
+      const store = useAppStore.getState();
+      expect(store.zoomedBlockId).toBe(null);
+
+      store.setZoomedBlock('block-1');
+      expect(useAppStore.getState().zoomedBlockId).toBe('block-1');
+
+      useAppStore.getState().setZoomedBlock(null);
+      expect(useAppStore.getState().zoomedBlockId).toBe(null);
+    });
+
+    it('toggles typewriter mode', () => {
+      const store = useAppStore.getState();
+      expect(store.typewriterEnabled).toBe(false);
+
+      store.toggleTypewriter();
+      expect(useAppStore.getState().typewriterEnabled).toBe(true);
+    });
+
+    it('toggles block dimming', () => {
+      const store = useAppStore.getState();
+      expect(store.blockDimmingEnabled).toBe(false);
+
+      store.toggleBlockDimming();
+      expect(useAppStore.getState().blockDimmingEnabled).toBe(true);
+    });
+
+    it('sets sidebar quiet', () => {
+      const store = useAppStore.getState();
+      expect(store.sidebarQuiet).toBe(false);
+
+      store.setSidebarQuiet(true);
+      expect(useAppStore.getState().sidebarQuiet).toBe(true);
     });
   });
 

@@ -98,7 +98,8 @@ describe('CommandPalette', () => {
       currentPageId: null,
       pageHistory: [],
       historyIndex: -1,
-      sidebarOpen: true,
+      sidebarMode: 'open',
+      sidebarOpen: true, // derived boolean; keep in sync with sidebarMode
       rightPanelOpen: false,
       rightPanelContent: null,
     });

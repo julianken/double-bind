@@ -5,7 +5,27 @@
  */
 
 export { useAppStore } from './ui-store.js';
-export type { AppStore, RightPanelContent } from './ui-store.js';
+export type {
+  AppStore,
+  SidebarMode,
+  RouteType,
+  SaveState,
+  RightPanelContent,
+  ThemePreference,
+  ResolvedTheme,
+} from './ui-store.js';
+
+export { useSettingsStore } from './settings-store.js';
+export type {
+  SettingsStore,
+  LineSpacing,
+  AccessibilityOverride,
+  FontScale,
+  DefaultBlockType,
+} from './settings-store.js';
+
+export { useGraphStore } from './graph-store.js';
+export type { GraphStore, EncodingMode, PageId } from './graph-store.js';
 
 export {
   useQueryHistoryStore,

@@ -15,7 +15,8 @@ import { useAppStore } from '../../../src/stores/ui-store';
 // Reset store to default state before each test
 function resetStore() {
   useAppStore.setState({
-    sidebarOpen: true,
+    sidebarMode: 'open',
+    sidebarOpen: true, // derived boolean; keep in sync with sidebarMode
     sidebarWidth: 240,
     rightPanelOpen: false,
     rightPanelContent: null,
@@ -119,7 +120,7 @@ describe('AppShell', () => {
     });
 
     it('respects sidebarOpen state', () => {
-      useAppStore.setState({ sidebarOpen: true, sidebarWidth: 240 });
+      useAppStore.setState({ sidebarMode: 'open', sidebarOpen: true, sidebarWidth: 240 });
 
       render(
         <AppShell sidebar={<div>Sidebar</div>}>
@@ -132,7 +133,7 @@ describe('AppShell', () => {
     });
 
     it('collapses sidebar when sidebarOpen is false', () => {
-      useAppStore.setState({ sidebarOpen: false });
+      useAppStore.setState({ sidebarMode: 'rail', sidebarOpen: false });
 
       render(
         <AppShell sidebar={<div>Sidebar</div>}>

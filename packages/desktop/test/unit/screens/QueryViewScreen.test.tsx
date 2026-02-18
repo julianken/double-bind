@@ -87,7 +87,8 @@ describe('QueryViewScreen', () => {
   beforeEach(() => {
     // Reset stores
     useAppStore.setState({
-      sidebarOpen: true,
+      sidebarMode: 'open',
+      sidebarOpen: true, // derived boolean; keep in sync with sidebarMode
       sidebarWidth: 240,
       rightPanelOpen: false,
       rightPanelContent: null,
