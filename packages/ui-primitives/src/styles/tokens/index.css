@@ -12,6 +12,9 @@
 @import './primitives/motion.css';
 @import './primitives/typography.css';
 
+/* Tier 1.5: Semantic motion (composed from primitives) */
+@import './semantic/motion.css';
+
 /* Tier 1: Color primitives */
 @import './primitives/colors-gray.css';
 @import './primitives/colors-accent.css';

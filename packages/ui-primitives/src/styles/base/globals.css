@@ -118,6 +118,12 @@ body {
   scrollbar-color: var(--border-strong) transparent;
 }
 
+/* Typing isolation — ProseMirror plugin sets/clears data-typing on <html> */
+[data-typing="true"] *:not(.ProseMirror):not(.ProseMirror *) {
+  transition-duration: 0ms !important;
+  animation-duration: 0ms !important;
+}
+
 /* Reduced motion preference */
 @media (prefers-reduced-motion: reduce) {
   *,

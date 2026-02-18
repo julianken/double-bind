@@ -76,6 +76,8 @@ export {
   highlightReferencesPluginKey,
 } from './highlight-references.js';
 
+export { typingIsolationPlugin } from './typing-isolation.js';
+
 export {
   createAutocompletePlugin as createPageAutocompletePlugin,
   autocompletePluginKey as pageAutocompletePluginKey,
