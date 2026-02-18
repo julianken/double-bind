@@ -15,7 +15,7 @@
 
 import { useState, useEffect } from 'react';
 import type { PageId } from '@double-bind/types';
-import { useServices } from '../providers/ServiceProvider.js';
+import { useServicesOptional } from '../providers/ServiceProvider.js';
 
 // ============================================================================
 // Types
@@ -58,13 +58,7 @@ export function usePagePreview(pageId: PageId | null): UsePagePreviewResult {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
-  let services: ReturnType<typeof useServices> | null = null;
-  try {
-    services = useServices();
-  } catch {
-    // Outside ServiceProvider (e.g., tests without provider)
-    services = null;
-  }
+  const services = useServicesOptional();
 
   useEffect(() => {
     if (!pageId) {
@@ -136,8 +130,7 @@ export function usePagePreview(pageId: PageId | null): UsePagePreviewResult {
     return () => {
       cancelled = true;
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pageId]);
+  }, [pageId, services?.pageService]);
 
   return { data, isLoading, error };
 }

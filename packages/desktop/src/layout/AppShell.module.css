@@ -63,7 +63,7 @@
  * ============================================================================ */
 
 .sidebar[data-sidebar-quiet="true"] {
-  opacity: 0.35;
+  opacity: 0.5;
   transition: opacity var(--transition-slow, 400ms ease);
   pointer-events: none;
 }
