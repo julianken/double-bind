@@ -713,17 +713,8 @@ const PageLinkSegment = memo(function PageLinkSegment({
   }
 
   // No ServiceProvider in tree (unit tests, Storybook, etc.) — render
-  // InlinePageLink optimistically so the component is visually testable.
-  // exists=false signals the page hasn't been created yet.
-  return (
-    <InlinePageLink
-      pageId={title as PageId}
-      title={title}
-      exists={false}
-      onClick={handleClick}
-      onHover={onHover ? handleHover : undefined}
-    />
-  );
+  // as plain text since we can't construct a valid PageId from a title string.
+  return <span className={styles.unresolvedLink}>{title}</span>;
 });
 
 /**
