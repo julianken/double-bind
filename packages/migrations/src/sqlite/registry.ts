@@ -3,6 +3,7 @@
 
 import type { SqliteMigration } from '../sqlite-types.js';
 import { migration as v001 } from './001-initial-schema.js';
+import { migration as v002 } from './002-starred-pages.js';
 
 /**
  * All SQLite migrations in version order.
@@ -10,4 +11,4 @@ import { migration as v001 } from './001-initial-schema.js';
  * Each migration is imported from its own file in the sqlite/ directory.
  * Migrations are applied in version order (lowest to highest).
  */
-export const ALL_SQLITE_MIGRATIONS: SqliteMigration[] = [v001];
+export const ALL_SQLITE_MIGRATIONS: SqliteMigration[] = [v001, v002];
