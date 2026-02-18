@@ -1,0 +1,29 @@
+/**
+ * LassoSelectionOverlay Component Styles
+ */
+
+.overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  user-select: none;
+}
+
+.overlayEnabled {
+  pointer-events: all;
+  cursor: crosshair;
+}
+
+/* ============================================================================
+ * Lasso Polygon
+ * ============================================================================ */
+
+.lasso {
+  fill: oklch(60% 0.18 250 / 12%);
+  stroke: oklch(60% 0.18 250 / 80%);
+  stroke-width: 1px;
+  stroke-dasharray: 4 3;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
