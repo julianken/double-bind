@@ -59,28 +59,32 @@
   font-family: var(--font-mono);
   font-size: 0.875em;
   font-feature-settings: 'ss01' 1;
+  background-color: var(--bg-tertiary);
+  border-radius: 3px;
+  padding: 0.1em 0.3em;
+  color: var(--text-secondary);
 }
 
-/* Page links: blue underlined text */
+/* Page links: accent-colored underlined text */
 .ProseMirror .highlight-page-link,
 .ProseMirror .page-link {
-  color: #2563eb;
+  color: var(--accent-primary);
   text-decoration: underline;
   cursor: pointer;
 }
 
-/* Block references: purple with subtle background */
+/* Block references: accent with subtle background */
 .ProseMirror .highlight-block-ref,
 .ProseMirror .block-ref {
-  color: #7c3aed;
-  background-color: rgba(124, 58, 237, 0.08);
-  border-radius: 2px;
+  color: var(--accent-primary);
+  background-color: var(--accent-muted);
+  border-radius: var(--radius-sm);
   padding: 0 2px;
 }
 
-/* Tags: green with medium weight */
+/* Tags: accent-colored with medium weight */
 .ProseMirror .highlight-tag,
 .ProseMirror .tag {
-  color: #059669;
-  font-weight: 500;
+  color: var(--accent-primary);
+  font-weight: var(--font-medium);
 }
