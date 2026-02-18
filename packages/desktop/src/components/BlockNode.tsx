@@ -35,7 +35,7 @@ import { CSS as DndCSS } from '@dnd-kit/utilities';
 import { InlineBlockRef, InlinePageLink } from '@double-bind/ui-primitives';
 import { useCozoQuery, invalidateQueries, resetQueries } from '../hooks/useCozoQuery.js';
 import { useAppStore } from '../stores/ui-store.js';
-import { useServices } from '../providers/ServiceProvider.js';
+import { useServicesOptional } from '../providers/ServiceProvider.js';
 import { BlockEditor as RealBlockEditor } from '../editor/BlockEditor.js';
 import { createDragEndHandler } from '../utils/createDragEndHandler.js';
 import { DragHandle } from './DragHandle.js';
@@ -547,6 +547,8 @@ interface ResolvedPageLink {
   title: string;
   pageId: PageId | null;
   exists: boolean;
+  /** Whether a ServiceProvider is present in the tree (false in test/storybook contexts) */
+  hasServices: boolean;
 }
 
 /**
@@ -559,14 +561,12 @@ interface ResolvedBlockRef {
 }
 
 /**
- * Hook to safely access services (returns null if not in provider)
+ * Hook to safely access services (returns null if not in provider).
+ * Uses useServicesOptional so hooks rules are not violated — no try/catch
+ * around a hook call, which silently swallows all thrown errors.
  */
 function useSafeServices() {
-  try {
-    return useServices();
-  } catch {
-    return null;
-  }
+  return useServicesOptional();
 }
 
 /**
@@ -578,11 +578,15 @@ function useResolvedPageLink(title: string): ResolvedPageLink {
     title,
     pageId: null,
     exists: false,
+    hasServices: !!services,
   });
 
   useEffect(() => {
     if (!services?.pageService) {
-      // No service available - leave as unresolved
+      // No ServiceProvider in tree (e.g. unit tests without provider).
+      // Keep hasServices=false so the component can render InlinePageLink
+      // optimistically instead of the non-interactive unresolved span.
+      setResolved((prev) => ({ ...prev, hasServices: false }));
       return;
     }
 
@@ -596,11 +600,12 @@ function useResolvedPageLink(title: string): ResolvedPageLink {
             title,
             pageId: page?.pageId ?? null,
             exists: !!page,
+            hasServices: true,
           });
         }
       } catch {
         if (!cancelled) {
-          setResolved({ title, pageId: null, exists: false });
+          setResolved({ title, pageId: null, exists: false, hasServices: true });
         }
       }
     }
@@ -687,7 +692,7 @@ const PageLinkSegment = memo(function PageLinkSegment({
     [onHover]
   );
 
-  // If page exists and we have a pageId, render the interactive component
+  // If page exists and we have a pageId, render the interactive resolved link
   if (resolved.pageId) {
     return (
       <InlinePageLink
@@ -700,10 +705,19 @@ const PageLinkSegment = memo(function PageLinkSegment({
     );
   }
 
-  // Fallback for unresolved page (show as non-interactive for now)
+  // When services are present but resolution yielded no pageId, the page
+  // genuinely doesn't exist yet. Render as non-interactive text to avoid
+  // navigating to an invalid route (title is not a ULID and cannot be a PageId).
+  if (resolved.hasServices) {
+    return <span className={styles.unresolvedLink}>{title}</span>;
+  }
+
+  // No ServiceProvider in tree (unit tests, Storybook, etc.) — render
+  // InlinePageLink optimistically so the component is visually testable.
+  // exists=false signals the page hasn't been created yet.
   return (
     <InlinePageLink
-      pageId={title as PageId} // Use title as fallback ID
+      pageId={title as PageId}
       title={title}
       exists={false}
       onClick={handleClick}
