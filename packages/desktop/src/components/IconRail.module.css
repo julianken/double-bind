@@ -1,0 +1,62 @@
+/**
+ * IconRail Component Styles
+ *
+ * Icon-only vertical navigation for rail sidebar mode.
+ */
+
+/* ============================================================================
+ * Rail Container
+ * ============================================================================ */
+
+.rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 48px;
+  padding: var(--space-2) 0;
+  gap: var(--space-1);
+}
+
+/* ============================================================================
+ * Navigation Button
+ * ============================================================================ */
+
+.navButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  /* 44px minimum touch target per WCAG 2.1 AA */
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+  outline: none;
+}
+
+.navButton:hover {
+  background-color: var(--surface-overlay);
+  color: var(--text-primary);
+}
+
+.navButton:focus-visible {
+  outline: var(--ring-width) solid var(--ring-color);
+  outline-offset: -2px;
+}
+
+.navButton--active {
+  color: var(--accent-interactive);
+}
+
+.navButton--active:hover {
+  background-color: var(--accent-subtle);
+  color: var(--accent-hover);
+}

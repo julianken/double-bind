@@ -1,0 +1,51 @@
+/**
+ * QuickCapture Component Styles
+ *
+ * Rapid note capture textarea in the sidebar.
+ */
+
+/* ============================================================================
+ * Container
+ * ============================================================================ */
+
+.container {
+  padding: var(--space-2) var(--space-3);
+}
+
+/* ============================================================================
+ * Textarea
+ * ============================================================================ */
+
+.textarea {
+  width: 100%;
+  box-sizing: border-box;
+  resize: none;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background-color: var(--surface-recessed);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: var(--text-ui);
+  line-height: 1.5;
+  padding: var(--space-2) var(--space-3);
+  outline: none;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.textarea::placeholder {
+  color: var(--text-muted);
+}
+
+.textarea:focus {
+  border-color: var(--accent-interactive);
+  box-shadow: 0 0 0 var(--ring-width) var(--ring-color);
+}
+
+.textarea:hover:not(:focus) {
+  border-color: var(--border-strong);
+}
+
+.textarea:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

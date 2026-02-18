@@ -1,0 +1,85 @@
+/**
+ * SectionHeader Component Styles
+ *
+ * Sidebar section labels: "STARRED", "RECENT", "ALL PAGES"
+ */
+
+/* ============================================================================
+ * Header Container
+ * ============================================================================ */
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1-5);
+  padding: var(--space-2) var(--space-3);
+  width: 100%;
+
+  /* Typography tokens per spec */
+  font-size: var(--text-meta);
+  font-weight: var(--font-semibold);
+  letter-spacing: var(--tracking-section);
+  text-transform: uppercase;
+  color: var(--text-muted);
+
+  /* Reset button styles if rendered as button */
+  background: none;
+  border: none;
+  cursor: default;
+  text-align: left;
+  outline: none;
+}
+
+/* When collapsible (rendered as button) */
+button.header {
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: color var(--transition-fast);
+}
+
+button.header:hover {
+  color: var(--text-secondary);
+}
+
+button.header:focus-visible {
+  outline: var(--ring-width) solid var(--ring-color);
+  outline-offset: -2px;
+}
+
+/* ============================================================================
+ * Label
+ * ============================================================================ */
+
+.label {
+  flex: 1;
+}
+
+/* ============================================================================
+ * Count Badge
+ * ============================================================================ */
+
+.count {
+  font-size: var(--text-meta);
+  font-weight: var(--font-normal);
+  color: var(--text-muted);
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+/* ============================================================================
+ * Chevron Icon
+ * ============================================================================ */
+
+.chevron {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  transition: transform var(--transition-fast);
+  transform: rotate(0deg);
+}
+
+.chevron--collapsed {
+  transform: rotate(-90deg);
+}
