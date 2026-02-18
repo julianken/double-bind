@@ -203,6 +203,7 @@ export function PageView({ pageId }: PageViewProps) {
   const selectedBlockIds = useAppStore((state) => state.selectedBlockIds);
   const clearSelection = useAppStore((state) => state.clearSelection);
   const setFocusedBlock = useAppStore((state) => state.setFocusedBlock);
+  const setCurrentPageMeta = useAppStore((state) => state.setCurrentPageMeta);
 
   // DnD sensors: pointer (mouse/touch) + keyboard for accessibility
   const sensors = useSensors(
@@ -233,6 +234,16 @@ export function PageView({ pageId }: PageViewProps) {
       .filter((block) => block.parentId === null)
       .sort((a, b) => a.order.localeCompare(b.order));
   }, [data?.blocks]);
+
+  // Sync page metadata (title, block count, route type) to Zustand store
+  // so StatusBar and other store consumers can display up-to-date info.
+  useEffect(() => {
+    setCurrentPageMeta({
+      title: data?.page.title ?? null,
+      blockCount: data?.blocks.length ?? null,
+      routeType: 'page',
+    });
+  }, [data?.page.title, data?.blocks.length, setCurrentPageMeta]);
 
   // Handle drag-and-drop reordering of root-level blocks.
   // Uses the shared createDragEndHandler so nested levels (in BlockNode)

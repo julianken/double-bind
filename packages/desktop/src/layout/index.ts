@@ -8,6 +8,9 @@ export { AppShell, type AppShellProps } from './AppShell.js';
 export { AppToolbar, type AppToolbarProps } from './AppToolbar.js';
 export { Breadcrumb, type BreadcrumbProps } from './Breadcrumb.js';
 
+export { StatusBar, type StatusBarProps } from './StatusBar.js';
+export { RightPanel, type RightPanelProps } from './RightPanel.js';
+
 export { Sidebar, QuickCapture, SidebarFooter, type SidebarProps } from './Sidebar.js';
 export { PageList, type PageListProps } from '../components/PageList.js';
 

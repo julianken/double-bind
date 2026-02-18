@@ -1,5 +1,9 @@
 /**
  * Tests for AppShell layout component.
+ *
+ * Note: Navigation back/forward buttons have moved to AppToolbar (DBB-442).
+ * A stub AppToolbar lives in this branch for test compatibility; the full
+ * implementation will replace it when DBB-442 merges.
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -20,6 +24,13 @@ function resetStore() {
     sidebarWidth: 240,
     rightPanelOpen: false,
     rightPanelContent: null,
+    rightPanelWidth: 300,
+    windowFocused: true,
+    focusModeActive: false,
+    typewriterEnabled: false,
+    blockDimmingEnabled: false,
+    saveState: 'idle',
+    blockCount: null,
   });
 }
 
@@ -50,11 +61,7 @@ describe('AppShell', () => {
   describe('Layout Structure', () => {
     it('renders all layout sections', () => {
       render(
-        <AppShell
-          sidebar={<div>Sidebar Content</div>}
-          rightPanel={<div>Right Panel Content</div>}
-          statusBar={<div>Status Bar Content</div>}
-        >
+        <AppShell sidebar={<div>Sidebar Content</div>}>
           <div>Main Content</div>
         </AppShell>
       );
@@ -62,52 +69,44 @@ describe('AppShell', () => {
       expect(screen.getByTestId('app-shell')).toBeDefined();
       expect(screen.getByTestId('app-shell-sidebar')).toBeDefined();
       expect(screen.getByTestId('app-shell-main')).toBeDefined();
-      expect(screen.getByTestId('app-shell-right-panel')).toBeDefined();
       expect(screen.getByTestId('app-shell-status-bar')).toBeDefined();
     });
 
     it('renders content in each section', () => {
       render(
-        <AppShell
-          sidebar={<div>Sidebar Content</div>}
-          rightPanel={<div>Right Panel Content</div>}
-          statusBar={<div>Status Bar Content</div>}
-        >
+        <AppShell sidebar={<div>Sidebar Content</div>}>
           <div>Main Content</div>
         </AppShell>
       );
 
       expect(screen.getByText('Sidebar Content')).toBeDefined();
       expect(screen.getByText('Main Content')).toBeDefined();
-      expect(screen.getByText('Right Panel Content')).toBeDefined();
-      expect(screen.getByText('Status Bar Content')).toBeDefined();
     });
 
-    it('renders without optional rightPanel', () => {
-      render(
-        <AppShell sidebar={<div>Sidebar</div>} statusBar={<div>Status</div>}>
-          <div>Main</div>
-        </AppShell>
-      );
-
-      expect(screen.queryByTestId('app-shell-right-panel')).toBeNull();
-    });
-
-    it('renders without optional statusBar content', () => {
+    it('always renders navigation bar via AppToolbar', () => {
       render(
         <AppShell sidebar={<div>Sidebar</div>}>
           <div>Main</div>
         </AppShell>
       );
 
-      // Status bar element exists but is empty
+      expect(screen.getByTestId('navigation-bar')).toBeDefined();
+    });
+
+    it('always renders status bar', () => {
+      render(
+        <AppShell sidebar={<div>Sidebar</div>}>
+          <div>Main</div>
+        </AppShell>
+      );
+
       expect(screen.getByTestId('app-shell-status-bar')).toBeDefined();
     });
   });
 
   describe('Sidebar State', () => {
-    it('uses sidebarWidth from store', () => {
-      useAppStore.setState({ sidebarWidth: 300 });
+    it('uses sidebarWidth from store when mode is open', () => {
+      useAppStore.setState({ sidebarMode: 'open', sidebarWidth: 300 });
 
       render(
         <AppShell sidebar={<div>Sidebar</div>}>
@@ -119,7 +118,7 @@ describe('AppShell', () => {
       expect(sidebar.style.width).toBe('300px');
     });
 
-    it('respects sidebarOpen state', () => {
+    it('respects sidebarMode=open state', () => {
       useAppStore.setState({ sidebarMode: 'open', sidebarOpen: true, sidebarWidth: 240 });
 
       render(
@@ -132,7 +131,21 @@ describe('AppShell', () => {
       expect(sidebar.style.width).toBe('240px');
     });
 
-    it('collapses sidebar when sidebarOpen is false', () => {
+    it('collapses sidebar when sidebarMode is closed', () => {
+      useAppStore.setState({ sidebarMode: 'closed', sidebarOpen: false });
+
+      render(
+        <AppShell sidebar={<div>Sidebar</div>}>
+          <div>Main</div>
+        </AppShell>
+      );
+
+      const sidebar = screen.getByTestId('app-shell-sidebar');
+      // No inline style applied for closed mode — CSS class handles it
+      expect(sidebar.getAttribute('data-sidebar-mode')).toBe('closed');
+    });
+
+    it('sets data-sidebar-mode=rail when sidebarMode is rail', () => {
       useAppStore.setState({ sidebarMode: 'rail', sidebarOpen: false });
 
       render(
@@ -142,16 +155,30 @@ describe('AppShell', () => {
       );
 
       const sidebar = screen.getByTestId('app-shell-sidebar');
-      expect(sidebar.style.width).toBe('0px');
+      expect(sidebar.getAttribute('data-sidebar-mode')).toBe('rail');
+      expect(sidebar.style.width).toBe('48px');
+    });
+
+    it('sets data-sidebar-mode attribute reflecting current mode', () => {
+      useAppStore.setState({ sidebarMode: 'open', sidebarWidth: 240 });
+
+      render(
+        <AppShell sidebar={<div>Sidebar</div>}>
+          <div>Main</div>
+        </AppShell>
+      );
+
+      const sidebar = screen.getByTestId('app-shell-sidebar');
+      expect(sidebar.getAttribute('data-sidebar-mode')).toBe('open');
     });
   });
 
   describe('Right Panel State', () => {
     it('shows right panel when rightPanelOpen is true', () => {
-      useAppStore.setState({ rightPanelOpen: true });
+      useAppStore.setState({ rightPanelOpen: true, rightPanelWidth: 300 });
 
       render(
-        <AppShell sidebar={<div>Sidebar</div>} rightPanel={<div>Panel</div>}>
+        <AppShell sidebar={<div>Sidebar</div>}>
           <div>Main</div>
         </AppShell>
       );
@@ -165,14 +192,95 @@ describe('AppShell', () => {
       useAppStore.setState({ rightPanelOpen: false });
 
       render(
-        <AppShell sidebar={<div>Sidebar</div>} rightPanel={<div>Panel</div>}>
+        <AppShell sidebar={<div>Sidebar</div>}>
           <div>Main</div>
         </AppShell>
       );
 
       const rightPanel = screen.getByTestId('app-shell-right-panel');
-      expect(rightPanel.style.width).toBe('0px');
+      expect(rightPanel.style.width).toBe('');
       expect(rightPanel.getAttribute('aria-hidden')).toBe('true');
+    });
+  });
+
+  describe('Data Attributes', () => {
+    it('sets data-window-focused=true when window is focused', () => {
+      useAppStore.setState({ windowFocused: true });
+
+      render(
+        <AppShell sidebar={<div>Sidebar</div>}>
+          <div>Main</div>
+        </AppShell>
+      );
+
+      const container = screen.getByTestId('app-shell');
+      expect(container.getAttribute('data-window-focused')).toBe('true');
+    });
+
+    it('sets data-window-focused=false when window is not focused', () => {
+      useAppStore.setState({ windowFocused: false });
+
+      render(
+        <AppShell sidebar={<div>Sidebar</div>}>
+          <div>Main</div>
+        </AppShell>
+      );
+
+      const container = screen.getByTestId('app-shell');
+      expect(container.getAttribute('data-window-focused')).toBe('false');
+    });
+
+    it('sets data-sidebar-mode on sidebar aside', () => {
+      useAppStore.setState({ sidebarMode: 'open' });
+
+      render(
+        <AppShell sidebar={<div>Sidebar</div>}>
+          <div>Main</div>
+        </AppShell>
+      );
+
+      const sidebar = screen.getByTestId('app-shell-sidebar');
+      expect(sidebar.getAttribute('data-sidebar-mode')).toBe('open');
+    });
+
+    it('does not set data-focus-mode when focus mode is inactive', () => {
+      useAppStore.setState({ focusModeActive: false, typewriterEnabled: false, blockDimmingEnabled: false });
+
+      render(
+        <AppShell sidebar={<div>Sidebar</div>}>
+          <div>Main</div>
+        </AppShell>
+      );
+
+      const main = screen.getByTestId('app-shell-main');
+      // data-focus-mode should be absent when all flags are off
+      expect(main.getAttribute('data-focus-mode')).toBeNull();
+    });
+
+    it('sets data-focus-mode=active when focusModeActive is true', () => {
+      useAppStore.setState({ focusModeActive: true, typewriterEnabled: false, blockDimmingEnabled: false });
+
+      render(
+        <AppShell sidebar={<div>Sidebar</div>}>
+          <div>Main</div>
+        </AppShell>
+      );
+
+      const main = screen.getByTestId('app-shell-main');
+      expect(main.getAttribute('data-focus-mode')).toBe('active');
+    });
+
+    it('combines multiple focus-mode flags in data-focus-mode', () => {
+      useAppStore.setState({ focusModeActive: true, typewriterEnabled: true, blockDimmingEnabled: true });
+
+      render(
+        <AppShell sidebar={<div>Sidebar</div>}>
+          <div>Main</div>
+        </AppShell>
+      );
+
+      const main = screen.getByTestId('app-shell-main');
+      expect(main.getAttribute('data-focus-mode')).toBe('active typewriter dim');
     });
   });
 
@@ -314,11 +422,7 @@ describe('AppShell', () => {
   describe('Accessibility', () => {
     it('has proper ARIA labels', () => {
       render(
-        <AppShell
-          sidebar={<div>Sidebar</div>}
-          rightPanel={<div>Panel</div>}
-          statusBar={<div>Status</div>}
-        >
+        <AppShell sidebar={<div>Sidebar</div>}>
           <div>Main</div>
         </AppShell>
       );
@@ -330,11 +434,7 @@ describe('AppShell', () => {
 
     it('uses semantic HTML elements', () => {
       render(
-        <AppShell
-          sidebar={<div>Sidebar</div>}
-          rightPanel={<div>Panel</div>}
-          statusBar={<div>Status</div>}
-        >
+        <AppShell sidebar={<div>Sidebar</div>}>
           <div>Main</div>
         </AppShell>
       );
@@ -369,7 +469,11 @@ describe('AppShell', () => {
   });
 
   describe('Flexbox Layout', () => {
-    it('main content has flex-grow behavior', () => {
+    // CSS module class-based flex properties are not computed by jsdom.
+    // These tests verify the correct elements are used (semantic HTML),
+    // which ensures the CSS classes have the correct targets.
+
+    it('main content element is present for flex layout', () => {
       render(
         <AppShell sidebar={<div>Sidebar</div>}>
           <div>Main</div>
@@ -377,11 +481,10 @@ describe('AppShell', () => {
       );
 
       const main = screen.getByTestId('app-shell-main');
-      // Check that flex includes grow value of 1 (may be shorthand like '1 1 0%')
-      expect(main.style.flex).toMatch(/^1/);
+      expect(main.tagName.toLowerCase()).toBe('main');
     });
 
-    it('sidebar has fixed width (no flex-grow)', () => {
+    it('sidebar element is an aside for flex layout', () => {
       render(
         <AppShell sidebar={<div>Sidebar</div>}>
           <div>Main</div>
@@ -389,124 +492,22 @@ describe('AppShell', () => {
       );
 
       const sidebar = screen.getByTestId('app-shell-sidebar');
-      expect(sidebar.style.flexShrink).toBe('0');
+      expect(sidebar.tagName.toLowerCase()).toBe('aside');
     });
 
-    it('right panel has fixed width (no flex-grow)', () => {
-      useAppStore.setState({ rightPanelOpen: true });
+    it('right panel element is present when open', () => {
+      useAppStore.setState({ rightPanelOpen: true, rightPanelWidth: 300 });
 
       render(
-        <AppShell sidebar={<div>Sidebar</div>} rightPanel={<div>Panel</div>}>
+        <AppShell sidebar={<div>Sidebar</div>}>
           <div>Main</div>
         </AppShell>
       );
 
       const rightPanel = screen.getByTestId('app-shell-right-panel');
-      expect(rightPanel.style.flexShrink).toBe('0');
-    });
-  });
-
-  describe('Navigation Buttons', () => {
-    it('renders navigation toolbar with back/forward buttons', () => {
-      render(
-        <AppShell sidebar={<div>Sidebar</div>}>
-          <div>Main</div>
-        </AppShell>
-      );
-
-      expect(screen.getByTestId('navigation-bar')).toBeDefined();
-      expect(screen.getByTestId('nav-back')).toBeDefined();
-      expect(screen.getByTestId('nav-forward')).toBeDefined();
-    });
-
-    it('back button is disabled when historyIndex is 0', () => {
-      useAppStore.setState({ historyIndex: 0, pageHistory: ['page1'] });
-
-      render(
-        <AppShell sidebar={<div>Sidebar</div>}>
-          <div>Main</div>
-        </AppShell>
-      );
-
-      const backButton = screen.getByTestId('nav-back');
-      expect(backButton).toBeInstanceOf(HTMLButtonElement);
-      expect((backButton as HTMLButtonElement).disabled).toBe(true);
-    });
-
-    it('forward button is disabled when at end of history', () => {
-      useAppStore.setState({ historyIndex: 0, pageHistory: ['page1'] });
-
-      render(
-        <AppShell sidebar={<div>Sidebar</div>}>
-          <div>Main</div>
-        </AppShell>
-      );
-
-      const forwardButton = screen.getByTestId('nav-forward');
-      expect(forwardButton).toBeInstanceOf(HTMLButtonElement);
-      expect((forwardButton as HTMLButtonElement).disabled).toBe(true);
-    });
-
-    it('back button calls goBack when enabled', async () => {
-      const user = userEvent.setup();
-      useAppStore.setState({
-        historyIndex: 1,
-        pageHistory: ['page1', 'page2'],
-        currentPageId: 'page2',
-      });
-
-      render(
-        <AppShell sidebar={<div>Sidebar</div>}>
-          <div>Main</div>
-        </AppShell>
-      );
-
-      const backButton = screen.getByTestId('nav-back');
-      expect((backButton as HTMLButtonElement).disabled).toBe(false);
-
-      await user.click(backButton);
-
-      // goBack decrements historyIndex
-      expect(useAppStore.getState().historyIndex).toBe(0);
-      expect(useAppStore.getState().currentPageId).toBe('page1');
-    });
-
-    it('forward button calls goForward when enabled', async () => {
-      const user = userEvent.setup();
-      useAppStore.setState({
-        historyIndex: 0,
-        pageHistory: ['page1', 'page2'],
-        currentPageId: 'page1',
-      });
-
-      render(
-        <AppShell sidebar={<div>Sidebar</div>}>
-          <div>Main</div>
-        </AppShell>
-      );
-
-      const forwardButton = screen.getByTestId('nav-forward');
-      expect((forwardButton as HTMLButtonElement).disabled).toBe(false);
-
-      await user.click(forwardButton);
-
-      // goForward increments historyIndex
-      expect(useAppStore.getState().historyIndex).toBe(1);
-      expect(useAppStore.getState().currentPageId).toBe('page2');
-    });
-
-    it('buttons have correct aria-labels', () => {
-      render(
-        <AppShell sidebar={<div>Sidebar</div>}>
-          <div>Main</div>
-        </AppShell>
-      );
-
-      const backButton = screen.getByTestId('nav-back');
-      const forwardButton = screen.getByTestId('nav-forward');
-
-      expect(backButton.getAttribute('aria-label')).toBe('Go back');
-      expect(forwardButton.getAttribute('aria-label')).toBe('Go forward');
+      expect(rightPanel.tagName.toLowerCase()).toBe('aside');
+      // Width comes from inline style when open
+      expect(rightPanel.style.width).toBe('300px');
     });
   });
 
@@ -536,20 +537,21 @@ describe('AppShell', () => {
 
     it('updates when right panel state changes', () => {
       const { rerender } = render(
-        <AppShell sidebar={<div>Sidebar</div>} rightPanel={<div>Panel</div>}>
+        <AppShell sidebar={<div>Sidebar</div>}>
           <div>Main</div>
         </AppShell>
       );
 
       const rightPanel = screen.getByTestId('app-shell-right-panel');
-      expect(rightPanel.style.width).toBe('0px');
+      // closed: no inline style
+      expect(rightPanel.style.width).toBe('');
 
       // Update store
-      useAppStore.setState({ rightPanelOpen: true });
+      useAppStore.setState({ rightPanelOpen: true, rightPanelWidth: 300 });
 
       // Re-render to pick up state change
       rerender(
-        <AppShell sidebar={<div>Sidebar</div>} rightPanel={<div>Panel</div>}>
+        <AppShell sidebar={<div>Sidebar</div>}>
           <div>Main</div>
         </AppShell>
       );

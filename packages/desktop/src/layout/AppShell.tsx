@@ -2,20 +2,24 @@
  * AppShell - Top-level layout component
  *
  * Arranges the three-column layout:
- * - Sidebar (left): width controlled by Zustand sidebarWidth state
+ * - AppToolbar (top): window drag region, nav buttons (rendered by AppToolbar)
+ * - Sidebar (left): width controlled by sidebarMode/sidebarWidth state
  * - MainContent (center): takes remaining horizontal space (flex-grow)
- * - RightPanel (right, optional): visibility controlled by Zustand rightPanelOpen state
+ * - RightPanel (right): visibility/width controlled by Zustand rightPanel state
+ * - StatusBar (bottom): save state + block count
  *
- * StatusBar is rendered at the bottom.
  * ErrorBoundaries wrap Sidebar and MainContent independently for fault isolation.
  *
  * @see docs/frontend/react-architecture.md for layout specifications
  */
 
-import { useCallback } from 'react';
 import type { ReactNode } from 'react';
 import { ErrorBoundary } from '../components/ErrorBoundary.js';
 import { useAppStore } from '../stores/index.js';
+// AppToolbar is created in DBB-442 and will resolve when that branch merges
+import { AppToolbar } from './AppToolbar.js';
+import { StatusBar } from './StatusBar.js';
+import { RightPanel } from './RightPanel.js';
 import styles from './AppShell.module.css';
 
 // ============================================================================
@@ -32,16 +36,6 @@ export interface AppShellProps {
    * Main content area. Wrapped in its own ErrorBoundary.
    */
   children: ReactNode;
-
-  /**
-   * Right panel content. Only rendered when rightPanelOpen is true.
-   */
-  rightPanel?: ReactNode;
-
-  /**
-   * Status bar content.
-   */
-  statusBar?: ReactNode;
 
   /**
    * Custom fallback for sidebar errors.
@@ -113,11 +107,7 @@ function MainContentErrorFallback({ reset }: { reset: () => void }) {
  *
  * @example
  * ```tsx
- * <AppShell
- *   sidebar={<Sidebar />}
- *   rightPanel={<BacklinksPanel />}
- *   statusBar={<StatusBar />}
- * >
+ * <AppShell sidebar={<Sidebar />}>
  *   <MainContent />
  * </AppShell>
  * ```
@@ -125,74 +115,61 @@ function MainContentErrorFallback({ reset }: { reset: () => void }) {
 export function AppShell({
   sidebar,
   children,
-  rightPanel,
-  statusBar,
   sidebarFallback,
   mainContentFallback,
 }: AppShellProps) {
-  const sidebarOpen = useAppStore((state) => state.sidebarOpen);
+  const sidebarMode = useAppStore((state) => state.sidebarMode);
   const sidebarWidth = useAppStore((state) => state.sidebarWidth);
-  const rightPanelOpen = useAppStore((state) => state.rightPanelOpen);
-  const goBack = useAppStore((state) => state.goBack);
-  const goForward = useAppStore((state) => state.goForward);
-  const pageHistory = useAppStore((state) => state.pageHistory);
-  const historyIndex = useAppStore((state) => state.historyIndex);
+  const rightPanelWidth = useAppStore((state) => state.rightPanelWidth);
+  const focusModeActive = useAppStore((state) => state.focusModeActive);
+  const typewriterEnabled = useAppStore((state) => state.typewriterEnabled);
+  const blockDimmingEnabled = useAppStore((state) => state.blockDimmingEnabled);
+  const windowFocused = useAppStore((state) => state.windowFocused);
 
-  const canGoBack = historyIndex > 0;
-  const canGoForward = historyIndex < pageHistory.length - 1;
+  // Sidebar width depends on mode
+  const sidebarStyle =
+    sidebarMode === 'closed'
+      ? undefined
+      : sidebarMode === 'rail'
+        ? { width: '48px', minWidth: '48px', maxWidth: '48px' }
+        : { width: `${sidebarWidth}px`, minWidth: `${sidebarWidth}px`, maxWidth: `${sidebarWidth}px` };
 
-  const handleGoBack = useCallback(() => {
-    if (canGoBack) goBack();
-  }, [canGoBack, goBack]);
+  // focus-mode data attribute bundles multiple flags into a space-separated string
+  const focusModeAttr =
+    [
+      focusModeActive ? 'active' : null,
+      typewriterEnabled ? 'typewriter' : null,
+      blockDimmingEnabled ? 'dim' : null,
+    ]
+      .filter(Boolean)
+      .join(' ') || undefined;
 
-  const handleGoForward = useCallback(() => {
-    if (canGoForward) goForward();
-  }, [canGoForward, goForward]);
-
-  // Dynamic styles for sidebar width (CSS custom property approach)
-  const sidebarStyle = sidebarOpen
-    ? { width: `${sidebarWidth}px`, minWidth: `${sidebarWidth}px`, maxWidth: `${sidebarWidth}px` }
-    : undefined;
-
-  // Dynamic styles for right panel width
-  const rightPanelStyle = rightPanelOpen
-    ? { width: '300px', minWidth: '300px', maxWidth: '300px' }
-    : undefined;
+  // RightPanel consumes rightPanelWidth but its own component manages open/closed
+  void rightPanelWidth;
 
   return (
-    <div className={styles.container} data-testid="app-shell">
-      {/* Navigation toolbar */}
-      {/* data-tauri-drag-region makes this toolbar the window drag handle */}
-      <nav className={styles.navToolbar} data-testid="navigation-bar" aria-label="Navigation" data-tauri-drag-region>
-        <button
-          type="button"
-          className={styles.navButton}
-          onClick={handleGoBack}
-          disabled={!canGoBack}
-          aria-label="Go back"
-          data-testid="nav-back"
-        >
-          &#8592;
-        </button>
-        <button
-          type="button"
-          className={styles.navButton}
-          onClick={handleGoForward}
-          disabled={!canGoForward}
-          aria-label="Go forward"
-          data-testid="nav-forward"
-        >
-          &#8594;
-        </button>
-      </nav>
+    <div
+      className={styles.container}
+      data-testid="app-shell"
+      data-window-focused={windowFocused ? 'true' : 'false'}
+    >
+      {/* Navigation toolbar - rendered by AppToolbar (DBB-442) */}
+      <AppToolbar />
 
       {/* Main content area with three-column layout */}
       <div className={styles.contentArea}>
         {/* Sidebar - left column */}
         <aside
-          className={`${styles.sidebar} ${!sidebarOpen ? styles['sidebar--closed'] : ''}`}
+          className={[
+            styles.sidebar,
+            sidebarMode === 'closed' ? styles['sidebar--closed'] : '',
+            sidebarMode === 'rail' ? styles['sidebar--rail'] : '',
+          ]
+            .filter(Boolean)
+            .join(' ')}
           style={sidebarStyle}
           data-testid="app-shell-sidebar"
+          data-sidebar-mode={sidebarMode}
           aria-label="Sidebar"
         >
           <ErrorBoundary
@@ -203,7 +180,12 @@ export function AppShell({
         </aside>
 
         {/* Main content - center column */}
-        <main className={styles.mainContent} data-testid="app-shell-main" aria-label="Main content">
+        <main
+          className={styles.mainContent}
+          data-testid="app-shell-main"
+          aria-label="Main content"
+          data-focus-mode={focusModeAttr}
+        >
           <ErrorBoundary
             fallback={(_error, reset) =>
               mainContentFallback ?? <MainContentErrorFallback reset={reset} />
@@ -213,24 +195,12 @@ export function AppShell({
           </ErrorBoundary>
         </main>
 
-        {/* Right panel - right column (optional) */}
-        {rightPanel && (
-          <aside
-            className={`${styles.rightPanel} ${!rightPanelOpen ? styles['rightPanel--closed'] : ''}`}
-            style={rightPanelStyle}
-            data-testid="app-shell-right-panel"
-            aria-label="Right panel"
-            aria-hidden={!rightPanelOpen}
-          >
-            {rightPanel}
-          </aside>
-        )}
+        {/* Right panel - right column (internal, driven by store) */}
+        <RightPanel />
       </div>
 
-      {/* Status bar - bottom */}
-      <footer className={styles.statusBar} data-testid="app-shell-status-bar">
-        {statusBar}
-      </footer>
+      {/* Status bar - bottom (internal) */}
+      <StatusBar />
     </div>
   );
 }

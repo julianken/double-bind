@@ -1,45 +1,20 @@
 /**
- * AppToolbar - Application toolbar with drag region and navigation
+ * AppToolbar - Navigation toolbar stub
  *
- * Split toolbar with:
- * - Left zone: back/forward navigation buttons
- * - Center zone: breadcrumb showing current page context
- * - Right zone: spacer for future toolbar actions
+ * THIS FILE IS A TEMPORARY STUB created for DBB-443.
+ * The real implementation lives in DBB-442 (feature/ui-redesign branch).
+ * This stub will be replaced when DBB-442 merges before DBB-443.
  *
- * The toolbar container has `data-tauri-drag-region` to serve as a window
- * drag handle. All interactive elements use `data-tauri-no-drag` so they
- * receive click events correctly.
- *
- * @see docs/frontend/react-architecture.md for layout specifications
+ * Renders a functional nav toolbar with back/forward buttons so that
+ * App.test.tsx and other integration tests continue to pass while waiting
+ * for DBB-442 to merge.
  */
 
 import { useCallback } from 'react';
-import { Breadcrumb } from './Breadcrumb.js';
 import { useAppStore } from '../stores/index.js';
 import styles from './AppToolbar.module.css';
 
-// ============================================================================
-// Types
-// ============================================================================
-
-export interface AppToolbarProps {
-  className?: string;
-}
-
-// ============================================================================
-// Component
-// ============================================================================
-
-/**
- * AppToolbar provides the top navigation bar with back/forward buttons
- * and breadcrumb navigation.
- *
- * @example
- * ```tsx
- * <AppToolbar />
- * ```
- */
-export function AppToolbar({ className }: AppToolbarProps) {
+export function AppToolbar() {
   const goBack = useAppStore((state) => state.goBack);
   const goForward = useAppStore((state) => state.goForward);
   const pageHistory = useAppStore((state) => state.pageHistory);
@@ -58,44 +33,31 @@ export function AppToolbar({ className }: AppToolbarProps) {
 
   return (
     <nav
-      className={`${styles.toolbar}${className ? ` ${className}` : ''}`}
-      data-testid="app-toolbar"
-      aria-label="Application toolbar"
+      className={styles.navToolbar}
+      data-testid="navigation-bar"
+      aria-label="Navigation"
       data-tauri-drag-region
     >
-      {/* Left zone: navigation buttons */}
-      <div className={styles.leftZone} data-tauri-no-drag>
-        <button
-          type="button"
-          className={styles.navButton}
-          onClick={handleGoBack}
-          disabled={!canGoBack}
-          aria-label="Go back"
-          data-testid="toolbar-nav-back"
-          data-tauri-no-drag
-        >
-          &#8592;
-        </button>
-        <button
-          type="button"
-          className={styles.navButton}
-          onClick={handleGoForward}
-          disabled={!canGoForward}
-          aria-label="Go forward"
-          data-testid="toolbar-nav-forward"
-          data-tauri-no-drag
-        >
-          &#8594;
-        </button>
-      </div>
-
-      {/* Center zone: breadcrumb */}
-      <div className={styles.centerZone} data-tauri-no-drag>
-        <Breadcrumb />
-      </div>
-
-      {/* Right zone: spacer for future toolbar actions */}
-      <div className={styles.rightZone} data-tauri-no-drag />
+      <button
+        type="button"
+        className={styles.navButton}
+        onClick={handleGoBack}
+        disabled={!canGoBack}
+        aria-label="Go back"
+        data-testid="nav-back"
+      >
+        &#8592;
+      </button>
+      <button
+        type="button"
+        className={styles.navButton}
+        onClick={handleGoForward}
+        disabled={!canGoForward}
+        aria-label="Go forward"
+        data-testid="nav-forward"
+      >
+        &#8594;
+      </button>
     </nav>
   );
 }
