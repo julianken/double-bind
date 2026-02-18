@@ -1,1 +1,31 @@
-/* Phase 2 */
+[data-theme="sepia"] {
+  --accent-hue: 70;
+  --accent-500: oklch(65.0% 0.150 70);
+
+  --surface-base:      oklch(96.0% 0.018 85);
+  --surface-recessed:  oklch(91.5% 0.022 85);
+  --surface-elevated:  oklch(98.5% 0.010 85);
+  --surface-overlay:   oklch(91.5% 0.022 85);
+  --surface-inset:     oklch(88.0% 0.025 85);
+
+  --text-primary:    var(--color-gray-950);
+  --text-secondary:  var(--color-gray-700);
+  --text-muted:      var(--color-gray-600);
+  --text-subtle:     var(--color-gray-500);
+  --text-disabled:   var(--color-gray-400);
+  --text-accent:     var(--accent-500);
+  --text-code:       var(--color-gray-700);
+
+  --border-default:  var(--color-gray-900-a20);
+  --border-strong:   var(--color-gray-900-a30);
+  --border-focus:    var(--accent-500);
+  --border-accent:   oklch(65.0% 0.150 70 / 20%);
+
+  --accent-interactive: var(--accent-500);
+  --accent-hover:       oklch(57.0% 0.150 70);
+  --accent-pressed:     oklch(50.0% 0.140 70);
+  --accent-subtle:      oklch(65.0% 0.150 70 / 8%);
+  --accent-emphasis:    oklch(65.0% 0.150 70 / 20%);
+
+  -webkit-font-smoothing: subpixel-antialiased;
+}

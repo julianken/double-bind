@@ -1,1 +1,14 @@
-/* Phase 2 */
+:root {
+  --color-gray-50:   oklch(98.5% 0.002 85);
+  --color-gray-100:  oklch(96.5% 0.004 85);
+  --color-gray-200:  oklch(92.0% 0.007 85);
+  --color-gray-300:  oklch(84.0% 0.009 85);
+  --color-gray-400:  oklch(72.0% 0.010 85);
+  --color-gray-500:  oklch(60.0% 0.010 85);
+  --color-gray-600:  oklch(48.0% 0.010 85);
+  --color-gray-700:  oklch(37.0% 0.009 85);
+  --color-gray-800:  oklch(26.5% 0.007 85);
+  --color-gray-850:  oklch(21.0% 0.006 85);
+  --color-gray-900:  oklch(16.0% 0.005 85);
+  --color-gray-950:  oklch(10.5% 0.003 85);
+}

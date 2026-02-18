@@ -12,6 +12,19 @@
 @import './primitives/motion.css';
 @import './primitives/typography.css';
 
+/* Tier 1: Color primitives */
+@import './primitives/colors-gray.css';
+@import './primitives/colors-accent.css';
+@import './primitives/colors-alpha.css';
+
+/* Tier 2: Theme mappings */
+@import './themes/light.css';
+@import './themes/dark.css';
+@import './themes/dim.css';
+@import './themes/sepia.css';
+@import './themes/hc-light.css';
+@import './themes/hc-dark.css';
+
 /* Existing flat token files remain — do not remove yet */
 @import './colors.css';
 @import './typography.css';
