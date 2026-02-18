@@ -12,12 +12,14 @@
  * - Ctrl+\ (or Cmd+\ on Mac): Cycle sidebar mode (open → rail → closed → open)
  * - Ctrl+K (or Cmd+K on Mac): Open command palette
  * - Ctrl+Shift+K (or Cmd+Shift+K on Mac): Focus quick capture
+ * - Ctrl+, (or Cmd+, on Mac): Open settings window
  *
  * See docs/frontend/keyboard-first.md for the full shortcut documentation.
  */
 
 import { useEffect } from 'react';
 import { useAppStore } from '../stores/ui-store.js';
+import { openSettingsWindow } from '../utils/settings-window.js';
 
 /**
  * Checks if the event matches a keyboard shortcut with Ctrl (or Cmd on Mac).
@@ -40,6 +42,7 @@ function isCtrlKey(event: KeyboardEvent, key: string): boolean {
  * - Ctrl+\ (or Cmd+\ on Mac): Cycle sidebar mode (open → rail → closed → open)
  * - Ctrl+K (or Cmd+K on Mac): Open command palette
  * - Ctrl+Shift+K (or Cmd+Shift+K on Mac): Focus quick capture
+ * - Ctrl+, (or Cmd+, on Mac): Open settings window
  *
  * These shortcuts work anywhere in the app and are not blocked by
  * editor focus or other components.
@@ -99,6 +102,13 @@ export function useGlobalShortcuts(): void {
       if (isCtrlKey(event, 'k')) {
         event.preventDefault();
         useAppStore.getState().toggleCommandPalette();
+        return;
+      }
+
+      // Ctrl+, - Open settings window
+      if (isCtrlKey(event, ',')) {
+        event.preventDefault();
+        void openSettingsWindow();
         return;
       }
     }
