@@ -25,4 +25,10 @@
   --accent-emphasis:    oklch(40% 0.175 283 / 25%);
 
   -webkit-font-smoothing: subpixel-antialiased;
+
+  /* Status colors — deep, high-chroma for maximum contrast on white */
+  --error:   var(--color-error-700);
+  --warning: var(--color-warning-700);
+  --success: var(--color-success-700);
+  --info:    var(--accent-interactive);
 }

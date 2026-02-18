@@ -33,3 +33,9 @@
   inherits: false;
   initial-value: 0;
 }
+
+@property --content-prose-width {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 680px;
+}

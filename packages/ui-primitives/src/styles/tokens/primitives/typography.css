@@ -55,4 +55,7 @@
 
   /* OpenType feature bundles */
   --font-feature-label: 'smcp' 1, 'c2sc' 1, 'kern' 1, 'liga' 1;
+
+  /* Section label tracking */
+  --tracking-section: 0.08em;
 }

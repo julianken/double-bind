@@ -1,1 +1,122 @@
-/* Phase 2 */
+/**
+ * Graph Visualization Colors
+ *
+ * Node and edge colors for the graph view, scoped per theme.
+ * Designed for perceptual distinguishability at small sizes.
+ * Uses OKLCH for theme-consistent chroma and lightness relationships.
+ */
+
+/* Light theme graph colors (default / :root) */
+:root {
+  --graph-node-default:    oklch(55% 0.12 264);
+  --graph-node-hover:      oklch(48% 0.16 264);
+  --graph-node-selected:   oklch(42% 0.20 264);
+  --graph-node-active:     oklch(36% 0.22 264);
+  --graph-node-muted:      oklch(70% 0.04 264);
+
+  --graph-edge-default:    oklch(70% 0.04 264 / 50%);
+  --graph-edge-hover:      oklch(55% 0.10 264 / 80%);
+  --graph-edge-selected:   oklch(48% 0.16 264 / 90%);
+  --graph-edge-muted:      oklch(80% 0.02 264 / 30%);
+
+  /* Categorical palette for tag/cluster coloring */
+  --graph-cat-1:  oklch(60% 0.18 264);  /* purple  */
+  --graph-cat-2:  oklch(60% 0.18 155);  /* green   */
+  --graph-cat-3:  oklch(60% 0.18  25);  /* red     */
+  --graph-cat-4:  oklch(60% 0.18  80);  /* amber   */
+  --graph-cat-5:  oklch(60% 0.18 200);  /* teal    */
+  --graph-cat-6:  oklch(60% 0.18 310);  /* pink    */
+  --graph-cat-7:  oklch(60% 0.18 320);  /* magenta */
+  --graph-cat-8:  oklch(60% 0.18 180);  /* cyan    */
+}
+
+/* Dark theme graph colors */
+[data-theme="dark"] {
+  --graph-node-default:    oklch(68% 0.14 264);
+  --graph-node-hover:      oklch(75% 0.16 264);
+  --graph-node-selected:   oklch(80% 0.20 264);
+  --graph-node-active:     oklch(85% 0.22 264);
+  --graph-node-muted:      oklch(45% 0.05 264);
+
+  --graph-edge-default:    oklch(60% 0.08 264 / 50%);
+  --graph-edge-hover:      oklch(70% 0.14 264 / 80%);
+  --graph-edge-selected:   oklch(78% 0.18 264 / 90%);
+  --graph-edge-muted:      oklch(35% 0.03 264 / 30%);
+
+  --graph-cat-1:  oklch(70% 0.18 264);
+  --graph-cat-2:  oklch(70% 0.18 155);
+  --graph-cat-3:  oklch(70% 0.18  25);
+  --graph-cat-4:  oklch(70% 0.18  80);
+  --graph-cat-5:  oklch(70% 0.18 200);
+  --graph-cat-6:  oklch(70% 0.18 310);
+  --graph-cat-7:  oklch(70% 0.18 320);
+  --graph-cat-8:  oklch(70% 0.18 180);
+}
+
+/* Dim theme graph colors */
+[data-theme="dim"] {
+  --graph-node-default:    oklch(65% 0.13 264);
+  --graph-node-hover:      oklch(72% 0.15 264);
+  --graph-node-selected:   oklch(78% 0.19 264);
+  --graph-node-active:     oklch(83% 0.21 264);
+  --graph-node-muted:      oklch(42% 0.05 264);
+
+  --graph-edge-default:    oklch(58% 0.07 264 / 50%);
+  --graph-edge-hover:      oklch(68% 0.13 264 / 80%);
+  --graph-edge-selected:   oklch(76% 0.17 264 / 90%);
+  --graph-edge-muted:      oklch(32% 0.03 264 / 30%);
+
+  --graph-cat-1:  oklch(68% 0.18 264);
+  --graph-cat-2:  oklch(68% 0.18 155);
+  --graph-cat-3:  oklch(68% 0.18  25);
+  --graph-cat-4:  oklch(68% 0.18  80);
+  --graph-cat-5:  oklch(68% 0.18 200);
+  --graph-cat-6:  oklch(68% 0.18 310);
+  --graph-cat-7:  oklch(68% 0.18 320);
+  --graph-cat-8:  oklch(68% 0.18 180);
+}
+
+/* High-contrast themes — maximize distinguishability */
+[data-theme="hc-light"] {
+  --graph-node-default:    oklch(30% 0.20 264);
+  --graph-node-hover:      oklch(20% 0.22 264);
+  --graph-node-selected:   oklch(10% 0.22 264);
+  --graph-node-active:     oklch(0% 0 0);
+  --graph-node-muted:      oklch(55% 0.08 264);
+
+  --graph-edge-default:    oklch(30% 0.15 264 / 80%);
+  --graph-edge-hover:      oklch(20% 0.20 264);
+  --graph-edge-selected:   oklch(0% 0 0);
+  --graph-edge-muted:      oklch(50% 0.08 264 / 50%);
+
+  --graph-cat-1:  oklch(30% 0.22 264);
+  --graph-cat-2:  oklch(30% 0.22 155);
+  --graph-cat-3:  oklch(30% 0.22  25);
+  --graph-cat-4:  oklch(30% 0.22  80);
+  --graph-cat-5:  oklch(30% 0.22 200);
+  --graph-cat-6:  oklch(30% 0.22 310);
+  --graph-cat-7:  oklch(30% 0.22 320);
+  --graph-cat-8:  oklch(30% 0.22 180);
+}
+
+[data-theme="hc-dark"] {
+  --graph-node-default:    oklch(85% 0.18 264);
+  --graph-node-hover:      oklch(90% 0.20 264);
+  --graph-node-selected:   oklch(95% 0.20 264);
+  --graph-node-active:     oklch(100% 0 0);
+  --graph-node-muted:      oklch(60% 0.08 264);
+
+  --graph-edge-default:    oklch(80% 0.12 264 / 80%);
+  --graph-edge-hover:      oklch(90% 0.18 264);
+  --graph-edge-selected:   oklch(100% 0 0);
+  --graph-edge-muted:      oklch(55% 0.06 264 / 50%);
+
+  --graph-cat-1:  oklch(85% 0.20 264);
+  --graph-cat-2:  oklch(85% 0.20 155);
+  --graph-cat-3:  oklch(85% 0.20  25);
+  --graph-cat-4:  oklch(85% 0.20  80);
+  --graph-cat-5:  oklch(85% 0.20 200);
+  --graph-cat-6:  oklch(85% 0.20 310);
+  --graph-cat-7:  oklch(85% 0.20 320);
+  --graph-cat-8:  oklch(85% 0.20 180);
+}

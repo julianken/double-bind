@@ -24,9 +24,9 @@
   --accent-subtle:      var(--accent-500-a08);
   --accent-emphasis:    var(--accent-500-a20);
 
-  /* Status colors */
-  --error:   #ef4444;
-  --warning: #f59e0b;
-  --success: #10b981;
+  /* Status colors — reference OKLCH semantic scale */
+  --error:   var(--color-error-500);
+  --warning: var(--color-warning-500);
+  --success: var(--color-success-500);
   --info:    var(--accent-interactive);
 }

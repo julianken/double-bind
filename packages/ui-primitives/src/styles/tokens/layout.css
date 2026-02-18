@@ -37,4 +37,20 @@
   /* --screen-md: 768px; */
   /* --screen-lg: 1024px; */
   /* --screen-xl: 1280px; */
+
+  /* Prose content column */
+  --content-prose-width: 680px;
+  --content-prose-padding-x: var(--space-10);
+  --content-prose-padding-y: var(--space-6);
+
+  /* Block editor row */
+  --block-row-padding-y: 3px;
+  --block-min-height: 26px;
+
+  /* Sidebar traffic-light clearance (macOS overlay title bar) */
+  --sidebar-trafficlight-margin: 76px;
+
+  /* Resize handle hit/visual areas */
+  --resize-handle-hit: 12px;
+  --resize-handle-visual: 4px;
 }

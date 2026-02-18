@@ -26,4 +26,10 @@
 
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  /* Status colors — lighter shades for dim dark backgrounds */
+  --error:   var(--color-error-400);
+  --warning: var(--color-warning-400);
+  --success: var(--color-success-400);
+  --info:    var(--accent-interactive);
 }

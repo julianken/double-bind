@@ -26,4 +26,10 @@
 
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  /* Status colors — very light, high-chroma for maximum contrast on near-black */
+  --error:   var(--color-error-200);
+  --warning: var(--color-warning-200);
+  --success: var(--color-success-200);
+  --info:    var(--accent-interactive);
 }

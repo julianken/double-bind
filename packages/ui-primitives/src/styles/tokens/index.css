@@ -19,6 +19,8 @@
 @import './primitives/colors-gray.css';
 @import './primitives/colors-accent.css';
 @import './primitives/colors-alpha.css';
+@import './primitives/colors-semantic.css';
+@import './primitives/colors-graph.css';
 
 /* Tier 2: Theme mappings */
 @import './themes/light.css';
