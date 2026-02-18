@@ -153,7 +153,7 @@ describe('BlockContextMenu', () => {
     });
 
     it('shows "Delete Block" item from hook actions', () => {
-      expect(screen.getByTestId('block-context-menu-item-delete')).toBeDefined();
+      expect(screen.getByTestId('block-context-menu-item-delete-block')).toBeDefined();
     });
   });
 

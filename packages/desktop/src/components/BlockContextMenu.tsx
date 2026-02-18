@@ -21,7 +21,7 @@
  * @see packages/desktop/src/hooks/useBlockContextMenu.ts
  */
 
-import { memo, useEffect, useCallback } from 'react';
+import { memo, useEffect, useCallback, useRef } from 'react';
 import type { BlockId } from '@double-bind/types';
 import {
   useBlockContextMenu,
@@ -55,7 +55,9 @@ export const BlockContextMenu = memo(function BlockContextMenu({
 }: BlockContextMenuProps) {
   const { isVisible, position, blockId, close, actions } = useBlockContextMenu();
 
-  // Dismiss on Escape key
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Keyboard navigation: Escape to dismiss, ArrowDown/ArrowUp to move focus
   useEffect(() => {
     if (!isVisible) return;
 
@@ -63,6 +65,25 @@ export const BlockContextMenu = memo(function BlockContextMenu({
       if (e.key === 'Escape') {
         e.preventDefault();
         close();
+        return;
+      }
+
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        const menu = menuRef.current;
+        if (!menu) return;
+        const items = Array.from(
+          menu.querySelectorAll<HTMLButtonElement>('button[role="menuitem"]:not(:disabled)')
+        );
+        if (items.length === 0) return;
+        const currentIndex = items.indexOf(document.activeElement as HTMLButtonElement);
+        let nextIndex: number;
+        if (e.key === 'ArrowDown') {
+          nextIndex = currentIndex < items.length - 1 ? currentIndex + 1 : 0;
+        } else {
+          nextIndex = currentIndex > 0 ? currentIndex - 1 : items.length - 1;
+        }
+        items[nextIndex].focus();
       }
     }
 
@@ -86,15 +107,15 @@ export const BlockContextMenu = memo(function BlockContextMenu({
   // Build the full action list with the additional DBB-450 actions first
   const additionalActions: BlockContextMenuAction[] = [];
 
-  additionalActions.push({
-    label: 'Open in Right Panel',
-    action: () => {
-      if (onOpenInRightPanel) {
+  if (onOpenInRightPanel) {
+    additionalActions.push({
+      label: 'Open in Right Panel',
+      action: () => {
         onOpenInRightPanel(blockId);
-      }
-      close();
-    },
-  });
+        close();
+      },
+    });
+  }
 
   additionalActions.push({
     label: 'Copy Reference',
@@ -127,6 +148,7 @@ export const BlockContextMenu = memo(function BlockContextMenu({
       data-testid="block-context-menu-backdrop"
     >
       <div
+        ref={menuRef}
         className={styles.menu}
         role="menu"
         aria-label="Block actions"

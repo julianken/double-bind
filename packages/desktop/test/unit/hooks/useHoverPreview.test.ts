@@ -2,7 +2,7 @@
  * Tests for useHoverPreview hook
  *
  * Validates the hover preview state machine:
- * - 150ms debounce before showing preview
+ * - 300ms debounce before showing preview
  * - Immediate close on hover-preview-close event
  * - Event listener lifecycle (add on mount, remove on unmount)
  */
@@ -16,7 +16,7 @@ import {
 } from '../../../src/hooks/useHoverPreview.js';
 import type { PageId } from '@double-bind/types';
 
-// Use fake timers so we can control the 150ms debounce
+// Use fake timers so we can control the 300ms debounce
 vi.useFakeTimers();
 
 describe('useHoverPreview', () => {
@@ -56,25 +56,25 @@ describe('useHoverPreview', () => {
   // ==========================================================================
 
   describe('hover-preview-open debounce', () => {
-    it('does not show preview before the 150ms debounce', () => {
+    it('does not show preview before the 300ms debounce', () => {
       const { result } = renderHook(() => useHoverPreview());
 
       act(() => {
         dispatchHoverPreviewOpen('page-001' as PageId, 100, 200);
-        // Advance only 100ms — not yet past the 150ms threshold
-        vi.advanceTimersByTime(100);
+        // Advance only 200ms — not yet past the 300ms threshold
+        vi.advanceTimersByTime(200);
       });
 
       expect(result.current.isVisible).toBe(false);
       expect(result.current.pageId).toBe(null);
     });
 
-    it('shows preview after 150ms debounce', () => {
+    it('shows preview after 300ms debounce', () => {
       const { result } = renderHook(() => useHoverPreview());
 
       act(() => {
         dispatchHoverPreviewOpen('page-001' as PageId, 100, 200);
-        vi.advanceTimersByTime(150);
+        vi.advanceTimersByTime(300);
       });
 
       expect(result.current.isVisible).toBe(true);
@@ -82,21 +82,21 @@ describe('useHoverPreview', () => {
       expect(result.current.position).toEqual({ x: 100, y: 200 });
     });
 
-    it('resets the debounce timer if a new open event fires before 150ms', () => {
+    it('resets the debounce timer if a new open event fires before 300ms', () => {
       const { result } = renderHook(() => useHoverPreview());
 
       act(() => {
         dispatchHoverPreviewOpen('page-001' as PageId, 10, 20);
-        vi.advanceTimersByTime(100); // 100ms in — not yet visible
+        vi.advanceTimersByTime(200); // 200ms in — not yet visible
         dispatchHoverPreviewOpen('page-002' as PageId, 30, 40); // second event resets timer
-        vi.advanceTimersByTime(100); // only 100ms since second event
+        vi.advanceTimersByTime(200); // only 200ms since second event
       });
 
       // Still within new debounce window — should not be visible yet
       expect(result.current.isVisible).toBe(false);
 
       act(() => {
-        vi.advanceTimersByTime(60); // total 160ms since second event → now visible
+        vi.advanceTimersByTime(110); // total 310ms since second event → now visible
       });
 
       expect(result.current.isVisible).toBe(true);
@@ -114,7 +114,7 @@ describe('useHoverPreview', () => {
 
       act(() => {
         dispatchHoverPreviewOpen('page-001' as PageId, 100, 200);
-        vi.advanceTimersByTime(150); // become visible
+        vi.advanceTimersByTime(300); // become visible
       });
 
       expect(result.current.isVisible).toBe(true);
@@ -133,9 +133,9 @@ describe('useHoverPreview', () => {
 
       act(() => {
         dispatchHoverPreviewOpen('page-001' as PageId, 100, 200);
-        // Close fires before the 150ms debounce completes
+        // Close fires before the 300ms debounce completes
         dispatchHoverPreviewClose('page-001' as PageId);
-        vi.advanceTimersByTime(300); // advance past the debounce
+        vi.advanceTimersByTime(400); // advance past the debounce
       });
 
       // Should never have become visible
@@ -154,7 +154,7 @@ describe('useHoverPreview', () => {
 
       act(() => {
         dispatchHoverPreviewOpen('page-001' as PageId, 100, 200);
-        vi.advanceTimersByTime(150);
+        vi.advanceTimersByTime(300);
       });
 
       expect(result.current.isVisible).toBe(true);

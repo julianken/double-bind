@@ -222,3 +222,5 @@ export const SourceListRow = memo(function SourceListRow({
     </div>
   );
 });
+
+SourceListRow.displayName = 'SourceListRow';
