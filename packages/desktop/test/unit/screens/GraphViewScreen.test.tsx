@@ -85,7 +85,11 @@ vi.mock('@double-bind/ui-primitives', () => ({
       data-size-by-pagerank={sizeByPageRank}
     >
       {nodes.map((node: { id: string; title: string }) => (
-        <button key={node.id} data-testid={`node-${node.id}`} onClick={() => onNodeClick(node.id)}>
+        <button
+          key={node.id}
+          data-testid={`node-${node.id}`}
+          onClick={(e) => onNodeClick(node.id, e.nativeEvent)}
+        >
           {node.title}
         </button>
       ))}

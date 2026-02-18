@@ -15,9 +15,9 @@
  * Accessible via Ctrl+G keyboard shortcut.
  */
 
-import React, { useCallback, useMemo, useState, useEffect, useRef } from 'react';
+import { type ReactElement, useCallback, useMemo, useState, useEffect, useRef } from 'react';
 import type { PageId, Page, Link } from '@double-bind/types';
-import { GraphView, type GraphNode, type GraphEdge } from '@double-bind/ui-primitives';
+import { GraphView, type GraphNode, type GraphEdge, type GraphViewRef } from '@double-bind/ui-primitives';
 import { useServices } from '../providers/index.js';
 import { useCozoQuery } from '../hooks/index.js';
 import { useAppStore } from '../stores/index.js';
@@ -170,7 +170,7 @@ function EmptyState() {
 // Main Component
 // ============================================================================
 
-export function GraphViewScreen(_props: GraphViewScreenProps): React.ReactElement {
+export function GraphViewScreen(_props: GraphViewScreenProps): ReactElement {
   const navigateToPage = useAppStore((state) => state.navigateToPage);
   const openRightPanel = useAppStore((state) => state.openRightPanel);
 
@@ -206,6 +206,9 @@ export function GraphViewScreen(_props: GraphViewScreenProps): React.ReactElemen
   // Container dimensions for responsive sizing
   const [dimensions, setDimensions] = useState({ width: DEFAULT_WIDTH, height: DEFAULT_HEIGHT });
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Ref to the ForceGraph2D instance — used for coordinate conversion in lasso selection
+  const graphViewRef = useRef<GraphViewRef>(undefined);
 
   useEffect(() => {
     function updateDimensions() {
@@ -299,10 +302,24 @@ export function GraphViewScreen(_props: GraphViewScreenProps): React.ReactElemen
   // ============================================================================
 
   const handleNodeClick = useCallback(
-    (pageId: PageId) => {
-      navigateToPage('page/' + pageId);
+    (pageId: PageId, event: MouseEvent) => {
+      if (event.shiftKey) {
+        // Shift+click: path-highlighting flow
+        if (pathSourceId !== null) {
+          // Source is already set — compute shortest path to this target node
+          const path = findShortestPath(pathSourceId, pageId, data?.edges ?? []);
+          setActivePath(path.length > 0 ? path : []);
+          setPathSource(null);
+        } else {
+          // No source yet — set this node as the path source
+          setPathSource(pageId);
+        }
+      } else {
+        // Normal click: navigate to the page
+        navigateToPage('page/' + pageId);
+      }
     },
-    [navigateToPage]
+    [navigateToPage, pathSourceId, data?.edges, setActivePath, setPathSource]
   );
 
   const handleNodeHover = useCallback(
@@ -331,17 +348,29 @@ export function GraphViewScreen(_props: GraphViewScreenProps): React.ReactElemen
     (polygon: Point[]) => {
       if (!data) return;
       clearNodeSelection();
-      // Select nodes whose positions fall within the polygon
-      // Note: node positions come from react-force-graph-2d's canvas coordinates
-      // We compare against the polygon drawn in canvas space
+
+      const fg = graphViewRef.current;
+
+      // Select nodes whose screen-space positions fall within the lasso polygon.
+      // react-force-graph-2d stores node positions in graph-internal coordinates;
+      // the lasso polygon is drawn in screen (canvas-element-relative) coordinates.
+      // We use graph2ScreenCoords to convert each node's position to screen space
+      // before the pointInPolygon test.
       for (const node of data.nodes) {
-        // Approximate: check a simple bounding check since we don't have
-        // direct access to canvas positions from GraphView without a ref.
-        // The polygon is in screen space relative to canvas top-left.
-        // A refined implementation would use graphRef.current.getNodeById coords.
-        // For now, we mark all nodes for demonstration; real impl needs canvas coords.
-        const nodePos: Point = { x: (node as unknown as { x?: number }).x ?? 0, y: (node as unknown as { y?: number }).y ?? 0 };
-        if (pointInPolygon(nodePos, polygon)) {
+        const rawX = (node as unknown as { x?: number }).x ?? 0;
+        const rawY = (node as unknown as { y?: number }).y ?? 0;
+
+        let screenPos: Point;
+        if (fg) {
+          // Convert graph-internal coords to screen-space coords
+          const converted = fg.graph2ScreenCoords(rawX, rawY);
+          screenPos = { x: converted.x, y: converted.y };
+        } else {
+          // Fallback when ref is not yet populated (e.g. tests)
+          screenPos = { x: rawX, y: rawY };
+        }
+
+        if (pointInPolygon(screenPos, polygon)) {
           selectNode(node.id);
         }
       }
@@ -501,6 +530,7 @@ export function GraphViewScreen(_props: GraphViewScreenProps): React.ReactElemen
         style={{ flex: 1, position: 'relative', overflow: 'hidden' }}
       >
         <GraphView
+          ref={graphViewRef}
           nodes={visibleData.nodes}
           edges={visibleData.edges}
           onNodeClick={handleNodeClick}
