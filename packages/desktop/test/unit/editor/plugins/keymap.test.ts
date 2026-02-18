@@ -9,7 +9,12 @@ import {
   createKeymapPlugin,
   createEditorKeymaps,
   KEYBINDINGS,
+  zoomIntoBlock,
+  jumpToParent,
+  focusPrevSibling,
+  focusNextSibling,
   type BlockService,
+  type NavigationService,
 } from '../../../../src/editor/plugins/keymap.js';
 
 /**
@@ -437,6 +442,185 @@ describe('createKeymapPlugin', () => {
       const values = Object.values(KEYBINDINGS);
       const hasCtrlQ = values.some((v) => v === 'Ctrl+Q' || v.includes('Ctrl+Q'));
       expect(hasCtrlQ).toBe(false);
+    });
+  });
+});
+
+// ============================================================================
+// NavigationService Command Tests
+// ============================================================================
+
+/**
+ * Create a mock navigation service for testing zoom and sibling navigation.
+ */
+function createMockNavigationService(): NavigationService {
+  return {
+    zoomIntoBlock: vi.fn(),
+    jumpToParent: vi.fn(),
+    focusPrevSibling: vi.fn(),
+    focusNextSibling: vi.fn(),
+  };
+}
+
+describe('Block Zoom & Sibling Navigation Commands', () => {
+  let schema: Schema;
+  let mockNavigationService: NavigationService;
+
+  beforeEach(() => {
+    schema = createTestSchema();
+    mockNavigationService = createMockNavigationService();
+    vi.clearAllMocks();
+  });
+
+  // --------------------------------------------------------------------------
+  // zoomIntoBlock
+  // --------------------------------------------------------------------------
+
+  describe('zoomIntoBlock', () => {
+    it('calls navigationService.zoomIntoBlock with blockId', () => {
+      const getBlockId = vi.fn().mockReturnValue('block-abc');
+      const cmd = zoomIntoBlock(mockNavigationService, getBlockId);
+
+      const result = cmd();
+      expect(result).toBe(true);
+      expect(mockNavigationService.zoomIntoBlock).toHaveBeenCalledWith('block-abc');
+    });
+
+    it('returns false when blockId is null', () => {
+      const getBlockId = vi.fn().mockReturnValue(null);
+      const cmd = zoomIntoBlock(mockNavigationService, getBlockId);
+
+      const result = cmd();
+      expect(result).toBe(false);
+      expect(mockNavigationService.zoomIntoBlock).not.toHaveBeenCalled();
+    });
+
+    it('is a valid ProseMirror Command (accepts state and dispatch)', () => {
+      const getBlockId = vi.fn().mockReturnValue('block-1');
+      const cmd = zoomIntoBlock(mockNavigationService, getBlockId);
+
+      // ProseMirror Commands receive state and optional dispatch
+      const doc = schema.node('doc', null, [schema.node('paragraph')]);
+      const state = EditorState.create({ doc });
+      const result = cmd(state, undefined);
+      expect(result).toBe(true);
+    });
+  });
+
+  // --------------------------------------------------------------------------
+  // jumpToParent
+  // --------------------------------------------------------------------------
+
+  describe('jumpToParent', () => {
+    it('calls navigationService.jumpToParent with blockId', () => {
+      const getBlockId = vi.fn().mockReturnValue('block-xyz');
+      const cmd = jumpToParent(mockNavigationService, getBlockId);
+
+      const result = cmd();
+      expect(result).toBe(true);
+      expect(mockNavigationService.jumpToParent).toHaveBeenCalledWith('block-xyz');
+    });
+
+    it('returns false when blockId is null', () => {
+      const getBlockId = vi.fn().mockReturnValue(null);
+      const cmd = jumpToParent(mockNavigationService, getBlockId);
+
+      const result = cmd();
+      expect(result).toBe(false);
+    });
+  });
+
+  // --------------------------------------------------------------------------
+  // focusPrevSibling
+  // --------------------------------------------------------------------------
+
+  describe('focusPrevSibling', () => {
+    it('calls navigationService.focusPrevSibling with blockId', () => {
+      const getBlockId = vi.fn().mockReturnValue('block-123');
+      const cmd = focusPrevSibling(mockNavigationService, getBlockId);
+
+      const result = cmd();
+      expect(result).toBe(true);
+      expect(mockNavigationService.focusPrevSibling).toHaveBeenCalledWith('block-123');
+    });
+
+    it('returns false when blockId is null', () => {
+      const getBlockId = vi.fn().mockReturnValue(null);
+      const cmd = focusPrevSibling(mockNavigationService, getBlockId);
+
+      const result = cmd();
+      expect(result).toBe(false);
+    });
+  });
+
+  // --------------------------------------------------------------------------
+  // focusNextSibling
+  // --------------------------------------------------------------------------
+
+  describe('focusNextSibling', () => {
+    it('calls navigationService.focusNextSibling with blockId', () => {
+      const getBlockId = vi.fn().mockReturnValue('block-456');
+      const cmd = focusNextSibling(mockNavigationService, getBlockId);
+
+      const result = cmd();
+      expect(result).toBe(true);
+      expect(mockNavigationService.focusNextSibling).toHaveBeenCalledWith('block-456');
+    });
+
+    it('returns false when blockId is null', () => {
+      const getBlockId = vi.fn().mockReturnValue(null);
+      const cmd = focusNextSibling(mockNavigationService, getBlockId);
+
+      const result = cmd();
+      expect(result).toBe(false);
+    });
+  });
+
+  // --------------------------------------------------------------------------
+  // Integration with createKeymapPlugin
+  // --------------------------------------------------------------------------
+
+  describe('createKeymapPlugin with navigationService', () => {
+    it('creates plugin with navigationService', () => {
+      const getBlockId = vi.fn().mockReturnValue('block-1');
+      const plugin = createKeymapPlugin({
+        schema,
+        navigationService: mockNavigationService,
+        getBlockId,
+      });
+
+      expect(plugin).toBeInstanceOf(Plugin);
+    });
+
+    it('creates plugin without navigationService (no-op)', () => {
+      const plugin = createKeymapPlugin({ schema });
+      expect(plugin).toBeInstanceOf(Plugin);
+    });
+  });
+
+  // --------------------------------------------------------------------------
+  // KEYBINDINGS constants
+  // --------------------------------------------------------------------------
+
+  describe('KEYBINDINGS additions', () => {
+    it('exports zoomIntoBlock keybinding', () => {
+      expect(KEYBINDINGS.zoomIntoBlock).toBeDefined();
+      expect(typeof KEYBINDINGS.zoomIntoBlock).toBe('string');
+    });
+
+    it('exports jumpToParent keybinding', () => {
+      expect(KEYBINDINGS.jumpToParent).toBeDefined();
+      expect(typeof KEYBINDINGS.jumpToParent).toBe('string');
+    });
+
+    it('exports focusPrevSibling keybinding', () => {
+      expect(KEYBINDINGS.focusPrevSibling).toBeDefined();
+      expect(typeof KEYBINDINGS.focusPrevSibling).toBe('string');
+    });
+
+    it('exports focusNextSibling keybinding', () => {
+      expect(KEYBINDINGS.focusNextSibling).toBeDefined();
+      expect(typeof KEYBINDINGS.focusNextSibling).toBe('string');
     });
   });
 });
