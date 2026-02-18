@@ -13,16 +13,18 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 16px;
-  height: 20px;
+  /* Minimum 24×24px touch target (WCAG 2.5.8 AA for desktop).
+     The inner SVG grip icon stays 10×14px; the surrounding padded area is clickable. */
+  min-width: 24px;
+  min-height: 24px;
 
   /* Positioned absolutely relative to .row in BlockNode */
   position: absolute;
-  left: -20px;
+  left: -24px;
   top: 50%;
   transform: translateY(-50%);
 
-  padding: 0;
+  padding: 4px;
   border: none;
   border-radius: var(--radius-sm);
   background: transparent;

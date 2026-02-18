@@ -60,16 +60,18 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 16px;
-  height: 20px;
-  /* Align bullet center with first-line text center.
+  /* Minimum 24×24px touch target (WCAG 2.5.8 AA for desktop).
+   * The inner SVG icon stays small; padding expands the clickable area.
+   * Vertical margin aligns the button's center with the first-line text center:
    * Content has 4px top padding (--space-1) then a 15px body font at
    * 1.65 line-height = 24.75px line box. Text center sits at:
    *   4 + 24.75/2 = 16.375px from row top.
-   * SVG bullet center = margin-top + 10px.
-   * Solving: margin-top = 16.375 - 10 = 6.375px → 6px. */
-  margin-top: 6px;
-  padding: 0;
+   * Button center = margin-top + 12px (half of 24px min-height).
+   * Solving: margin-top = 16.375 - 12 = 4.375px → 4px. */
+  min-width: 24px;
+  min-height: 24px;
+  margin-top: 4px;
+  padding: 4px;
   border: none;
   border-radius: var(--radius-sm);
   background: transparent;
@@ -222,6 +224,14 @@
 
 .pageLink:hover {
   border-bottom-color: var(--accent-interactive);
+}
+
+/* Unresolved page link — no pageId available yet, rendered as non-interactive text */
+.unresolvedLink {
+  color: var(--text-muted);
+  cursor: default;
+  border-bottom: 1px dashed var(--text-muted);
+  opacity: 0.7;
 }
 
 .blockRef {
