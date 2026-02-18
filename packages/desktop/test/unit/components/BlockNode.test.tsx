@@ -105,7 +105,8 @@ beforeEach(() => {
   // Reset store to initial state before each test (all state fields)
   useAppStore.setState({
     // Sidebar
-    sidebarOpen: true,
+    sidebarMode: 'open',
+    sidebarOpen: true, // derived boolean; keep in sync with sidebarMode
     sidebarWidth: 240,
     // Right Panel
     rightPanelOpen: false,

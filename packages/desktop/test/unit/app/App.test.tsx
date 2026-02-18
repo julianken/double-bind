@@ -12,7 +12,8 @@ describe('App', () => {
   beforeEach(() => {
     // Reset store to initial state before each test
     useAppStore.setState({
-      sidebarOpen: true,
+      sidebarMode: 'open',
+      sidebarOpen: true, // derived boolean; keep in sync with sidebarMode
       sidebarWidth: 240,
       rightPanelOpen: false,
       rightPanelContent: null,
@@ -46,7 +47,7 @@ describe('App', () => {
     });
 
     it('does not render sidebar when closed', () => {
-      useAppStore.setState({ sidebarOpen: false });
+      useAppStore.setState({ sidebarMode: 'closed', sidebarOpen: false });
       render(<App />);
       expect(screen.queryByTestId('sidebar')).toBeNull();
     });

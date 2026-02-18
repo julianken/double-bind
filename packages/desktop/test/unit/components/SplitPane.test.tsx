@@ -28,6 +28,7 @@ describe('SplitPane', () => {
     // Reset store to initial state before each test
     useAppStore.setState({
       sidebarWidth: 240,
+      sidebarMode: 'open',
       sidebarOpen: true,
     });
   });
