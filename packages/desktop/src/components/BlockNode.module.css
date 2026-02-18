@@ -104,8 +104,8 @@
   padding: var(--space-1) 0;
   min-height: var(--block-min-height, 24px);
   cursor: text;
-  font-size: var(--text-base);
-  line-height: var(--leading-normal);
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
   color: var(--text-primary);
   border-radius: var(--radius-sm);
   transition: background-color var(--transition-fast);
