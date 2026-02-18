@@ -7,13 +7,13 @@
  * - closed: Renders nothing; container is hidden by AppShell CSS.
  *
  * Mode cycling (Ctrl+\) is handled globally in useGlobalShortcuts.ts.
- * Width in open mode is resizable and persisted to localStorage.
+ * Width in open mode is resizable; width is persisted via Zustand persist middleware.
  *
  * @see docs/frontend/react-architecture.md for component hierarchy
  * @see docs/frontend/keyboard-first.md for keyboard shortcuts
  */
 
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useRef } from 'react';
 import { ErrorBoundary } from '../components/ErrorBoundary.js';
 import { QuickCapture } from '../components/QuickCapture.js';
 import { IconRail } from '../components/IconRail.js';
@@ -25,10 +25,9 @@ import styles from './Sidebar.module.css';
 // Constants
 // ============================================================================
 
-const DEFAULT_SIDEBAR_WIDTH = 250;
+const DEFAULT_SIDEBAR_WIDTH = 240;
 const MIN_SIDEBAR_WIDTH = 150;
 const MAX_SIDEBAR_WIDTH = 500;
-const LOCAL_STORAGE_KEY = 'sidebar-width';
 
 // ============================================================================
 // SidebarFooter
@@ -74,52 +73,6 @@ export interface SidebarProps {
 }
 
 // ============================================================================
-// Hooks
-// ============================================================================
-
-/**
- * Persists sidebar width to localStorage.
- * Reads initial value on mount and saves on width changes.
- */
-function useSidebarWidthPersistence() {
-  const { sidebarWidth, setSidebarWidth } = useAppStore();
-  const isInitialized = useRef(false);
-
-  // Load persisted width on mount
-  useEffect(() => {
-    if (isInitialized.current) return;
-    isInitialized.current = true;
-
-    try {
-      const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
-      if (stored) {
-        const parsed = parseInt(stored, 10);
-        if (!isNaN(parsed) && parsed >= MIN_SIDEBAR_WIDTH && parsed <= MAX_SIDEBAR_WIDTH) {
-          setSidebarWidth(parsed);
-        }
-      } else {
-        setSidebarWidth(DEFAULT_SIDEBAR_WIDTH);
-      }
-    } catch {
-      setSidebarWidth(DEFAULT_SIDEBAR_WIDTH);
-    }
-  }, [setSidebarWidth]);
-
-  // Persist width changes to localStorage
-  useEffect(() => {
-    if (!isInitialized.current) return;
-
-    try {
-      localStorage.setItem(LOCAL_STORAGE_KEY, String(sidebarWidth));
-    } catch {
-      // localStorage unavailable, ignore
-    }
-  }, [sidebarWidth]);
-
-  return { sidebarWidth, setSidebarWidth };
-}
-
-// ============================================================================
 // Resize Handle
 // ============================================================================
 
@@ -161,13 +114,36 @@ function ResizeHandle({ onResize, sidebarRef }: ResizeHandleProps) {
     [onResize, sidebarRef]
   );
 
+  const handleKeyDown = useCallback(
+    (event: React.KeyboardEvent) => {
+      const step = event.shiftKey ? 20 : 5;
+      const currentWidth = sidebarRef.current?.offsetWidth ?? DEFAULT_SIDEBAR_WIDTH;
+
+      if (event.key === 'ArrowRight') {
+        event.preventDefault();
+        onResize(Math.min(MAX_SIDEBAR_WIDTH, currentWidth + step));
+      } else if (event.key === 'ArrowLeft') {
+        event.preventDefault();
+        onResize(Math.max(MIN_SIDEBAR_WIDTH, currentWidth - step));
+      }
+    },
+    [onResize, sidebarRef]
+  );
+
+  const currentWidth = sidebarRef.current?.offsetWidth ?? DEFAULT_SIDEBAR_WIDTH;
+
   return (
     <div
       className={styles.resizeHandle}
       role="separator"
       aria-orientation="vertical"
       aria-label="Resize sidebar"
+      aria-valuenow={currentWidth}
+      aria-valuemin={MIN_SIDEBAR_WIDTH}
+      aria-valuemax={MAX_SIDEBAR_WIDTH}
+      tabIndex={0}
       onMouseDown={handleMouseDown}
+      onKeyDown={handleKeyDown}
     />
   );
 }
@@ -214,7 +190,7 @@ interface SidebarOpenProps {
  */
 function SidebarOpen({ onNewPage, sidebarRef }: SidebarOpenProps) {
   const navigateToPage = useAppStore((state) => state.navigateToPage);
-  const { setSidebarWidth } = useSidebarWidthPersistence();
+  const setSidebarWidth = useAppStore((state) => state.setSidebarWidth);
 
   const handleResize = useCallback(
     (width: number) => {

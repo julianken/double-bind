@@ -11,7 +11,6 @@
  * - Fetches pages via PageService.getAllPages()
  * - Starred state is managed locally per session (DB backing is future work)
  * - Each section is collapsible via SectionHeader
- * - Uses SourceListRow for hover actions (star, delete) in sections
  * - The legacy PageListItem export is preserved for backward compatibility
  * - Highlights the currently active page
  * - Updates automatically when ['pages'] query key is invalidated
@@ -66,16 +65,6 @@ export interface PageListItemProps {
    * Callback when the page is clicked.
    */
   onClick: () => void;
-
-  /**
-   * Whether this page is starred.
-   */
-  isStarred?: boolean;
-
-  /**
-   * Callback when the star button is clicked.
-   */
-  onStar?: () => void;
 }
 
 // ============================================================================
@@ -114,8 +103,6 @@ export const PageListItem = memo(function PageListItem({
   page,
   isActive,
   onClick,
-  isStarred: _isStarred,
-  onStar: _onStar,
 }: PageListItemProps) {
   return (
     <li
@@ -163,8 +150,8 @@ export function PageList({ limit = 100, className }: PageListProps) {
   const [recentCollapsed, setRecentCollapsed] = useState(false);
   const [allCollapsed, setAllCollapsed] = useState(false);
 
-  // ---- Local starred IDs (session-scoped; DB backing is future work) ----
-  const [starredIds, setStarredIds] = useState<Set<string>>(new Set());
+  // ---- Local starred IDs (session-scoped; DB backing is future work — always empty for now) ----
+  const starredIds = new Set<string>();
 
   // ---- Data fetching ----
   const queryFn = useCallback(
@@ -183,10 +170,11 @@ export function PageList({ limit = 100, className }: PageListProps) {
     const starredIdSet = new Set(starred.map((p) => p.pageId));
 
     const nonStarred = pages.filter((p) => !starredIdSet.has(p.pageId));
-    const recent = nonStarred.slice(0, RECENT_COUNT);
+    const sortedNonStarred = [...nonStarred].sort((a, b) => b.updatedAt - a.updatedAt);
+    const recent = sortedNonStarred.slice(0, RECENT_COUNT);
     const recentIdSet = new Set(recent.map((p) => p.pageId));
 
-    const remaining = nonStarred.filter((p) => !recentIdSet.has(p.pageId));
+    const remaining = sortedNonStarred.filter((p) => !recentIdSet.has(p.pageId));
 
     return {
       starredPages: starred,
@@ -202,18 +190,6 @@ export function PageList({ limit = 100, className }: PageListProps) {
     },
     [navigateToPage]
   );
-
-  const handleStar = useCallback((pageId: string) => {
-    setStarredIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(pageId)) {
-        next.delete(pageId);
-      } else {
-        next.add(pageId);
-      }
-      return next;
-    });
-  }, []);
 
   // Determine active page ID (strip 'page/' prefix for matching)
   const activePageId = useMemo(() => {
@@ -288,8 +264,6 @@ export function PageList({ limit = 100, className }: PageListProps) {
                 page={page}
                 isActive={activePageId === page.pageId}
                 onClick={() => handlePageClick(page.pageId)}
-                isStarred
-                onStar={() => handleStar(page.pageId)}
               />
             ))}
         </>
@@ -313,8 +287,6 @@ export function PageList({ limit = 100, className }: PageListProps) {
                 page={page}
                 isActive={activePageId === page.pageId}
                 onClick={() => handlePageClick(page.pageId)}
-                isStarred={starredIds.has(page.pageId)}
-                onStar={() => handleStar(page.pageId)}
               />
             ))}
         </>
@@ -338,8 +310,6 @@ export function PageList({ limit = 100, className }: PageListProps) {
                 page={page}
                 isActive={activePageId === page.pageId}
                 onClick={() => handlePageClick(page.pageId)}
-                isStarred={starredIds.has(page.pageId)}
-                onStar={() => handleStar(page.pageId)}
               />
             ))}
         </>
