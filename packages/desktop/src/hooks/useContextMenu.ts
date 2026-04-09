@@ -63,10 +63,11 @@ export function useContextMenu(): UseContextMenuResult {
         // Dynamic import — type-declared in src/types/tauri-plugin-menu.d.ts
         // Falls back gracefully in browser/test environments where the Tauri
         // runtime is not present (import() will throw and be caught below).
-        // eslint-disable-next-line import-x/no-unresolved -- runtime Tauri import, stubbed in browser/test
+        /* eslint-disable import-x/no-unresolved -- runtime Tauri import, stubbed in browser/test */
         const { Menu, MenuItem, PredefinedMenuItem } = await import(
           /* @vite-ignore */ '@tauri-apps/plugin-menu'
         );
+        /* eslint-enable import-x/no-unresolved */
 
         // Build native menu items
         const menuItems = await Promise.all(
