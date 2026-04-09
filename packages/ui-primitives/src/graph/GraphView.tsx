@@ -211,7 +211,7 @@ export interface GraphViewProps {
    * - 'orphan'   — highlight disconnected nodes
    * - 'recency'  — color by last-modified (requires lastModifiedAt on nodes)
    */
-  encodingMode?: 'primary' | 'orphan' | 'recency';
+  encodingMode?: 'primary' | 'orphan' | 'recency' | 'community';
 
   /**
    * Degree map: node ID → number of connections.

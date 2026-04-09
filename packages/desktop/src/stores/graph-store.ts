@@ -21,7 +21,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 // Types
 // ============================================================================
 
-export type EncodingMode = 'primary' | 'orphan' | 'recency';
+export type EncodingMode = 'primary' | 'orphan' | 'recency' | 'community';
 export type PageId = string;
 
 export interface GraphStore {

@@ -25,7 +25,6 @@ import styles from './Sidebar.module.css';
 // Constants
 // ============================================================================
 
-const DEFAULT_SIDEBAR_WIDTH = 240;
 const MIN_SIDEBAR_WIDTH = 150;
 const MAX_SIDEBAR_WIDTH = 500;
 
