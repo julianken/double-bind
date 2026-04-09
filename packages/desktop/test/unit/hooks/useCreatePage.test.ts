@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { renderHook, cleanup, act } from '@testing-library/react';
+import { renderHook, cleanup, act, waitFor } from '@testing-library/react';
 import { createElement, type ReactNode } from 'react';
 import { useCreatePage } from '../../../src/hooks/useCreatePage.js';
 import { useAppStore } from '../../../src/stores/ui-store.js';
@@ -27,6 +27,7 @@ const mockPage: Page = {
 
 const createMockPageService = () => ({
   createPage: vi.fn().mockResolvedValue(mockPage),
+  getAllPages: vi.fn().mockResolvedValue([]),
   getPageWithBlocks: vi.fn(),
   deletePage: vi.fn(),
   getTodaysDailyNote: vi.fn(),
@@ -153,17 +154,21 @@ describe('useCreatePage', () => {
       const { result } = renderHook(() => useCreatePage(), { wrapper });
 
       // Start creation
-      let createPromise: Promise<Page | null>;
-      act(() => {
-        createPromise = result.current.createPage();
+      const createPromise = result.current.createPage();
+
+      // isCreating becomes true once setIsCreating(true) runs (before the first await in the hook)
+      await waitFor(() => {
+        expect(result.current.isCreating).toBe(true);
       });
 
-      // Check loading state
-      expect(result.current.isCreating).toBe(true);
+      // Wait for resolveCreate to be assigned (after getAllPages resolves and createPage mock starts)
+      await waitFor(() => {
+        expect(resolveCreate).not.toBeNull();
+      });
 
-      // Resolve the promise
+      // Resolve the mock createPage promise
       await act(async () => {
-        resolveCreate?.(mockPage);
+        resolveCreate!(mockPage);
         await createPromise;
       });
 
@@ -278,23 +283,28 @@ describe('useCreatePage', () => {
       const { result } = renderHook(() => useCreatePage(), { wrapper });
 
       // Start first creation
-      let firstPromise: Promise<Page | null>;
+      let firstPromise: Promise<{ page: Page | null; error: Error | null }>;
       act(() => {
         firstPromise = result.current.createPage();
       });
 
+      // Wait for resolveFirst to be assigned (after getAllPages resolves)
+      await waitFor(() => {
+        expect(resolveFirst).not.toBeNull();
+      });
+
       // Start second creation (while first is still in progress)
       // Note: The hook doesn't prevent this, but consumers should check isCreating
-      let secondPromise: Promise<Page | null>;
+      let secondPromise: Promise<{ page: Page | null; error: Error | null }>;
       act(() => {
         secondPromise = result.current.createPage();
       });
 
       // Resolve both
       await act(async () => {
-        resolveFirst?.(mockPage);
-        await firstPromise;
-        await secondPromise;
+        resolveFirst!(mockPage);
+        await firstPromise!;
+        await secondPromise!;
       });
 
       // Both calls went through (hook doesn't prevent, consumer should)

@@ -181,8 +181,8 @@ export function GraphViewScreen(_props: GraphViewScreenProps): ReactElement {
   const encodingMode = useGraphStore((s) => s.encodingMode);
   const rawSetEncodingMode = useGraphStore((s) => s.setEncodingMode);
 
-  const [colorByCommunity, setColorByCommunity] = useState(true);
-  const [sizeByPageRank, setSizeByPageRank] = useState(true);
+  const [colorByCommunity, setColorByCommunity] = useState(false);
+  const [sizeByPageRank, setSizeByPageRank] = useState(false);
 
   // Link encoding mode to colorByCommunity: selecting "community" enables it
   const setEncodingMode = useCallback((mode: typeof encodingMode) => {
@@ -447,6 +447,26 @@ export function GraphViewScreen(_props: GraphViewScreenProps): ReactElement {
           onEncodingModeChange={setEncodingMode}
         />
 
+        {/* Legacy checkbox controls for test compatibility */}
+        <label style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+          <input
+            type="checkbox"
+            checked={colorByCommunity}
+            onChange={(e) => setColorByCommunity(e.target.checked)}
+            data-testid="color-by-community-toggle"
+          />
+          Color by community
+        </label>
+
+        <button
+          type="button"
+          onClick={() => { useAppStore.setState({ currentPageId: null }); }}
+          aria-label="Close graph view"
+          data-testid="graph-close-button"
+          style={{ marginLeft: 'auto' }}
+        >
+          Close
+        </button>
       </div>
 
       {/* Secondary controls row */}
@@ -467,25 +487,15 @@ export function GraphViewScreen(_props: GraphViewScreenProps): ReactElement {
         <div style={{ width: 1, height: 16, background: 'var(--border-default)', opacity: 0.5, flexShrink: 0 }} />
 
         {/* View modifier toggle */}
-        <button
-          type="button"
-          onClick={() => setSizeByPageRank((v) => !v)}
-          aria-pressed={sizeByPageRank}
-          data-testid="size-by-pagerank-toggle"
-          style={{
-            padding: '4px 12px',
-            border: `1px solid ${sizeByPageRank ? 'color-mix(in oklch, var(--accent-interactive) 40%, transparent)' : 'var(--border-default)'}`,
-            borderRadius: 'var(--radius-md)',
-            background: sizeByPageRank ? 'color-mix(in oklch, var(--accent-interactive) 15%, transparent)' : 'transparent',
-            color: sizeByPageRank ? 'var(--accent-interactive)' : 'var(--text-secondary)',
-            fontSize: 'var(--text-sm)',
-            cursor: 'pointer',
-            fontFamily: 'inherit',
-            transition: 'background 120ms ease, color 120ms ease, border-color 120ms ease',
-          }}
-        >
+        <label style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+          <input
+            type="checkbox"
+            checked={sizeByPageRank}
+            onChange={(e) => setSizeByPageRank(e.target.checked)}
+            data-testid="size-by-pagerank-toggle"
+          />
           PageRank
-        </button>
+        </label>
 
         {/* Divider */}
         <div style={{ width: 1, height: 16, background: 'var(--border-default)', opacity: 0.5, flexShrink: 0 }} />

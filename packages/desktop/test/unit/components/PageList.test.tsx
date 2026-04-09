@@ -11,6 +11,7 @@ import { PageList, PageListItem } from '../../../src/components/PageList.js';
 import { ServiceProvider } from '../../../src/providers/ServiceProvider.js';
 import { useAppStore } from '../../../src/stores/ui-store.js';
 import { clearQueryCache, invalidateQueries } from '../../../src/hooks/useCozoQuery.js';
+import { queryClient as globalQueryClient } from '../../../src/lib/queryClient.js';
 
 // Create a QueryClient for testing
 const createTestQueryClient = () =>
@@ -90,10 +91,9 @@ function TestWrapper({
   pageService?: PageService;
   blockService?: BlockService;
 }) {
-  const queryClient = createTestQueryClient();
   return (
-    <QueryClientProvider client={queryClient}>
-      <ServiceProvider services={{ pageService, blockService }}>{children}</ServiceProvider>
+    <QueryClientProvider client={globalQueryClient}>
+      <ServiceProvider services={{ pageService, blockService } as never}>{children}</ServiceProvider>
     </QueryClientProvider>
   );
 }

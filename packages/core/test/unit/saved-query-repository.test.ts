@@ -1,8 +1,8 @@
 /**
  * Unit tests for SavedQueryRepository
  *
- * These tests verify correct Datalog query construction and parameter passing
- * using MockDatabase. They do NOT execute real Datalog queries - that's for
+ * These tests verify correct SQL query construction and parameter passing
+ * using MockDatabase. They do NOT execute real SQL queries - that's for
  * Layer 2 integration tests.
  */
 
@@ -29,8 +29,8 @@ describe('SavedQueryRepository', () => {
 
       await repo.getById(id);
 
-      expect(db.lastQuery.script).toContain('*saved_queries{');
-      expect(db.lastQuery.script).toContain('id == $id');
+      expect(db.lastQuery.script).toContain('FROM saved_queries');
+      expect(db.lastQuery.script).toContain('id = $id');
       expect(db.lastQuery.params).toEqual({ id });
     });
 
@@ -79,10 +79,10 @@ describe('SavedQueryRepository', () => {
 
       await repo.getAll();
 
-      expect(db.lastQuery.script).toContain('*saved_queries{');
-      expect(db.lastQuery.script).toContain(':order -updated_at');
-      expect(db.lastQuery.script).toContain(':limit $limit');
-      expect(db.lastQuery.script).toContain(':offset $offset');
+      expect(db.lastQuery.script).toContain('FROM saved_queries');
+      expect(db.lastQuery.script).toContain('ORDER BY updated_at DESC');
+      expect(db.lastQuery.script).toContain('LIMIT $limit');
+      expect(db.lastQuery.script).toContain('OFFSET $offset');
       expect(db.lastQuery.params).toEqual({ limit: 100, offset: 0 });
     });
 
@@ -99,7 +99,7 @@ describe('SavedQueryRepository', () => {
 
       await repo.getAll({ type: SavedQueryType.TEMPLATE });
 
-      expect(db.lastQuery.script).toContain('type == $type');
+      expect(db.lastQuery.script).toContain('type = $type');
       expect(db.lastQuery.params).toEqual({ type: 'template', limit: 100, offset: 0 });
     });
 
@@ -124,11 +124,11 @@ describe('SavedQueryRepository', () => {
 
       await repo.search('test query');
 
-      expect(db.lastQuery.script).toContain('~saved_queries:fts{');
-      expect(db.lastQuery.script).toContain('query: $query');
-      expect(db.lastQuery.script).toContain('k: $limit');
-      expect(db.lastQuery.script).toContain('bind_score: score');
-      expect(db.lastQuery.script).toContain(':order -score');
+      expect(db.lastQuery.script).toContain('saved_queries_fts');
+      expect(db.lastQuery.script).toContain('MATCH $query');
+      expect(db.lastQuery.script).toContain('LIMIT $limit');
+      expect(db.lastQuery.script).toContain('ORDER BY');
+      expect(db.lastQuery.script).toContain('rank');
       expect(db.lastQuery.params).toEqual({ query: 'test query', limit: 50 });
     });
 
@@ -149,7 +149,7 @@ describe('SavedQueryRepository', () => {
         definition: '?[x] := *blocks{x}',
       });
 
-      expect(db.lastMutation.script).toContain(':put saved_queries {');
+      expect(db.lastMutation.script).toContain('INSERT INTO saved_queries');
       expect(db.lastMutation.script).toContain(
         'id, name, type, definition, description, created_at, updated_at'
       );
@@ -211,7 +211,6 @@ describe('SavedQueryRepository', () => {
       // Second call should be the write (mutation)
       expect(db.mutations).toHaveLength(1);
       expect(db.lastMutation.params.name).toBe('Updated Name');
-      expect(db.lastMutation.params.created_at).toBe(now);
     });
 
     it('should throw SAVED_QUERY_NOT_FOUND if query does not exist', async () => {
@@ -276,7 +275,7 @@ describe('SavedQueryRepository', () => {
 
       await repo.delete(id);
 
-      expect(db.lastMutation.script).toContain(':rm saved_queries { id }');
+      expect(db.lastMutation.script).toContain('DELETE FROM saved_queries');
       expect(db.lastMutation.params).toEqual({ id });
     });
 
@@ -296,7 +295,7 @@ describe('SavedQueryRepository', () => {
 
       await repo.getByName('Test Query');
 
-      expect(db.lastQuery.script).toContain('name == $name');
+      expect(db.lastQuery.script).toContain('name = $name');
       expect(db.lastQuery.params).toEqual({ name: 'Test Query' });
     });
 
@@ -342,28 +341,24 @@ describe('SavedQueryRepository', () => {
 
   describe('row validation', () => {
     it('should throw on invalid id type', async () => {
-      // @ts-expect-error - testing runtime validation
       db.seed('saved_queries', [[123, 'Name', 'raw', '?[x] := 1', null, 1700000000, 1700000000]]);
 
       await expect(repo.getAll()).rejects.toThrow(DoubleBindError);
     });
 
     it('should throw on invalid name type', async () => {
-      // @ts-expect-error - testing runtime validation
       db.seed('saved_queries', [['id-1', null, 'raw', '?[x] := 1', null, 1700000000, 1700000000]]);
 
       await expect(repo.getAll()).rejects.toThrow(DoubleBindError);
     });
 
     it('should throw on invalid type type', async () => {
-      // @ts-expect-error - testing runtime validation
       db.seed('saved_queries', [['id-1', 'Name', 123, '?[x] := 1', null, 1700000000, 1700000000]]);
 
       await expect(repo.getAll()).rejects.toThrow(DoubleBindError);
     });
 
     it('should throw on invalid timestamp type', async () => {
-      // @ts-expect-error - testing runtime validation
       db.seed('saved_queries', [['id-1', 'Name', 'raw', '?[x] := 1', null, 'not-a-number', 1700000000]]);
 
       await expect(repo.getAll()).rejects.toThrow(DoubleBindError);

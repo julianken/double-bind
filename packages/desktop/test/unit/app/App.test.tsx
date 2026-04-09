@@ -9,6 +9,25 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { App } from '../../../src/App.js';
 import { useAppStore } from '../../../src/stores/ui-store.js';
 
+function mockMatchMedia() {
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    configurable: true,
+    value: (query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: () => {},
+      removeListener: () => {},
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      dispatchEvent: () => false,
+    }),
+  });
+}
+
+mockMatchMedia();
+
 function createTestQueryClient() {
   return new QueryClient({ defaultOptions: { queries: { retry: false } } });
 }
@@ -24,6 +43,7 @@ function renderApp() {
 
 describe('App', () => {
   beforeEach(() => {
+    mockMatchMedia();
     // Reset store to initial state before each test
     useAppStore.setState({
       sidebarMode: 'open',

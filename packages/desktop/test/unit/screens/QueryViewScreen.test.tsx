@@ -371,7 +371,7 @@ describe('QueryViewScreen', () => {
   // ==========================================================================
 
   describe('Side Panel', () => {
-    it('shows saved queries tab by default', () => {
+    it('shows saved queries tab by default', async () => {
       render(
         <QueryClientProvider client={createTestQueryClient()}>
           <ServiceProvider services={mockServices}>
@@ -380,7 +380,9 @@ describe('QueryViewScreen', () => {
         </QueryClientProvider>
       );
 
-      expect(screen.getByTestId('saved-queries-list')).toBeDefined();
+      await waitFor(() => {
+        expect(screen.getByTestId('saved-queries-list')).toBeDefined();
+      });
     });
 
     it('switches to history tab when clicked', () => {

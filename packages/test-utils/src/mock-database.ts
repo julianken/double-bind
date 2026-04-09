@@ -83,7 +83,11 @@ export class MockDatabase implements Database {
   ): Promise<QueryResult<T>> {
     this._queries.push({ script, params });
 
-    // Extract relation name from *relation_name{ pattern
+    // Try SQL parsing first (post-SQLite migration)
+    const sqlResult = this.parseSqlSelect<T>(script, params);
+    if (sqlResult) return sqlResult;
+
+    // Fall back to Datalog parsing (legacy)
     const relationMatch = script.match(/\*(\w+)\s*\{/);
     if (!relationMatch) {
       return { headers: [], rows: [] };
@@ -95,16 +99,12 @@ export class MockDatabase implements Database {
       return { headers: [], rows: [] };
     }
 
-    // Extract requested columns from ?[col1, col2, ...] pattern
     const columnsMatch = script.match(/\?\s*\[\s*([^\]]+)\s*\]/);
     const requestedColumns = columnsMatch ? columnsMatch[1]!.split(',').map((c) => c.trim()) : [];
 
-    // Extract column bindings from the relation body
-    // e.g., *pages{ page_id, title, created_at } or *pages{ page_id: $id }
     const bodyMatch = script.match(/\*\w+\s*\{\s*([^}]+)\s*\}/);
     const relationColumns = bodyMatch ? this.parseRelationColumns(bodyMatch[1]!) : [];
 
-    // Store headers for this relation if we have column info
     if (relationColumns.length > 0 && !this._headers.has(relationName)) {
       this._headers.set(
         relationName,
@@ -112,7 +112,6 @@ export class MockDatabase implements Database {
       );
     }
 
-    // Filter rows based on parameter bindings in the relation body
     let filteredRows = [...seededRows];
     for (const col of relationColumns) {
       if (col.param && col.param in params) {
@@ -124,7 +123,6 @@ export class MockDatabase implements Database {
       }
     }
 
-    // Also filter based on equality conditions in the where clause: column_name == $param
     const equalityConditions = this.parseEqualityConditions(script, params);
     for (const cond of equalityConditions) {
       const colIndex = relationColumns.findIndex((c) => c.name === cond.column);
@@ -133,7 +131,6 @@ export class MockDatabase implements Database {
       }
     }
 
-    // Project to requested columns if specified
     let resultRows: unknown[][] = filteredRows;
     if (requestedColumns.length > 0 && relationColumns.length > 0) {
       const columnIndices = requestedColumns.map((reqCol) =>
@@ -163,6 +160,11 @@ export class MockDatabase implements Database {
    */
   async mutate(script: string, params: Record<string, unknown> = {}): Promise<MutationResult> {
     this._mutations.push({ script, params });
+
+    // Try SQL mutation first (post-SQLite migration)
+    if (this.parseSqlMutation(script, params)) {
+      return { headers: [], rows: [] };
+    }
 
     // Split script by transaction blocks or find individual statements
     // Each block or statement may have ?[...] <- [[...]] and :put
@@ -428,6 +430,218 @@ export class MockDatabase implements Database {
     this._headers.clear();
     this._queries = [];
     this._mutations = [];
+  }
+
+  /**
+   * Parse a SQL SELECT statement and return matching seeded data.
+   * Returns null if the script is not a SQL SELECT.
+   */
+  private parseSqlSelect<T>(
+    script: string,
+    params: Record<string, unknown>
+  ): QueryResult<T> | null {
+    const fromMatch = script.match(/FROM\s+(\w+)/i);
+    if (!fromMatch) return null;
+
+    const tableName = fromMatch[1]!;
+    const seededRows = this._relations.get(tableName);
+    if (!seededRows) {
+      return { headers: [], rows: [] };
+    }
+
+    // Extract SELECT columns (handles quoted columns like "order")
+    const selectMatch = script.match(/SELECT\s+([\s\S]+?)\s+FROM/i);
+    const columns = selectMatch
+      ? selectMatch[1]!
+          .split(',')
+          .map((c) => c.trim().replace(/^"|"$/g, ''))
+          .filter((c) => c.length > 0)
+      : [];
+
+    // Store column mapping for this table
+    if (columns.length > 0) {
+      this._headers.set(tableName, columns);
+    }
+
+    // Parse WHERE conditions
+    let filteredRows = [...seededRows];
+    const whereMatch = script.match(/WHERE\s+([\s\S]+?)(?:ORDER|LIMIT|GROUP|$)/i);
+    if (whereMatch) {
+      const whereClauses = whereMatch[1]!.split(/\s+AND\s+/i);
+      for (const clause of whereClauses) {
+        const trimmed = clause.trim();
+
+        // column IS NULL
+        const isNullMatch = trimmed.match(/^"?(\w+)"?\s+IS\s+NULL$/i);
+        if (isNullMatch) {
+          const colIdx = columns.indexOf(isNullMatch[1]!);
+          if (colIdx !== -1) {
+            filteredRows = filteredRows.filter((row) => row[colIdx] === null || row[colIdx] === undefined);
+          }
+          continue;
+        }
+
+        // column IS NOT NULL
+        const isNotNullMatch = trimmed.match(/^"?(\w+)"?\s+IS\s+NOT\s+NULL$/i);
+        if (isNotNullMatch) {
+          const colIdx = columns.indexOf(isNotNullMatch[1]!);
+          if (colIdx !== -1) {
+            filteredRows = filteredRows.filter((row) => row[colIdx] !== null && row[colIdx] !== undefined);
+          }
+          continue;
+        }
+
+        // column = $param
+        const paramMatch = trimmed.match(/^"?(\w+)"?\s*=\s*\$(\w+)$/);
+        if (paramMatch) {
+          const colName = paramMatch[1]!;
+          const paramName = paramMatch[2]!;
+          if (paramName in params) {
+            const colIdx = columns.indexOf(colName);
+            if (colIdx !== -1) {
+              filteredRows = filteredRows.filter((row) => row[colIdx] === params[paramName]);
+            }
+          }
+          continue;
+        }
+
+        // column = literal (number)
+        const literalMatch = trimmed.match(/^"?(\w+)"?\s*=\s*(\d+)$/);
+        if (literalMatch) {
+          const colName = literalMatch[1]!;
+          const literalValue = Number(literalMatch[2]);
+          const colIdx = columns.indexOf(colName);
+          if (colIdx !== -1) {
+            filteredRows = filteredRows.filter((row) => {
+              // Handle boolean/integer comparison (SQLite stores booleans as 0/1)
+              if (typeof row[colIdx] === 'boolean') {
+                return row[colIdx] === (literalValue !== 0);
+              }
+              return row[colIdx] === literalValue;
+            });
+          }
+          continue;
+        }
+
+        // LOWER(column) = LOWER($param) — case-insensitive match
+        const lowerMatch = trimmed.match(/^LOWER\("?(\w+)"?\)\s*=\s*LOWER\(\$(\w+)\)$/i);
+        if (lowerMatch) {
+          const colName = lowerMatch[1]!;
+          const paramName = lowerMatch[2]!;
+          if (paramName in params) {
+            const colIdx = columns.indexOf(colName);
+            if (colIdx !== -1) {
+              const paramValue = String(params[paramName]).toLowerCase();
+              filteredRows = filteredRows.filter(
+                (row) => String(row[colIdx]).toLowerCase() === paramValue
+              );
+            }
+          }
+          continue;
+        }
+      }
+    }
+
+    return {
+      headers: columns,
+      rows: filteredRows as T[][],
+    };
+  }
+
+  /**
+   * Parse a SQL mutation (INSERT/UPDATE/DELETE) and update seeded data.
+   * Returns true if handled, false if not a recognized SQL mutation.
+   */
+  private parseSqlMutation(script: string, params: Record<string, unknown>): boolean {
+    // INSERT INTO table (cols) VALUES ($params)
+    const insertMatch = script.match(/INSERT\s+(?:OR\s+\w+\s+)?INTO\s+(\w+)\s*\(([^)]+)\)\s*VALUES\s*\(([^)]+)\)/i);
+    if (insertMatch) {
+      const tableName = insertMatch[1]!;
+      const columns = insertMatch[2]!.split(',').map((c) => c.trim().replace(/^"|"$/g, ''));
+      const valuePlaceholders = insertMatch[3]!.split(',').map((v) => v.trim());
+
+      const row: unknown[] = valuePlaceholders.map((v) => {
+        if (v.startsWith('$')) {
+          return params[v.slice(1)] ?? null;
+        }
+        if (v === 'NULL' || v === 'null') return null;
+        if (!isNaN(Number(v))) return Number(v);
+        return v.replace(/^'|'$/g, '');
+      });
+
+      const existing = this._relations.get(tableName) ?? [];
+      // Upsert: check if primary key (first column) matches
+      const existingIdx = existing.findIndex((r) => r[0] === row[0]);
+      if (existingIdx !== -1) {
+        existing[existingIdx] = row;
+      } else {
+        existing.push(row);
+      }
+      this._relations.set(tableName, existing);
+
+      if (!this._headers.has(tableName)) {
+        this._headers.set(tableName, columns);
+      }
+      return true;
+    }
+
+    // UPDATE table SET col = $param WHERE ...
+    const updateMatch = script.match(/UPDATE\s+(\w+)\s+SET\s+([\s\S]+?)\s+WHERE\s+([\s\S]+?)$/i);
+    if (updateMatch) {
+      const tableName = updateMatch[1]!;
+      const headers = this._headers.get(tableName) ?? [];
+      const setClauses = updateMatch[2]!.split(',').map((s) => s.trim());
+      const whereClause = updateMatch[3]!.trim();
+
+      // Parse WHERE to find matching rows
+      const whereParamMatch = whereClause.match(/"?(\w+)"?\s*=\s*\$(\w+)/);
+      const existing = this._relations.get(tableName) ?? [];
+
+      if (whereParamMatch && whereParamMatch[2]! in params) {
+        const whereCol = whereParamMatch[1]!;
+        const whereIdx = headers.indexOf(whereCol);
+        const whereVal = params[whereParamMatch[2]!];
+
+        for (const row of existing) {
+          if (whereIdx !== -1 && row[whereIdx] === whereVal) {
+            for (const clause of setClauses) {
+              const setMatch = clause.match(/^"?(\w+)"?\s*=\s*\$(\w+)$/);
+              if (setMatch && setMatch[2]! in params) {
+                const setIdx = headers.indexOf(setMatch[1]!);
+                if (setIdx !== -1) {
+                  row[setIdx] = params[setMatch[2]!];
+                }
+              }
+            }
+          }
+        }
+      }
+      return true;
+    }
+
+    // DELETE FROM table WHERE ...
+    const deleteMatch = script.match(/DELETE\s+FROM\s+(\w+)\s+WHERE\s+([\s\S]+?)$/i);
+    if (deleteMatch) {
+      const tableName = deleteMatch[1]!;
+      const headers = this._headers.get(tableName) ?? [];
+      const whereClause = deleteMatch[2]!.trim();
+
+      const whereParamMatch = whereClause.match(/"?(\w+)"?\s*=\s*\$(\w+)/);
+      if (whereParamMatch && whereParamMatch[2]! in params) {
+        const whereCol = whereParamMatch[1]!;
+        const whereIdx = headers.indexOf(whereCol);
+        const whereVal = params[whereParamMatch[2]!];
+
+        const existing = this._relations.get(tableName) ?? [];
+        this._relations.set(
+          tableName,
+          existing.filter((row) => !(whereIdx !== -1 && row[whereIdx] === whereVal))
+        );
+      }
+      return true;
+    }
+
+    return false;
   }
 
   /**

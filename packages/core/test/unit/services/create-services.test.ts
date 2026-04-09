@@ -15,6 +15,7 @@ import { PageService } from '../../../src/services/page-service.js';
 import { BlockService } from '../../../src/services/block-service.js';
 import { GraphService } from '../../../src/services/graph-service.js';
 import { SearchService } from '../../../src/services/search-service.js';
+import { SavedQueryService } from '../../../src/services/saved-query-service.js';
 
 describe('createServices', () => {
   let db: MockDatabase;
@@ -32,6 +33,7 @@ describe('createServices', () => {
       expect(services).toHaveProperty('blockService');
       expect(services).toHaveProperty('graphService');
       expect(services).toHaveProperty('searchService');
+      expect(services).toHaveProperty('savedQueryService');
     });
 
     it('should create PageService instance', () => {
@@ -48,6 +50,10 @@ describe('createServices', () => {
 
     it('should create SearchService instance', () => {
       expect(services.searchService).toBeInstanceOf(SearchService);
+    });
+
+    it('should create SavedQueryService instance', () => {
+      expect(services.savedQueryService).toBeInstanceOf(SavedQueryService);
     });
 
     it('should create services that share the same Database instance', async () => {
@@ -167,6 +173,7 @@ describe('createServices', () => {
       expect(services1.blockService).not.toBe(services2.blockService);
       expect(services1.graphService).not.toBe(services2.graphService);
       expect(services1.searchService).not.toBe(services2.searchService);
+      expect(services1.savedQueryService).not.toBe(services2.savedQueryService);
     });
 
     it('should share the Database instance across all created repositories', async () => {
@@ -267,11 +274,13 @@ describe('createServices', () => {
       const _blockService: BlockService = result.blockService;
       const _graphService: GraphService = result.graphService;
       const _searchService: SearchService = result.searchService;
+      const _savedQueryService: SavedQueryService = result.savedQueryService;
 
       expect(_pageService).toBeDefined();
       expect(_blockService).toBeDefined();
       expect(_graphService).toBeDefined();
       expect(_searchService).toBeDefined();
+      expect(_savedQueryService).toBeDefined();
     });
 
     it('should accept any Database implementation', () => {

@@ -1,8 +1,8 @@
 /**
  * Unit tests for PageRepository
  *
- * These tests verify correct Datalog query construction and parameter passing
- * using MockDatabase. They do NOT execute real Datalog queries - that's for
+ * These tests verify correct SQL query construction and parameter passing
+ * using MockDatabase. They do NOT execute real SQL queries - that's for
  * Layer 2 integration tests.
  */
 
@@ -27,9 +27,9 @@ describe('PageRepository', () => {
 
       await repo.getById(pageId);
 
-      expect(db.lastQuery.script).toContain('*pages{');
-      expect(db.lastQuery.script).toContain('page_id == $id');
-      expect(db.lastQuery.script).toContain('is_deleted == false');
+      expect(db.lastQuery.script).toContain('FROM pages');
+      expect(db.lastQuery.script).toContain('page_id = $id');
+      expect(db.lastQuery.script).toContain('is_deleted = 0');
       expect(db.lastQuery.params).toEqual({ id: pageId });
     });
 
@@ -75,11 +75,11 @@ describe('PageRepository', () => {
 
       await repo.getAll();
 
-      expect(db.lastQuery.script).toContain('*pages{');
-      expect(db.lastQuery.script).toContain('is_deleted == false');
-      expect(db.lastQuery.script).toContain(':order -updated_at');
-      expect(db.lastQuery.script).toContain(':limit $limit');
-      expect(db.lastQuery.script).toContain(':offset $offset');
+      expect(db.lastQuery.script).toContain('FROM pages');
+      expect(db.lastQuery.script).toContain('is_deleted = 0');
+      expect(db.lastQuery.script).toContain('ORDER BY');
+      expect(db.lastQuery.script).toContain('LIMIT $limit');
+      expect(db.lastQuery.script).toContain('OFFSET $offset');
       expect(db.lastQuery.params).toEqual({ limit: 100, offset: 0 });
     });
 
@@ -97,7 +97,7 @@ describe('PageRepository', () => {
       await repo.getAll({ includeDeleted: true });
 
       // When includeDeleted is true, the query should NOT have is_deleted filter
-      expect(db.lastQuery.script).not.toContain('is_deleted == false');
+      expect(db.lastQuery.script).not.toContain('is_deleted = 0');
     });
 
     it('should return array of Pages', async () => {
@@ -121,11 +121,10 @@ describe('PageRepository', () => {
 
       await repo.search('test query');
 
-      expect(db.lastQuery.script).toContain('~pages:fts{');
-      expect(db.lastQuery.script).toContain('query: $query');
-      expect(db.lastQuery.script).toContain('k: $limit');
-      expect(db.lastQuery.script).toContain('bind_score: score');
-      expect(db.lastQuery.script).toContain(':order -score');
+      expect(db.lastQuery.script).toContain('pages_fts');
+      expect(db.lastQuery.script).toContain('MATCH $query');
+      expect(db.lastQuery.script).toContain('LIMIT $limit');
+      expect(db.lastQuery.script).toContain('ORDER BY rank');
       expect(db.lastQuery.params).toEqual({ query: 'test query', limit: 50 });
     });
 
@@ -142,7 +141,7 @@ describe('PageRepository', () => {
     it('should construct put mutation with ULID', async () => {
       await repo.create({ title: 'New Page' });
 
-      expect(db.lastMutation.script).toContain(':put pages {');
+      expect(db.lastMutation.script).toContain('INSERT INTO pages');
       expect(db.lastMutation.script).toContain(
         'page_id, title, created_at, updated_at, is_deleted, daily_note_date'
       );
@@ -189,7 +188,6 @@ describe('PageRepository', () => {
       // Then the write (mutation)
       expect(db.mutations).toHaveLength(1);
       expect(db.lastMutation.params.title).toBe('Updated Title');
-      expect(db.lastMutation.params.created_at).toBe(now);
     });
 
     it('should throw PAGE_NOT_FOUND if page does not exist', async () => {
@@ -209,7 +207,6 @@ describe('PageRepository', () => {
       await repo.update(pageId, { title: 'Updated' });
 
       expect(db.lastMutation.params.daily_date).toBe('2025-01-15');
-      expect(db.lastMutation.params.is_deleted).toBe(false);
     });
 
     it('should allow updating dailyNoteDate', async () => {
@@ -231,9 +228,8 @@ describe('PageRepository', () => {
 
       await repo.softDelete(pageId);
 
-      expect(db.lastMutation.script).toContain(':put pages {');
-      // The mutation script should have is_deleted = true hardcoded
-      expect(db.lastMutation.script).toContain('true');
+      expect(db.lastMutation.script).toContain('UPDATE pages');
+      expect(db.lastMutation.script).toContain('is_deleted = 1');
     });
 
     it('should throw PAGE_NOT_FOUND if page does not exist', async () => {
@@ -266,8 +262,8 @@ describe('PageRepository', () => {
 
       await repo.getByDailyNoteDate('2025-01-15');
 
-      expect(db.queries[0]?.script).toContain('*daily_notes{');
-      expect(db.queries[0]?.script).toContain('date == $date');
+      expect(db.queries[0]?.script).toContain('FROM daily_notes');
+      expect(db.queries[0]?.script).toContain('date = $date');
       expect(db.queries[0]?.params).toEqual({ date: '2025-01-15' });
     });
 
@@ -282,7 +278,8 @@ describe('PageRepository', () => {
     it('should return page when daily note exists', async () => {
       const pageId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
       const now = Date.now();
-      db.seed('daily_notes', [['2025-01-15', pageId]]);
+      // Seed daily_notes with [page_id] matching the SQL SELECT column order
+      db.seed('daily_notes', [[pageId]]);
       db.seed('pages', [[pageId, '2025-01-15', now, now, false, '2025-01-15']]);
 
       const result = await repo.getByDailyNoteDate('2025-01-15');
@@ -296,7 +293,8 @@ describe('PageRepository', () => {
     it('should return existing daily note without creating', async () => {
       const pageId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
       const now = Date.now();
-      db.seed('daily_notes', [['2025-01-15', pageId]]);
+      // Seed daily_notes with [page_id] matching SQL SELECT column order
+      db.seed('daily_notes', [[pageId]]);
       db.seed('pages', [[pageId, '2025-01-15', now, now, false, '2025-01-15']]);
 
       const result = await repo.getOrCreateDailyNote('2025-01-15');
@@ -309,17 +307,17 @@ describe('PageRepository', () => {
 
     it('should create page and register in daily_notes when not exists', async () => {
       db.seed('daily_notes', []);
-      // After creation, the getById call needs data
-      // MockDatabase doesn't actually persist mutations, so we need to pre-seed
-      // In real tests, we'd use integration tests for this behavior
 
-      // For unit test, we verify the mutations are called correctly
-      await expect(repo.getOrCreateDailyNote('2025-01-15')).rejects.toThrow();
+      // MockDatabase persists SQL mutations, so the full flow succeeds
+      const result = await repo.getOrCreateDailyNote('2025-01-15');
 
-      // Even though it fails (because mock doesn't persist), we can verify mutations
+      expect(result.title).toBe('2025-01-15');
+      expect(result.dailyNoteDate).toBe('2025-01-15');
+
+      // Verify mutations were called correctly
       expect(db.mutations.length).toBeGreaterThanOrEqual(1);
       // First mutation creates the page
-      expect(db.mutations[0]?.script).toContain(':put pages {');
+      expect(db.mutations[0]?.script).toContain('INSERT INTO pages');
       expect(db.mutations[0]?.params.title).toBe('2025-01-15');
       expect(db.mutations[0]?.params.daily_date).toBe('2025-01-15');
     });
@@ -327,12 +325,12 @@ describe('PageRepository', () => {
     it('should register new daily note in daily_notes relation', async () => {
       db.seed('daily_notes', []);
 
-      // Will fail at getById after create, but we can still verify the mutation
-      await expect(repo.getOrCreateDailyNote('2025-01-15')).rejects.toThrow();
+      // MockDatabase persists SQL mutations, so the full flow succeeds
+      await repo.getOrCreateDailyNote('2025-01-15');
 
       // Should have at least 2 mutations: create page and register daily note
       expect(db.mutations.length).toBeGreaterThanOrEqual(2);
-      expect(db.mutations[1]?.script).toContain(':put daily_notes {');
+      expect(db.mutations[1]?.script).toContain('INSERT INTO daily_notes');
       expect(db.mutations[1]?.params.date).toBe('2025-01-15');
     });
   });
@@ -343,21 +341,18 @@ describe('PageRepository', () => {
     // Using getAll() ensures the invalid row is returned and validated.
 
     it('should throw on invalid page_id type', async () => {
-      // @ts-expect-error - testing runtime validation
       db.seed('pages', [[123, 'Title', 1700000000, 1700000000, false, null]]);
 
       await expect(repo.getAll()).rejects.toThrow(DoubleBindError);
     });
 
     it('should throw on invalid title type', async () => {
-      // @ts-expect-error - testing runtime validation
       db.seed('pages', [['page-1', null, 1700000000, 1700000000, false, null]]);
 
       await expect(repo.getAll()).rejects.toThrow(DoubleBindError);
     });
 
     it('should throw on invalid timestamp type', async () => {
-      // @ts-expect-error - testing runtime validation
       db.seed('pages', [['page-1', 'Title', 'not-a-number', 1700000000, false, null]]);
 
       await expect(repo.getAll()).rejects.toThrow(DoubleBindError);
@@ -416,7 +411,7 @@ describe('PageRepository', () => {
       await repo.getByTitle('Deleted Page');
 
       // MockDatabase doesn't filter by is_deleted, but the query should have the filter
-      expect(db.lastQuery.script).toContain('is_deleted == false');
+      expect(db.lastQuery.script).toContain('is_deleted = 0');
       // In real DB this would return null, but MockDatabase returns the seeded row
       // This test verifies the query structure is correct
     });
@@ -426,7 +421,7 @@ describe('PageRepository', () => {
 
       await repo.getByTitle('Test Title');
 
-      expect(db.lastQuery.script).toContain('title == $title');
+      expect(db.lastQuery.script).toContain('title = $title');
       expect(db.lastQuery.params).toEqual({ title: 'Test Title' });
     });
   });
@@ -454,7 +449,7 @@ describe('PageRepository', () => {
 
       await repo.search('test');
 
-      expect(db.lastQuery.script).toContain('is_deleted == false');
+      expect(db.lastQuery.script).toContain('is_deleted = 0');
     });
   });
 
@@ -464,7 +459,7 @@ describe('PageRepository', () => {
 
       await repo.getByTitleCaseInsensitive('Test Title');
 
-      expect(db.lastQuery.script).toContain('lowercase(title) == lowercase($title)');
+      expect(db.lastQuery.script).toContain('LOWER(title) = LOWER($title)');
       expect(db.lastQuery.params).toEqual({ title: 'Test Title' });
     });
 
@@ -476,7 +471,7 @@ describe('PageRepository', () => {
       await repo.getByTitleCaseInsensitive('MY PAGE');
 
       // MockDatabase doesn't implement case-insensitive matching, but we verify query structure
-      expect(db.lastQuery.script).toContain('lowercase(title) == lowercase($title)');
+      expect(db.lastQuery.script).toContain('LOWER(title) = LOWER($title)');
     });
 
     it('should return null when not found', async () => {
@@ -522,8 +517,9 @@ describe('PageRepository', () => {
 
       // Should have 2 queries: getById and getByTitleCaseInsensitive
       expect(db.queries).toHaveLength(2);
-      expect(db.queries[1]?.script).toContain('lowercase(title) == lowercase($title)');
-      expect(db.queries[1]?.params).toEqual({ title: 'New Title' });
+      expect(db.queries[1]?.script).toContain('LOWER(title) = LOWER($title)');
+      // SQL query also includes is_deleted filter
+      expect(db.queries[1]?.params.title).toBe('New Title');
     });
 
     it('should skip duplicate check when title unchanged', async () => {
@@ -591,7 +587,8 @@ describe('PageRepository', () => {
     it('should always set is_deleted to false on create', async () => {
       await repo.create({ title: 'New Page' });
 
-      expect(db.lastMutation.script).toContain('false');
+      // SQL uses 0 for false
+      expect(db.lastMutation.script).toContain('0');
     });
   });
 
@@ -679,7 +676,7 @@ describe('PageRepository', () => {
       await repo.getById(pageId);
 
       // MockDatabase returns the row, but the query should have is_deleted filter
-      expect(db.lastQuery.script).toContain('is_deleted == false');
+      expect(db.lastQuery.script).toContain('is_deleted = 0');
       // In a real DB with deleted page, this would be null
     });
   });

@@ -196,7 +196,7 @@ export function DailyNotesView(_props: DailyNotesViewProps): React.ReactElement 
       >
         <div className={styles.error}>
           <h1>Failed to load daily note</h1>
-          <p>{error.message ?? 'An unknown error occurred'}</p>
+          <p>{error instanceof Error ? error.message : String(error)}</p>
         </div>
       </div>
     );

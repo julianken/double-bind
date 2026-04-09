@@ -79,9 +79,10 @@ export interface SidebarProps {
 interface ResizeHandleProps {
   onResize: (width: number) => void;
   sidebarRef: React.RefObject<HTMLElement | null>;
+  currentStoreWidth: number;
 }
 
-function ResizeHandle({ onResize, sidebarRef }: ResizeHandleProps) {
+function ResizeHandle({ onResize, sidebarRef, currentStoreWidth }: ResizeHandleProps) {
   const isDragging = useRef(false);
 
   const handleMouseDown = useCallback(
@@ -90,7 +91,7 @@ function ResizeHandle({ onResize, sidebarRef }: ResizeHandleProps) {
       isDragging.current = true;
 
       const startX = event.clientX;
-      const startWidth = sidebarRef.current?.offsetWidth ?? DEFAULT_SIDEBAR_WIDTH;
+      const startWidth = sidebarRef.current?.offsetWidth || currentStoreWidth;
 
       function handleMouseMove(e: MouseEvent) {
         if (!isDragging.current) return;
@@ -111,13 +112,13 @@ function ResizeHandle({ onResize, sidebarRef }: ResizeHandleProps) {
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
     },
-    [onResize, sidebarRef]
+    [onResize, sidebarRef, currentStoreWidth]
   );
 
   const handleKeyDown = useCallback(
     (event: React.KeyboardEvent) => {
       const step = event.shiftKey ? 20 : 5;
-      const currentWidth = sidebarRef.current?.offsetWidth ?? DEFAULT_SIDEBAR_WIDTH;
+      const currentWidth = sidebarRef.current?.offsetWidth || currentStoreWidth;
 
       if (event.key === 'ArrowRight') {
         event.preventDefault();
@@ -127,10 +128,10 @@ function ResizeHandle({ onResize, sidebarRef }: ResizeHandleProps) {
         onResize(Math.max(MIN_SIDEBAR_WIDTH, currentWidth - step));
       }
     },
-    [onResize, sidebarRef]
+    [onResize, sidebarRef, currentStoreWidth]
   );
 
-  const currentWidth = sidebarRef.current?.offsetWidth ?? DEFAULT_SIDEBAR_WIDTH;
+  const currentWidth = sidebarRef.current?.offsetWidth || currentStoreWidth;
 
   return (
     <div
@@ -191,6 +192,7 @@ interface SidebarOpenProps {
 function SidebarOpen({ onNewPage, sidebarRef }: SidebarOpenProps) {
   const navigateToPage = useAppStore((state) => state.navigateToPage);
   const setSidebarWidth = useAppStore((state) => state.setSidebarWidth);
+  const sidebarWidth = useAppStore((state) => state.sidebarWidth);
 
   const handleResize = useCallback(
     (width: number) => {
@@ -230,7 +232,7 @@ function SidebarOpen({ onNewPage, sidebarRef }: SidebarOpenProps) {
         <SidebarFooter />
       </div>
 
-      <ResizeHandle onResize={handleResize} sidebarRef={sidebarRef} />
+      <ResizeHandle onResize={handleResize} sidebarRef={sidebarRef} currentStoreWidth={sidebarWidth} />
     </>
   );
 }

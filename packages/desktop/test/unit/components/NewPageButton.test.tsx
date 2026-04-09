@@ -37,6 +37,7 @@ const mockPage: Page = {
 
 const createMockPageService = () => ({
   createPage: vi.fn().mockResolvedValue(mockPage),
+  getAllPages: vi.fn().mockResolvedValue([]),
   getPageWithBlocks: vi.fn(),
   deletePage: vi.fn(),
   getTodaysDailyNote: vi.fn(),

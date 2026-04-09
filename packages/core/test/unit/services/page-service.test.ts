@@ -33,18 +33,15 @@ describe('PageService', () => {
 
   describe('createPage', () => {
     it('should create a page and return the full Page object', async () => {
-      // We need to spy on the repository to capture the created pageId
       const createSpy = vi.spyOn(pageRepo, 'create');
 
-      // First, attempt to create - this will generate a ULID
-      const createPromise = service.createPage('My New Page');
-
-      // Since MockDatabase doesn't persist, the getById after create will fail
-      // We need a different approach - mock the repository methods
-      await expect(createPromise).rejects.toThrow(DoubleBindError);
+      // MockDatabase persists SQL mutations, so createPage succeeds end-to-end
+      const result = await service.createPage('My New Page');
 
       // Verify the create was called with correct title
       expect(createSpy).toHaveBeenCalledWith({ title: 'My New Page' });
+      expect(result.title).toBe('My New Page');
+      expect(result.pageId).toBeDefined();
     });
 
     it('should delegate to pageRepo.create with title', async () => {
@@ -70,8 +67,8 @@ describe('PageService', () => {
       const createSpy = vi.spyOn(pageRepo, 'create');
       const getByIdSpy = vi.spyOn(pageRepo, 'getById');
 
-      createSpy.mockResolvedValueOnce('new-page-id');
-      getByIdSpy.mockResolvedValueOnce(null);
+      createSpy.mockResolvedValue('new-page-id');
+      getByIdSpy.mockResolvedValue(null);
 
       await expect(service.createPage('Test')).rejects.toThrow(DoubleBindError);
       await expect(service.createPage('Test')).rejects.toMatchObject({

@@ -15,6 +15,7 @@ import {
   forwardRef,
   memo,
   useCallback,
+  useState,
 } from 'react';
 import type { PageId } from '@double-bind/types';
 
@@ -65,11 +66,18 @@ const styles = {
   base: {
     display: 'inline',
     color: cssVars.color,
-    textDecoration: 'underline',
+    textDecoration: 'none',
     cursor: 'pointer',
     padding: '0',
     margin: '0',
-    border: 'none',
+    // Button reset: only bottom border is used for hover underline effect
+    borderTopStyle: 'none',
+    borderLeftStyle: 'none',
+    borderRightStyle: 'none',
+    borderBottomStyle: 'solid',
+    borderBottomWidth: '1px',
+    borderBottomColor: 'transparent',
+    transition: 'border-color 0.15s ease',
     fontFamily: 'inherit',
     fontSize: 'inherit',
     lineHeight: 'inherit',
@@ -124,6 +132,8 @@ export const InlinePageLink = memo(
     { pageId, title, onClick, onHover, exists = true, className },
     ref
   ) {
+    const [isHovered, setIsHovered] = useState(false);
+
     const handleClick = useCallback(
       (event: MouseEvent<HTMLButtonElement>) => {
         event.preventDefault();
@@ -149,16 +159,20 @@ export const InlinePageLink = memo(
     );
 
     const handleMouseEnter = useCallback(() => {
+      setIsHovered(true);
       onHover?.(pageId);
     }, [pageId, onHover]);
 
     const handleMouseLeave = useCallback(() => {
+      setIsHovered(false);
       onHover?.(null);
     }, [onHover]);
 
     // Combine styles based on state
     const combinedStyles: CSSProperties = {
       ...styles.base,
+      // Show underline on hover when page exists
+      ...(isHovered && exists ? { borderBottomColor: cssVars.color } : {}),
       ...(!exists ? styles.missing : {}),
     };
 

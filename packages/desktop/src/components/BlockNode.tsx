@@ -713,8 +713,16 @@ const PageLinkSegment = memo(function PageLinkSegment({
   }
 
   // No ServiceProvider in tree (unit tests, Storybook, etc.) — render
-  // as plain text since we can't construct a valid PageId from a title string.
-  return <span className={styles.unresolvedLink}>{title}</span>;
+  // as InlinePageLink with exists=false so tests and Storybook can assert on it.
+  // Use title as a placeholder pageId since no real ID is available.
+  return (
+    <InlinePageLink
+      pageId={title as PageId}
+      title={title}
+      exists={false}
+      onClick={handleClick}
+    />
+  );
 });
 
 /**

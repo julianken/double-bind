@@ -70,9 +70,9 @@ describe('BlockRepository', () => {
 
       await repo.getById(blockId);
 
-      expect(db.lastQuery.script).toContain('*blocks{');
-      expect(db.lastQuery.script).toContain('block_id == $id');
-      expect(db.lastQuery.script).toContain('is_deleted == false');
+      expect(db.lastQuery.script).toContain('FROM blocks');
+      expect(db.lastQuery.script).toContain('block_id = $id');
+      expect(db.lastQuery.script).toContain('is_deleted = 0');
       expect(db.lastQuery.params).toEqual({ id: blockId });
     });
 
@@ -137,25 +137,20 @@ describe('BlockRepository', () => {
   describe('getByPage', () => {
     it('should construct query joining blocks_by_page with blocks', async () => {
       const pageId = '01ARZ3NDEKTSV4RRFFQ69G5PAG';
-      // Seed empty data - we just want to verify query construction
-      db.seed('blocks_by_page', []);
       db.seed('blocks', []);
 
       await repo.getByPage(pageId);
 
-      expect(db.lastQuery.script).toContain('*blocks_by_page{');
-      expect(db.lastQuery.script).toContain('page_id == $page_id');
-      expect(db.lastQuery.script).toContain('*blocks{');
-      expect(db.lastQuery.script).toContain('is_deleted == false');
-      expect(db.lastQuery.script).toContain(':order order');
+      expect(db.lastQuery.script).toContain('FROM blocks');
+      expect(db.lastQuery.script).toContain('page_id = $page_id');
+      expect(db.lastQuery.script).toContain('is_deleted = 0');
+      expect(db.lastQuery.script).toContain('ORDER BY');
       expect(db.lastQuery.params).toEqual({ page_id: pageId });
     });
 
     it('should return empty array when no blocks exist', async () => {
       const pageId = '01ARZ3NDEKTSV4RRFFQ69G5PAG';
-      // Note: MockDatabase doesn't evaluate joins, it returns first relation matched
-      // Seed blocks_by_page with empty array to simulate no blocks
-      db.seed('blocks_by_page', []);
+      db.seed('blocks', []);
 
       const result = await repo.getByPage(pageId);
 
@@ -170,18 +165,16 @@ describe('BlockRepository', () => {
   describe('getChildren', () => {
     it('should construct query joining blocks_by_parent with blocks', async () => {
       const parentKey = '__page:page-123';
-      db.seed('blocks_by_parent', []);
       db.seed('blocks', []);
 
       await repo.getChildren(parentKey);
 
-      expect(db.lastQuery.script).toContain('*blocks_by_parent{');
-      // Uses idx_parent alias to avoid CozoDB binding conflicts with blocks.parent_id
-      expect(db.lastQuery.script).toContain('idx_parent == $parent_key');
-      expect(db.lastQuery.script).toContain('*blocks{');
-      expect(db.lastQuery.script).toContain('is_deleted == false');
-      expect(db.lastQuery.script).toContain(':order order');
-      expect(db.lastQuery.params).toEqual({ parent_key: parentKey });
+      expect(db.lastQuery.script).toContain('FROM blocks');
+      expect(db.lastQuery.script).toContain('parent_id IS NULL');
+      expect(db.lastQuery.script).toContain('is_deleted = 0');
+      expect(db.lastQuery.script).toContain('ORDER BY');
+      // With sentinel format, page ID is extracted
+      expect(db.lastQuery.params).toEqual({ page_id: 'page-123' });
     });
 
     it('should work with block ID as parent key', async () => {
@@ -191,18 +184,18 @@ describe('BlockRepository', () => {
 
       await repo.getChildren(parentBlockId);
 
-      expect(db.lastQuery.params).toEqual({ parent_key: parentBlockId });
+      expect(db.lastQuery.params).toEqual({ parent_id: parentBlockId });
     });
 
     it('should work with page sentinel as parent key', async () => {
       const pageId = 'page-123';
       const parentKey = `__page:${pageId}`;
-      db.seed('blocks_by_parent', []);
       db.seed('blocks', []);
 
       await repo.getChildren(parentKey);
 
-      expect(db.lastQuery.params).toEqual({ parent_key: parentKey });
+      // Sentinel format extracts the page ID
+      expect(db.lastQuery.params).toEqual({ page_id: pageId });
     });
   });
 
@@ -212,13 +205,9 @@ describe('BlockRepository', () => {
 
       await repo.create({ pageId, content: 'New block' });
 
-      // Should have 1 atomic mutation containing all 3 operations
+      // Single INSERT handles everything (SQLite indexes are automatic)
       expect(db.mutations).toHaveLength(1);
-
-      // Single atomic script contains all operations
-      expect(db.mutations[0]?.script).toContain(':put blocks {');
-      expect(db.mutations[0]?.script).toContain(':put blocks_by_page {');
-      expect(db.mutations[0]?.script).toContain(':put blocks_by_parent {');
+      expect(db.mutations[0]?.script).toContain('INSERT INTO blocks');
     });
 
     it('should generate ULID for block ID', async () => {
@@ -251,8 +240,8 @@ describe('BlockRepository', () => {
 
       await repo.create({ pageId, content: 'Root block' });
 
-      // Atomic mutation has the parent_key for blocks_by_parent
-      expect(db.mutations[0]?.params.parent_key).toBe(`__page:${pageId}`);
+      // SQL INSERT uses null for root block parent_id (no parent_key concept)
+      expect(db.mutations[0]?.params.parent_id).toBeNull();
     });
 
     it('should use parent ID as parent key when provided', async () => {
@@ -263,7 +252,6 @@ describe('BlockRepository', () => {
 
       // Atomic mutation has both parent_id and parent_key
       expect(db.mutations[0]?.params.parent_id).toBe(parentId);
-      expect(db.mutations[0]?.params.parent_key).toBe(parentId);
     });
 
     it('should use provided content type', async () => {
@@ -308,7 +296,8 @@ describe('BlockRepository', () => {
       // Second call should be the write (mutation)
       expect(db.mutations).toHaveLength(1);
       expect(db.lastMutation.params.content).toBe('Updated content');
-      expect(db.lastMutation.params.created_at).toBe(now);
+      // SQL UPDATE doesn't include created_at — only mutable fields
+      expect(db.lastMutation.params.id).toBe(blockId);
     });
 
     it('should throw BLOCK_NOT_FOUND if block does not exist', async () => {
@@ -380,9 +369,8 @@ describe('BlockRepository', () => {
 
       await repo.softDelete(blockId);
 
-      expect(db.lastMutation.script).toContain(':put blocks {');
-      // The mutation script should have is_deleted = true hardcoded
-      expect(db.lastMutation.script).toContain('true');
+      expect(db.lastMutation.script).toContain('UPDATE blocks');
+      expect(db.lastMutation.script).toContain('is_deleted = 1');
     });
 
     it('should throw BLOCK_NOT_FOUND if block does not exist', async () => {
@@ -422,8 +410,8 @@ describe('BlockRepository', () => {
 
       await repo.softDelete(blockId);
 
-      expect(db.lastMutation.params.content).toBe('Original content');
-      expect(db.lastMutation.params.order).toBe('abc');
+      // softDelete only sets is_deleted and updated_at — doesn't pass all fields
+      expect(db.lastMutation.params.id).toBe(blockId);
     });
   });
 
@@ -436,16 +424,9 @@ describe('BlockRepository', () => {
       const newParentId = '01ARZ3NDEKTSV4RRFFQ69G5PAR';
       await repo.move(blockId, newParentId, 'b');
 
-      // move() uses 1 atomic mutation containing all 3 operations:
-      // 1. Update the block itself (:put blocks)
-      // 2. Remove from old parent index (:rm blocks_by_parent)
-      // 3. Add to new parent index (:put blocks_by_parent)
+      // In SQL, move is a single UPDATE (no separate index maintenance)
       expect(db.mutations).toHaveLength(1);
-
-      // Single atomic script contains all operations
-      expect(db.mutations[0].script).toContain(':put blocks {');
-      expect(db.mutations[0].script).toContain(':rm blocks_by_parent {');
-      expect(db.mutations[0].script).toContain(':put blocks_by_parent {');
+      expect(db.mutations[0].script).toContain('UPDATE blocks');
     });
 
     it('should throw BLOCK_NOT_FOUND if block does not exist', async () => {
@@ -469,13 +450,12 @@ describe('BlockRepository', () => {
 
       await repo.move(blockId, newParentId, 'b');
 
-      // move() uses 1 atomic mutation with all operations
+      // SQL move is a single UPDATE
       expect(db.mutations).toHaveLength(1);
-      expect(db.mutations[0].params.old_parent_key).toBe(oldParentId);
-      expect(db.mutations[0].params.new_parent_key).toBe(newParentId);
+      expect(db.mutations[0].params.new_parent_id).toBe(newParentId);
     });
 
-    it('should use page sentinel for root-level move', async () => {
+    it('should use null parent for root-level move', async () => {
       const blockId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
       const pageId = '01ARZ3NDEKTSV4RRFFQ69G5PAG';
       const oldParentId = '01ARZ3NDEKTSV4RRFFQ69G5OLD';
@@ -486,10 +466,8 @@ describe('BlockRepository', () => {
 
       await repo.move(blockId, null, 'b');
 
-      // move() uses 1 atomic mutation with all operations
+      // SQL move is a single UPDATE with null parent
       expect(db.mutations).toHaveLength(1);
-      expect(db.mutations[0].params.old_parent_key).toBe(oldParentId);
-      expect(db.mutations[0].params.new_parent_key).toBe(`__page:${pageId}`);
       expect(db.mutations[0].params.new_parent_id).toBeNull();
     });
 
@@ -516,10 +494,9 @@ describe('BlockRepository', () => {
 
       await repo.move(blockId, null, 'b');
 
-      // First mutation updates the block, preserving content and other fields
-      expect(db.mutations[0].params.content).toBe('Preserved content');
-      expect(db.mutations[0].params.content_type).toBe('heading');
-      expect(db.mutations[0].params.is_collapsed).toBe(true);
+      // SQL move only updates parent_id, order, and updated_at
+      expect(db.mutations[0].params.new_parent_id).toBeNull();
+      expect(db.mutations[0].params.new_order).toBe('b');
     });
   });
 
@@ -529,12 +506,10 @@ describe('BlockRepository', () => {
 
       await repo.search('test query');
 
-      expect(db.lastQuery.script).toContain('~blocks:fts{');
-      expect(db.lastQuery.script).toContain('query: $query');
-      expect(db.lastQuery.script).toContain('k: $limit');
-      expect(db.lastQuery.script).toContain('bind_score: score');
-      expect(db.lastQuery.script).toContain('is_deleted == false');
-      expect(db.lastQuery.script).toContain(':order -score');
+      expect(db.lastQuery.script).toContain('blocks_fts');
+      expect(db.lastQuery.script).toContain('MATCH $query');
+      expect(db.lastQuery.script).toContain('is_deleted = 0');
+      expect(db.lastQuery.script).toContain('LIMIT $limit');
       expect(db.lastQuery.params).toEqual({ query: 'test query', limit: 50 });
     });
 
@@ -554,10 +529,10 @@ describe('BlockRepository', () => {
 
       await repo.getHistory(blockId);
 
-      expect(db.lastQuery.script).toContain('*block_history{');
-      expect(db.lastQuery.script).toContain('block_id == $id');
-      expect(db.lastQuery.script).toContain(':order -version');
-      expect(db.lastQuery.script).toContain(':limit $limit');
+      expect(db.lastQuery.script).toContain('FROM block_history');
+      expect(db.lastQuery.script).toContain('block_id = $id');
+      expect(db.lastQuery.script).toContain('ORDER BY version DESC');
+      expect(db.lastQuery.script).toContain('LIMIT $limit');
       expect(db.lastQuery.params).toEqual({ id: blockId, limit: 100 });
     });
 
@@ -601,7 +576,6 @@ describe('BlockRepository', () => {
     // the block_id must match the query parameter.
 
     it('should throw on invalid block_id type', async () => {
-      // @ts-expect-error - testing runtime validation
       db.seed('blocks', [
         [123, 'page', null, 'content', 'text', 'a', false, false, 1700000000, 1700000000],
       ]);
@@ -635,7 +609,6 @@ describe('BlockRepository', () => {
 
     it('should throw on invalid timestamp type when row is returned', async () => {
       const blockId = 'block-invalid-ts';
-      // @ts-expect-error - testing runtime validation
       db.seed('blocks', [
         [blockId, 'page', null, 'content', 'text', 'a', false, false, 'not-a-number', 1700000000],
       ]);
@@ -645,7 +618,6 @@ describe('BlockRepository', () => {
 
     it('should throw on invalid is_collapsed type when row is returned', async () => {
       const blockId = 'block-invalid-bool';
-      // @ts-expect-error - testing runtime validation
       db.seed('blocks', [
         [
           blockId,
@@ -796,8 +768,6 @@ describe('BlockRepository', () => {
       expect(db.mutations).toHaveLength(1);
       expect(db.mutations[0].params.new_parent_id).toBe(parentId);
       expect(db.mutations[0].params.new_order).toBe('z');
-      expect(db.mutations[0].params.old_parent_key).toBe(parentId);
-      expect(db.mutations[0].params.new_parent_key).toBe(parentId);
     });
   });
 
@@ -824,7 +794,7 @@ describe('BlockRepository', () => {
 
       await repo.search('test');
 
-      expect(db.lastQuery.script).toContain('is_deleted == false');
+      expect(db.lastQuery.script).toContain('is_deleted = 0');
     });
   });
 
@@ -874,7 +844,6 @@ describe('BlockRepository', () => {
       // create() uses 1 atomic mutation with all operations
       expect(db.mutations).toHaveLength(1);
       expect(db.mutations[0]?.params.parent_id).toBeNull();
-      expect(db.mutations[0]?.params.parent_key).toBe(`__page:${pageId}`);
     });
 
     it('should create child block with parentId', async () => {
@@ -886,7 +855,6 @@ describe('BlockRepository', () => {
       // create() uses 1 atomic mutation with all operations
       expect(db.mutations).toHaveLength(1);
       expect(db.mutations[0]?.params.parent_id).toBe(parentId);
-      expect(db.mutations[0]?.params.parent_key).toBe(parentId);
     });
 
     it('should maintain all indexes on create', async () => {
@@ -894,41 +862,39 @@ describe('BlockRepository', () => {
 
       await repo.create({ pageId, content: 'Block' });
 
-      // create() uses 1 atomic mutation containing all 3 index operations
+      // Single INSERT handles everything (SQLite indexes are automatic)
       expect(db.mutations).toHaveLength(1);
-      expect(db.mutations[0]?.script).toContain(':put blocks {');
-      expect(db.mutations[0]?.script).toContain(':put blocks_by_page {');
-      expect(db.mutations[0]?.script).toContain(':put blocks_by_parent {');
+      expect(db.mutations[0]?.script).toContain('INSERT INTO blocks');
     });
   });
 
   describe('update preserving unmodified fields', () => {
-    it('should preserve contentType when updating other fields', async () => {
+    it('should preserve order when updating content', async () => {
       const blockId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
-      db.seed('blocks', [createBlockRow({ block_id: blockId, content_type: 'code' })]);
+      db.seed('blocks', [createBlockRow({ block_id: blockId, order: 'xyz' })]);
 
       await repo.update(blockId, { content: 'New content' });
 
-      expect(db.lastMutation.params.content_type).toBe('code');
+      expect(db.lastMutation.params.order).toBe('xyz');
     });
 
-    it('should preserve pageId when updating', async () => {
+    it('should preserve parentId when updating content', async () => {
       const blockId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
-      const pageId = '01ARZ3NDEKTSV4RRFFQ69G5PAG';
-      db.seed('blocks', [createBlockRow({ block_id: blockId, page_id: pageId })]);
+      const parentId = '01ARZ3NDEKTSV4RRFFQ69G5PAR';
+      db.seed('blocks', [createBlockRow({ block_id: blockId, parent_id: parentId })]);
 
       await repo.update(blockId, { content: 'New content' });
 
-      expect(db.lastMutation.params.page_id).toBe(pageId);
+      expect(db.lastMutation.params.parent_id).toBe(parentId);
     });
 
-    it('should preserve isDeleted when updating', async () => {
+    it('should preserve isCollapsed when updating content', async () => {
       const blockId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
-      db.seed('blocks', [createBlockRow({ block_id: blockId, is_deleted: false })]);
+      db.seed('blocks', [createBlockRow({ block_id: blockId, is_collapsed: true })]);
 
       await repo.update(blockId, { content: 'New content' });
 
-      expect(db.lastMutation.params.is_deleted).toBe(false);
+      expect(db.lastMutation.params.is_collapsed).toBe(true);
     });
   });
 
@@ -952,12 +918,11 @@ describe('BlockRepository', () => {
 
       await repo.softDelete(blockId);
 
-      expect(db.lastMutation.params.page_id).toBe(pageId);
-      expect(db.lastMutation.params.parent_id).toBe(parentId);
-      expect(db.lastMutation.params.content).toBe('Test content');
-      expect(db.lastMutation.params.content_type).toBe('code');
-      expect(db.lastMutation.params.order).toBe('xyz');
-      expect(db.lastMutation.params.is_collapsed).toBe(true);
+      // SQL softDelete only passes id and now — no field preservation needed
+      expect(db.lastMutation.params.id).toBe(blockId);
+      expect(db.lastMutation.params.now).toBeDefined();
+      expect(db.lastMutation.script).toContain('UPDATE blocks');
+      expect(db.lastMutation.script).toContain('is_deleted = 1');
     });
   });
 
@@ -986,12 +951,10 @@ describe('BlockRepository', () => {
 
       await repo.rebalanceSiblings(parentKey, newOrders);
 
-      // Verify the fetch query structure
-      const fetchQuery = db.queries[db.queries.length - 1];
-      expect(fetchQuery?.script).toContain('*blocks_by_parent{');
-      expect(fetchQuery?.script).toContain('parent_id == $parent_key');
-      expect(fetchQuery?.script).toContain('*blocks{');
-      expect(fetchQuery?.params.parent_key).toBe(parentKey);
+      // rebalanceSiblings does individual UPDATE per block
+      expect(db.mutations.length).toBe(1);
+      expect(db.lastMutation.script).toContain('UPDATE blocks');
+      expect(db.lastMutation.params.block_id).toBe('block1');
     });
 
     it('should construct batch update mutation with correct structure', async () => {
@@ -1051,12 +1014,11 @@ describe('BlockRepository', () => {
 
       await repo.rebalanceSiblings(parentKey, newOrders);
 
-      // Verify the mutation script structure
-      expect(db.lastMutation.script).toContain(':put blocks {');
-      expect(db.lastMutation.script).toContain(blockId1);
-      expect(db.lastMutation.script).toContain(blockId2);
-      expect(db.lastMutation.script).toContain('"a0"');
-      expect(db.lastMutation.script).toContain('"a1"');
+      // Individual UPDATE per block in SQL
+      expect(db.mutations.length).toBe(2);
+      expect(db.mutations[0].script).toContain('UPDATE blocks');
+      expect(db.mutations[0].params.new_order).toBe('a0');
+      expect(db.mutations[1].params.new_order).toBe('a1');
 
       mockQuery.mockRestore();
     });
@@ -1099,9 +1061,9 @@ describe('BlockRepository', () => {
 
       await repo.rebalanceSiblings(parentKey, newOrders);
 
-      // The mutation should contain escaped content
-      expect(db.lastMutation.script).toContain('\\"quotes\\"');
-      expect(db.lastMutation.script).toContain('\\\\backslashes\\\\');
+      // SQL uses parameterized queries — no escaping in the script itself
+      expect(db.lastMutation.script).toContain('UPDATE blocks');
+      expect(db.lastMutation.params.new_order).toBe('a0');
 
       mockQuery.mockRestore();
     });
@@ -1144,8 +1106,9 @@ describe('BlockRepository', () => {
 
       await repo.rebalanceSiblings(actualParentId, newOrders);
 
-      // Verify parent_id is preserved in the update
-      expect(db.lastMutation.script).toContain(`"${actualParentId}"`);
+      // SQL uses parameterized UPDATE — parent_id is not in the rebalance script
+      expect(db.lastMutation.script).toContain('UPDATE blocks');
+      expect(db.lastMutation.params.block_id).toBe(blockId);
 
       mockQuery.mockRestore();
     });
@@ -1188,15 +1151,10 @@ describe('BlockRepository', () => {
 
       await repo.rebalanceSiblings(parentKey, newOrders);
 
-      const script = db.lastMutation.script;
-      expect(script).toContain(`"${blockId}"`);
-      expect(script).toContain(`"${pageId}"`);
-      expect(script).toContain('"Test content"');
-      expect(script).toContain('"code"');
-      expect(script).toContain('"a0"'); // New order
-      expect(script).toContain('true'); // is_collapsed
-      expect(script).toContain('false'); // is_deleted
-      expect(script).toContain(String(timestamp)); // created_at preserved
+      // SQL rebalance only updates order and updated_at
+      expect(db.lastMutation.script).toContain('UPDATE blocks');
+      expect(db.lastMutation.params.new_order).toBe('a0');
+      expect(db.lastMutation.params.block_id).toBe(blockId);
 
       mockQuery.mockRestore();
     });
@@ -1230,11 +1188,10 @@ describe('BlockRepository', () => {
 
       await repo.rebalanceSiblings(parentKey, newOrders);
 
-      // Only block1's update should be in the script with new order
-      expect(db.lastMutation.script).toContain(blockId1);
-      expect(db.lastMutation.script).toContain('"b0"');
-      // block2 should not have its order updated (it's not in newOrders)
-      expect(db.lastMutation.script).not.toContain(blockId2);
+      // Only block1 should have been updated (1 mutation)
+      expect(db.mutations.length).toBe(1);
+      expect(db.mutations[0].params.block_id).toBe(blockId1);
+      expect(db.mutations[0].params.new_order).toBe('b0');
 
       mockQuery.mockRestore();
     });
@@ -1275,8 +1232,9 @@ describe('BlockRepository', () => {
 
       await repo.rebalanceSiblings(parentKey, newOrders);
 
-      // No mutation should have been made since no blocks matched
-      expect(db.mutations.length).toBe(0);
+      // SQL issues UPDATE per newOrders entry regardless of match
+      expect(db.mutations.length).toBe(1);
+      expect(db.mutations[0].params.block_id).toBe('nonexistent_id');
 
       mockQuery.mockRestore();
     });

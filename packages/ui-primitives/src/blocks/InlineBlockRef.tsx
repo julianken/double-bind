@@ -15,6 +15,7 @@ import {
   forwardRef,
   memo,
   useCallback,
+  useState,
 } from 'react';
 import type { BlockId } from '@double-bind/types';
 
@@ -57,7 +58,6 @@ export interface InlineBlockRefProps {
 // CSS custom properties for theming — prefer design tokens, fall back to raw values
 const cssVars = {
   color: 'var(--accent-interactive, var(--db-inline-ref-color, #2563eb))',
-  bg: 'var(--accent-subtle, var(--db-inline-ref-bg, rgba(37, 99, 235, 0.08)))',
   colorMissing: 'var(--text-muted, var(--db-inline-ref-color-missing, #9ca3af))',
 } as const;
 
@@ -67,13 +67,20 @@ const styles = {
   base: {
     display: 'inline',
     color: cssVars.color,
-    backgroundColor: cssVars.bg,
+    backgroundColor: 'transparent',
     textDecoration: 'none',
     cursor: 'pointer',
     borderRadius: 'var(--radius-sm, 2px)',
     padding: '0 2px',
     margin: '0',
-    border: 'none',
+    // Button reset: only bottom border is used for hover underline effect
+    borderTopStyle: 'none',
+    borderLeftStyle: 'none',
+    borderRightStyle: 'none',
+    borderBottomStyle: 'solid',
+    borderBottomWidth: '1px',
+    borderBottomColor: 'transparent',
+    transition: 'border-color 0.15s ease',
     fontFamily: 'inherit',
     fontSize: 'inherit',
     lineHeight: 'inherit',
@@ -84,7 +91,6 @@ const styles = {
     textDecoration: 'line-through',
     cursor: 'not-allowed',
     opacity: 0.7,
-    backgroundColor: 'transparent',
   } satisfies CSSProperties,
 
   brackets: {
@@ -127,6 +133,8 @@ export const InlineBlockRef = memo(
     { blockId, content, onClick, onHover, exists = true, className },
     ref
   ) {
+    const [isHovered, setIsHovered] = useState(false);
+
     const handleClick = useCallback(
       (event: MouseEvent<HTMLButtonElement>) => {
         event.preventDefault();
@@ -152,10 +160,12 @@ export const InlineBlockRef = memo(
     );
 
     const handleMouseEnter = useCallback(() => {
+      setIsHovered(true);
       onHover?.(blockId);
     }, [blockId, onHover]);
 
     const handleMouseLeave = useCallback(() => {
+      setIsHovered(false);
       onHover?.(null);
     }, [onHover]);
 
@@ -165,6 +175,8 @@ export const InlineBlockRef = memo(
     // Combine styles based on state
     const combinedStyles: CSSProperties = {
       ...styles.base,
+      // Show underline on hover when block exists
+      ...(isHovered && exists ? { borderBottomColor: cssVars.color } : {}),
       ...(!exists ? styles.missing : {}),
     };
 

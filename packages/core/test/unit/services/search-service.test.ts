@@ -46,12 +46,12 @@ describe('SearchService', () => {
 
       // Verify page FTS query
       const pageCall = querySpy.mock.calls[0];
-      expect(pageCall![0]).toContain('~pages:fts');
+      expect(pageCall![0]).toContain('pages_fts');
       expect(pageCall![1]).toMatchObject({ query: 'test' });
 
       // Verify block FTS query
       const blockCall = querySpy.mock.calls[1];
-      expect(blockCall![0]).toContain('~blocks:fts');
+      expect(blockCall![0]).toContain('blocks_fts');
       expect(blockCall![1]).toMatchObject({ query: 'test' });
     });
 
@@ -236,7 +236,7 @@ describe('SearchService', () => {
 
       // Only page query should be executed
       expect(querySpy).toHaveBeenCalledTimes(1);
-      expect(querySpy.mock.calls[0]![0]).toContain('~pages:fts');
+      expect(querySpy.mock.calls[0]![0]).toContain('pages_fts');
 
       expect(results).toHaveLength(1);
       expect(results[0]?.type).toBe('page');
@@ -254,7 +254,7 @@ describe('SearchService', () => {
 
       // Only block query should be executed
       expect(querySpy).toHaveBeenCalledTimes(1);
-      expect(querySpy.mock.calls[0]![0]).toContain('~blocks:fts');
+      expect(querySpy.mock.calls[0]![0]).toContain('blocks_fts');
 
       expect(results).toHaveLength(1);
       expect(results[0]?.type).toBe('block');
@@ -392,16 +392,16 @@ describe('SearchService', () => {
       const pageScript = querySpy.mock.calls[0]![0] as string;
 
       // Verify FTS syntax
-      expect(pageScript).toContain('~pages:fts');
-      expect(pageScript).toContain('query: $query');
-      expect(pageScript).toContain('k: $limit');
-      expect(pageScript).toContain('bind_score: score');
+      expect(pageScript).toContain('pages_fts');
+      expect(pageScript).toContain('MATCH $query');
+      expect(pageScript).toContain('LIMIT $limit');
+      expect(pageScript).toContain('rank');
 
       // Verify soft-delete filter
-      expect(pageScript).toContain('is_deleted == false');
+      expect(pageScript).toContain('is_deleted = 0');
 
       // Verify sorting
-      expect(pageScript).toContain(':order -score');
+      expect(pageScript).toContain('ORDER BY');
     });
 
     it('should construct block FTS query with correct syntax', async () => {
@@ -415,21 +415,21 @@ describe('SearchService', () => {
       const blockScript = querySpy.mock.calls[1]![0] as string;
 
       // Verify FTS syntax
-      expect(blockScript).toContain('~blocks:fts');
-      expect(blockScript).toContain('query: $query');
-      expect(blockScript).toContain('k: $limit');
-      expect(blockScript).toContain('bind_score: score');
+      expect(blockScript).toContain('blocks_fts');
+      expect(blockScript).toContain('MATCH $query');
+      expect(blockScript).toContain('LIMIT $limit');
+      expect(blockScript).toContain('rank');
 
       // Verify join with pages for title
-      expect(blockScript).toContain('*pages{');
+      expect(blockScript).toContain('JOIN pages');
       expect(blockScript).toContain('page_title');
 
       // Verify soft-delete filters for both blocks and pages
-      expect(blockScript).toContain('block_deleted == false');
-      expect(blockScript).toContain('page_deleted == false');
+      expect(blockScript).toContain('b.is_deleted = 0');
+      expect(blockScript).toContain('p.is_deleted = 0');
 
       // Verify sorting
-      expect(blockScript).toContain(':order -score');
+      expect(blockScript).toContain('ORDER BY');
     });
 
     it('should pass query parameter to FTS', async () => {
@@ -449,13 +449,11 @@ describe('SearchService', () => {
     it('should handle empty query string', async () => {
       const querySpy = vi.spyOn(db, 'query');
 
-      querySpy.mockResolvedValueOnce({ headers: [], rows: [] });
-      querySpy.mockResolvedValueOnce({ headers: [], rows: [] });
-
       const results = await service.search('');
 
+      // sanitizeFtsQuery returns '' for empty input, so search returns early
       expect(results).toEqual([]);
-      expect(querySpy).toHaveBeenCalledTimes(2);
+      expect(querySpy).toHaveBeenCalledTimes(0);
     });
 
     it('should handle special characters in query', async () => {
@@ -466,8 +464,8 @@ describe('SearchService', () => {
 
       await service.search('test [special] "chars"');
 
-      // Verify query was passed through
-      expect(querySpy.mock.calls[0]![1]).toMatchObject({ query: 'test [special] "chars"' });
+      // sanitizeFtsQuery strips FTS5 special chars like [] and "
+      expect(querySpy.mock.calls[0]![1]).toMatchObject({ query: 'test special chars' });
     });
 
     it('should handle zero score results', async () => {
