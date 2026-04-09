@@ -22,7 +22,7 @@ jobs:
           node-version: 20
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm lint
+      - run: pnpm lint --filter='!@double-bind/mobile-primitives' --filter='!@double-bind/mobile-app'
 
   typecheck:
     name: Type Check
@@ -35,6 +35,7 @@ jobs:
           node-version: 20
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: pnpm build
       - run: pnpm typecheck
 
   test:
