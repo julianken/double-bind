@@ -5,8 +5,9 @@
  * star/unstar, and delete.
  */
 
-import { useCallback } from 'react';
+import { useCallback, useContext } from 'react';
 import { useContextMenu } from './useContextMenu.js';
+import { ServiceContext } from '../providers/ServiceProvider.js';
 
 // ============================================================================
 // Types
@@ -36,6 +37,7 @@ export interface UsePageContextMenuResult {
  * ```
  */
 export function usePageContextMenu(pageId: string): UsePageContextMenuResult {
+  const services = useContext(ServiceContext);
   const { showContextMenu: showGenericMenu } = useContextMenu();
 
   const showContextMenu = useCallback(
@@ -43,19 +45,14 @@ export function usePageContextMenu(pageId: string): UsePageContextMenuResult {
       showGenericMenu(event, [
         {
           label: 'Open in new tab',
-          // Stub: new tab support is not yet implemented
-          action: () => {
-            // TODO: implement when tab support is available
-          },
+          action: () => {},
           disabled: true,
         },
         {
           label: 'Copy link',
           action: () => {
             const url = `double-bind://page/${pageId}`;
-            navigator.clipboard.writeText(url).catch(() => {
-              // Clipboard write failed — non-critical
-            });
+            navigator.clipboard.writeText(url).catch(() => {});
           },
         },
         {
@@ -68,12 +65,13 @@ export function usePageContextMenu(pageId: string): UsePageContextMenuResult {
         {
           label: 'Delete',
           action: () => {
-            // TODO: wire to PageService.deletePage() when available
+            if (!services) return;
+            services.pageService.deletePage(pageId).catch(() => {});
           },
         },
       ]);
     },
-    [pageId, showGenericMenu]
+    [pageId, showGenericMenu, services]
   );
 
   return { showContextMenu };

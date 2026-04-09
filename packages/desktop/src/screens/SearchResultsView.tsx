@@ -244,7 +244,7 @@ function SearchResultItem({
               textOverflow: 'ellipsis',
             }}
           >
-            in page {result.pageId}
+            in {result.title}
           </div>
         )}
       </div>
