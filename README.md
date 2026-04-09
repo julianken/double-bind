@@ -56,14 +56,6 @@ The `Database` interface is the sole dependency injection boundary. Four adapter
 | Integration tests  | `SqliteNodeAdapter`      | better-sqlite3 directly        |
 | Mobile             | `MobileDatabaseProvider` | op-sqlite                      |
 
-### Design Decisions
-
-- **Contentless FTS5** for full-text search with minimal storage overhead
-- **String-based fractional indexing** (a la Figma) for block ordering -- O(1) inserts, no rebalancing
-- **Recursive CTEs** for graph traversal instead of application-level BFS
-- **ULID block identifiers** -- lexicographically sortable, globally unique, no coordination required
-- **Minimal Rust shim** -- forwards SQL to rusqlite and returns JSON; all query construction happens in TypeScript
-
 15 Architecture Decision Records in [`docs/decisions/`](docs/decisions/).
 
 ## Monorepo Structure
