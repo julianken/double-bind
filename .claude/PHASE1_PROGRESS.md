@@ -18,16 +18,16 @@
 ### Key Deliverables
 
 - Types package with branded types and Zod schemas
-- Test utilities (MockGraphDB, fixtures, factories)
+- Test utilities (MockDatabase, fixtures, factories)
 - Migrations package with schema and runner
 - All 5 repositories (Page, Block, Tag, Link, Property)
-- TauriGraphDB client
+- TauriDatabaseProvider client
 - PageService and BlockService
 - Desktop scaffold (React + Vite + Tauri v2)
 - Rust shim with IPC commands
 - React providers (ServiceProvider)
 - Zustand stores (AppStore)
-- React hooks (useCozoQuery)
+- React hooks (useQuery — migrated from CozoDB to SQLite)
 - Router and ErrorBoundary components
 - Comprehensive test coverage
 

@@ -29,9 +29,9 @@ cat .env.e2e  # Shows your isolated ports
 ### Example
 
 ```bash
-# Create worktree for BEA-330
-git worktree add ../wt-BEA-330-login-form -b feat/BEA-330-login-form
-cd ../wt-BEA-330-login-form
+# Create worktree for DBB-330
+git worktree add ../wt-DBB-330-login-form -b feat/DBB-330-login-form
+cd ../wt-DBB-330-login-form
 
 # Set up port isolation
 ./scripts/setup-worktree-e2e.sh
@@ -65,9 +65,9 @@ This script:
 source .env.e2e
 
 # Start each server on its isolated port
-PORT=$BINGO_PORT pnpm --filter @beak-gaming/bingo dev &
-PORT=$TRIVIA_PORT pnpm --filter @beak-gaming/trivia dev &
-PORT=$HUB_PORT pnpm --filter @beak-gaming/platform-hub dev &
+PORT=$BINGO_PORT pnpm --filter @double-bind/desktop dev &
+PORT=$TRIVIA_PORT pnpm --filter @double-bind/core dev &
+PORT=$HUB_PORT pnpm --filter @double-bind/cli dev &
 ```
 
 ## Running E2E Tests
@@ -104,7 +104,7 @@ Worktree 3:    ports 3ZZZ, 3ZZZ, 3ZZZ (different hash)
 pnpm dev
 
 # Worktree tries to use same ports
-cd ../wt-BEA-330-login-form
+cd ../wt-DBB-330-login-form
 pnpm dev  # ❌ EADDRINUSE: address already in use :::3000
 ```
 
@@ -117,7 +117,7 @@ pnpm dev  # ❌ EADDRINUSE: address already in use :::3000
 pnpm dev
 
 # Worktree uses isolated ports (e.g., 3573-3575)
-cd ../wt-BEA-330-login-form
+cd ../wt-DBB-330-login-form
 ./scripts/setup-worktree-e2e.sh
 ./start-e2e-servers.sh  # ✅ Servers start on 3573-3575
 ```
@@ -134,7 +134,7 @@ pkill -f "next-server.*3573"  # Replace 3573 with your base port
 
 # Remove worktree
 cd /path/to/main/repo
-git worktree remove ../wt-BEA-330-login-form
+git worktree remove ../wt-DBB-330-login-form
 ```
 
 ## Troubleshooting

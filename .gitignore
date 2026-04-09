@@ -39,3 +39,10 @@ debug-*.spec.ts
 *.log
 npm-debug.log*
 pnpm-debug.log*
+
+# Local/personal artifacts
+tmp/
+planny/
+docs/CLAUDE.md
+claude-mem-snapshot.md
+dbb-345-frontend-analysis.md

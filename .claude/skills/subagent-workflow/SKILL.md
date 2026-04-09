@@ -34,9 +34,9 @@ description: MANDATORY for all multi-step tasks - parallel task execution with s
 ```
 PARALLEL across Linear issues, SEQUENTIAL within each issue:
 
-BEA-330 ─┬─ Implementer → Spec Review → Quality Review → Merge
-BEA-331 ─┬─ Implementer → Spec Review → Quality Review → Merge
-BEA-332 ─┬─ Implementer → Spec Review → Quality Review → Merge
+DBB-330 ─┬─ Implementer → Spec Review → Quality Review → Merge
+DBB-331 ─┬─ Implementer → Spec Review → Quality Review → Merge
+DBB-332 ─┬─ Implementer → Spec Review → Quality Review → Merge
 
 State flow: Backlog → Todo → In Progress → [Blocked] → In Review → Done
 ```
@@ -59,7 +59,7 @@ State flow: Backlog → Todo → In Progress → [Blocked] → In Review → Don
    - Description, acceptance criteria, comments, linked PRs, labels, dependencies
 4. **Claim the issue:** `mcp__linear-server__update_issue { id: "issue-id", state: "Todo", assignee: "me" }`
 
-**If Linear is inaccessible:** STOP. Ask user to configure Linear MCP or provide a specific BEA-### issue ID. Never fabricate issue IDs.
+**If Linear is inaccessible:** STOP. Ask user to configure Linear MCP or provide a specific DBB-### issue ID. Never fabricate issue IDs.
 
 ---
 
@@ -81,8 +81,8 @@ Track each issue with `TodoWrite`.
 One worktree per Linear issue using `Skill(using-git-worktrees)`:
 
 ```bash
-git worktree add ../wt-BEA-330-login-form -b feat/BEA-330-login-form
-cd ../wt-BEA-330-login-form && ./scripts/setup-worktree-e2e.sh && cd -
+git worktree add ../wt-DBB-330-login-form -b feat/DBB-330-login-form
+cd ../wt-DBB-330-login-form && ./scripts/setup-worktree-e2e.sh && cd -
 ```
 
 **CRITICAL:** Run `./scripts/setup-worktree-e2e.sh` in EACH worktree to prevent port conflicts.
@@ -139,7 +139,7 @@ Update Linear: `state: "In Progress"` for each issue. Post comment: `"Starting w
    pnpm test:e2e --workers=1 && pnpm test:e2e:summary  # MUST show "0 failed", NEVER parallel
    git status --porcelain | grep -E "debug-|\.bak$" && echo "FAIL" && exit 1
 6. Clean debug artifacts (debug-*.spec.ts, *.bak, console.log)
-7. Commit: feat(scope): description (BEA-###)
+7. Commit: feat(scope): description (DBB-###)
 8. Self-review, push, create draft PR using .github/PULL_REQUEST_TEMPLATE.md
 9. Update Linear with pre-PR verification evidence (actual test output)
 10. Mark task as completed
@@ -215,12 +215,12 @@ Once BOTH reviews pass for each issue:
 
 # Example: Multiple Independent Issues
 
-**Issues:** BEA-330 (login form), BEA-331 (trivia fix), BEA-332 (theme colors)
+**Issues:** DBB-330 (login form), DBB-331 (trivia fix), DBB-332 (theme colors)
 
 ```
 Step 0: Query Linear for all 3, read full context, claim with assignee: "me"
 Step 1: 3 independent issues → task list
-Step 2: 3 worktrees (wt-BEA-330-login, wt-BEA-331-trivia, wt-BEA-332-theme)
+Step 2: 3 worktrees (wt-DBB-330-login, wt-DBB-331-trivia, wt-DBB-332-theme)
 Step 3: 3 implementers dispatched in parallel (one Task call each, single message)
 Step 4: 3 spec reviewers in parallel after implementers complete
 Step 5: 3 quality reviewers in parallel after spec reviews pass

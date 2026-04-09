@@ -18,6 +18,23 @@ import { open, type DB, type Scalar } from '@op-engineering/op-sqlite';
 import type { Database, QueryResult, MutationResult, TransactionContext } from '@double-bind/types';
 import { getDatabaseModule } from '../DatabaseNativeModule';
 
+const TABLE_WHITELIST = new Set([
+  'pages',
+  'blocks',
+  'links',
+  'block_properties',
+  'page_properties',
+  'block_tags',
+  'page_tags',
+  'daily_notes',
+]);
+
+function assertValidTable(table: string): void {
+  if (!TABLE_WHITELIST.has(table)) {
+    throw new Error(`Invalid table name: "${table}"`);
+  }
+}
+
 /**
  * Mobile database provider using op-sqlite.
  * Implements the Database interface for React Native apps.
@@ -218,7 +235,7 @@ export class MobileDatabaseProvider implements Database {
       for (const [table, rows] of Object.entries(data)) {
         if (rows.length === 0) continue;
 
-        // Get column names from the table
+        assertValidTable(table);
         const tableInfoResult = await tx.execute(`PRAGMA table_info(${table})`);
         const tableInfo = (tableInfoResult.rows ?? []) as Array<{ name: string }>;
         const columns = tableInfo.map((col) => col.name);
@@ -260,6 +277,7 @@ export class MobileDatabaseProvider implements Database {
     const result: Record<string, unknown[][]> = {};
 
     for (const table of relations) {
+      assertValidTable(table);
       const queryResult = await this.db.execute(`SELECT * FROM ${table}`);
       const rows = queryResult.rows ?? [];
       result[table] = rows.map((row) => Object.values(row));

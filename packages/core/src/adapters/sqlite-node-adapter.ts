@@ -20,6 +20,23 @@ import type {
   TransactionContext,
 } from '@double-bind/types';
 
+const TABLE_WHITELIST = new Set([
+  'pages',
+  'blocks',
+  'links',
+  'block_properties',
+  'page_properties',
+  'block_tags',
+  'page_tags',
+  'daily_notes',
+]);
+
+function assertValidTable(table: string): void {
+  if (!TABLE_WHITELIST.has(table)) {
+    throw new Error(`Invalid table name: "${table}"`);
+  }
+}
+
 /**
  * Adapter wrapping better-sqlite3 to implement the Database interface.
  * Provides compatibility between synchronous SQLite operations and
@@ -167,7 +184,7 @@ export class SqliteNodeAdapter implements Database {
       for (const [table, rows] of Object.entries(data)) {
         if (rows.length === 0) continue;
 
-        // Get column names from the table
+        assertValidTable(table);
         const tableInfo = this.db.pragma(`table_info(${table})`) as Array<{
           name: string;
         }>;
@@ -202,6 +219,7 @@ export class SqliteNodeAdapter implements Database {
     const result: Record<string, unknown[][]> = {};
 
     for (const table of relations) {
+      assertValidTable(table);
       const rows = this.db.prepare(`SELECT * FROM ${table}`).all();
       result[table] = rows.map((row) => Object.values(row as Record<string, unknown>));
     }
