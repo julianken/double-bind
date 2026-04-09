@@ -134,7 +134,7 @@ export const useGraphStore = create<GraphStore>()(
       toggleCommunityFilter: (id) =>
         set((s) => {
           const next = new Set(s.activeCommunityFilters);
-          next.has(id) ? next.delete(id) : next.add(id);
+          if (next.has(id)) next.delete(id); else next.add(id);
           return { activeCommunityFilters: next };
         }),
 
