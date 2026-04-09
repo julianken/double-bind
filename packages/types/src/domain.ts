@@ -5,24 +5,10 @@
  * All identifiers use ULID format for sortable, unique IDs.
  */
 
-// ============================================================================
-// Identifiers
-// ============================================================================
-
-/** Page identifier - ULID format */
 export type PageId = string;
-
-/** Block identifier - ULID format */
 export type BlockId = string;
 
-// ============================================================================
-// Core Entities
-// ============================================================================
-
-/**
- * A page is the top-level container for blocks.
- * Pages can be regular notes or daily notes (journal entries).
- */
+/** Top-level container for blocks. Can be a regular note or daily note. */
 export interface Page {
   pageId: PageId;
   title: string;
@@ -32,10 +18,7 @@ export interface Page {
   dailyNoteDate: string | null; // YYYY-MM-DD format or null for regular pages
 }
 
-/**
- * A block is the fundamental unit of content.
- * Blocks form a tree structure within a page via parentId references.
- */
+/** Fundamental unit of content. Forms a tree within a page via parentId. */
 export interface Block {
   blockId: BlockId;
   pageId: PageId;
@@ -49,20 +32,14 @@ export interface Block {
   updatedAt: number;
 }
 
-/**
- * A block reference links one block to another.
- * Used for block embeds and transclusions.
- */
+/** Block-to-block reference for embeds and transclusions. */
 export interface BlockRef {
   sourceBlockId: BlockId;
   targetBlockId: BlockId;
   createdAt: number;
 }
 
-/**
- * A link connects two pages.
- * Links are extracted from block content and stored for graph traversal.
- */
+/** Page-to-page link extracted from block content for graph traversal. */
 export interface Link {
   sourceId: PageId;
   targetId: PageId;
@@ -71,10 +48,7 @@ export interface Link {
   contextBlockId: BlockId | null; // The block containing this link
 }
 
-/**
- * A property is a key-value pair attached to a page or block.
- * Used for structured metadata (e.g., status::done, priority::high).
- */
+/** Key-value metadata on a page or block (e.g., status::done, priority::high). */
 export interface Property {
   entityId: string; // PageId or BlockId
   key: string;
@@ -83,20 +57,14 @@ export interface Property {
   updatedAt: number;
 }
 
-/**
- * A tag attached to a page or block.
- * Tags are a simplified form of categorization.
- */
+/** Tag on a page or block. */
 export interface Tag {
   entityId: string; // PageId or BlockId
   tag: string;
   createdAt: number;
 }
 
-/**
- * A versioned snapshot of a block for history tracking.
- * Enables undo/redo and audit trails.
- */
+/** Versioned snapshot of a block for undo/redo and audit trails. */
 export interface BlockVersion {
   blockId: BlockId;
   version: number;

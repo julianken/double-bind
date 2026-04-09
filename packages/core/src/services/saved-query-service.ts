@@ -1,13 +1,5 @@
 /**
- * SavedQueryService - Orchestrates saved query operations with cross-cutting concerns.
- *
- * This service layer sits above the repository and handles:
- * - Input validation
- * - Error wrapping with context
- * - Business logic for query management
- *
- * All errors are wrapped with context before re-throwing to provide
- * better debugging information at higher layers.
+ * SavedQueryService - CRUD for saved queries with input validation.
  */
 
 import type {
@@ -22,42 +14,21 @@ import type {
   GetAllSavedQueriesOptions,
 } from '../repositories/saved-query-repository.js';
 
-/**
- * Options for listing saved queries.
- */
 export interface ListSavedQueriesOptions {
-  /** Filter by query type */
   type?: SavedQueryType;
-  /** Maximum number of results */
   limit?: number;
-  /** Number of results to skip */
   offset?: number;
 }
 
-/**
- * Service for high-level saved query operations.
- *
- * Provides a clean API for saved query CRUD operations with proper
- * error handling and validation.
- */
 export class SavedQueryService {
   constructor(private readonly savedQueryRepo: SavedQueryRepository) {}
 
-  /**
-   * Create a new saved query.
-   *
-   * @param input - The saved query data
-   * @returns The newly created saved query
-   * @throws DoubleBindError with context on repository failure
-   */
   async create(input: CreateSavedQueryInput): Promise<SavedQuery> {
     try {
-      // Validate name is not empty
       if (!input.name || input.name.trim().length === 0) {
         throw new DoubleBindError('Saved query name cannot be empty', ErrorCode.INVALID_CONTENT);
       }
 
-      // Validate definition is not empty
       if (!input.definition || input.definition.trim().length === 0) {
         throw new DoubleBindError(
           'Saved query definition cannot be empty',
@@ -88,14 +59,6 @@ export class SavedQueryService {
     }
   }
 
-  /**
-   * Get a saved query by ID.
-   *
-   * @param id - The saved query identifier
-   * @returns The saved query
-   * @throws DoubleBindError with SAVED_QUERY_NOT_FOUND if not found
-   * @throws DoubleBindError with context on repository failure
-   */
   async getById(id: SavedQueryId): Promise<SavedQuery> {
     try {
       const savedQuery = await this.savedQueryRepo.getById(id);
@@ -117,13 +80,6 @@ export class SavedQueryService {
     }
   }
 
-  /**
-   * List all saved queries with optional filtering.
-   *
-   * @param options - Optional filtering and pagination options
-   * @returns Array of saved queries sorted by updated_at descending
-   * @throws DoubleBindError with context on repository failure
-   */
   async list(options: ListSavedQueriesOptions = {}): Promise<SavedQuery[]> {
     try {
       const repoOptions: GetAllSavedQueriesOptions = {
@@ -145,14 +101,6 @@ export class SavedQueryService {
     }
   }
 
-  /**
-   * Search saved queries by name.
-   *
-   * @param query - The search query string
-   * @param limit - Maximum number of results (default 50)
-   * @returns Array of saved queries matching the search
-   * @throws DoubleBindError with context on repository failure
-   */
   async search(query: string, limit = 50): Promise<SavedQuery[]> {
     try {
       return await this.savedQueryRepo.search(query, limit);
@@ -168,23 +116,12 @@ export class SavedQueryService {
     }
   }
 
-  /**
-   * Update an existing saved query.
-   *
-   * @param id - The saved query identifier
-   * @param input - The fields to update
-   * @returns The updated saved query
-   * @throws DoubleBindError with SAVED_QUERY_NOT_FOUND if not found
-   * @throws DoubleBindError with context on repository failure
-   */
   async update(id: SavedQueryId, input: UpdateSavedQueryInput): Promise<SavedQuery> {
     try {
-      // Validate name if provided
       if (input.name !== undefined && input.name.trim().length === 0) {
         throw new DoubleBindError('Saved query name cannot be empty', ErrorCode.INVALID_CONTENT);
       }
 
-      // Validate definition if provided
       if (input.definition !== undefined && input.definition.trim().length === 0) {
         throw new DoubleBindError(
           'Saved query definition cannot be empty',
@@ -215,13 +152,6 @@ export class SavedQueryService {
     }
   }
 
-  /**
-   * Delete a saved query.
-   *
-   * @param id - The saved query identifier
-   * @throws DoubleBindError with SAVED_QUERY_NOT_FOUND if not found
-   * @throws DoubleBindError with context on repository failure
-   */
   async delete(id: SavedQueryId): Promise<void> {
     try {
       await this.savedQueryRepo.delete(id);
@@ -237,13 +167,6 @@ export class SavedQueryService {
     }
   }
 
-  /**
-   * Get a saved query by its name.
-   *
-   * @param name - The saved query name
-   * @returns The saved query if found, null otherwise
-   * @throws DoubleBindError with context on repository failure
-   */
   async getByName(name: string): Promise<SavedQuery | null> {
     try {
       return await this.savedQueryRepo.getByName(name);
@@ -259,15 +182,6 @@ export class SavedQueryService {
     }
   }
 
-  /**
-   * Check if a saved query with the given name already exists.
-   *
-   * Useful for validating uniqueness before creating/renaming.
-   *
-   * @param name - The name to check
-   * @returns true if name is already in use
-   * @throws DoubleBindError with context on repository failure
-   */
   async nameExists(name: string): Promise<boolean> {
     try {
       return await this.savedQueryRepo.existsByName(name);

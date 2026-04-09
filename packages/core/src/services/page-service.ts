@@ -1,13 +1,7 @@
 /**
  * PageService - Orchestrates page operations with cross-cutting concerns.
  *
- * This service layer sits above the repositories and handles:
- * - Cascading operations (e.g., deleting page + all its blocks)
- * - Daily note management
- * - Composite queries (e.g., page with blocks)
- *
- * All errors are wrapped with context before re-throwing to provide
- * better debugging information at higher layers.
+ * Handles cascading deletes, daily note management, and composite queries.
  */
 
 import type { Page, Block, PageId } from '@double-bind/types';
@@ -16,34 +10,17 @@ import type { PageRepository } from '../repositories/page-repository.js';
 import type { BlockRepository } from '../repositories/block-repository.js';
 import type { LinkRepository } from '../repositories/link-repository.js';
 
-/**
- * Result type for getPageWithBlocks operation.
- */
 export interface PageWithBlocks {
   page: Page;
   blocks: Block[];
 }
 
-/**
- * Result type for page backlinks (incoming links to a page).
- * Each backlink includes the referencing block and its source page.
- */
 export interface PageBacklink {
-  /** The block containing the link to the target page */
   block: Block;
-  /** The page containing the referencing block */
   page: Page;
 }
 
-/**
- * Service for high-level page operations.
- *
- * Orchestrates PageRepository, BlockRepository, and LinkRepository
- * to provide cross-cutting operations like cascading deletes.
- */
 export class PageService {
-  // LinkRepository is stored for future link-related operations
-  // (e.g., cleaning up links when pages are deleted)
   private readonly linkRepo: LinkRepository;
 
   constructor(
@@ -54,23 +31,12 @@ export class PageService {
     this.linkRepo = linkRepo;
   }
 
-  /**
-   * Get the link repository (for testing/extension purposes).
-   * @internal
-   */
+  /** @internal */
   protected getLinkRepo(): LinkRepository {
     return this.linkRepo;
   }
 
-  /**
-   * Create a new page with the given title.
-   *
-   * Creates the page and an initial empty block so users can start typing immediately.
-   *
-   * @param title - The page title
-   * @returns The newly created page
-   * @throws DoubleBindError with context on repository failure
-   */
+  /** Create a new page with an initial empty block. */
   async createPage(title: string): Promise<Page> {
     try {
       const pageId = await this.pageRepo.create({ title });
@@ -83,7 +49,6 @@ export class PageService {
         );
       }
 
-      // Create an initial empty block so users can start typing
       await this.blockRepo.create({
         pageId,
         content: '',
@@ -102,14 +67,6 @@ export class PageService {
     }
   }
 
-  /**
-   * Get a page with all its blocks.
-   *
-   * @param pageId - The page identifier
-   * @returns Object containing the page and its blocks
-   * @throws DoubleBindError with PAGE_NOT_FOUND if page doesn't exist
-   * @throws DoubleBindError with context on repository failure
-   */
   async getPageWithBlocks(pageId: PageId): Promise<PageWithBlocks> {
     try {
       const page = await this.pageRepo.getById(pageId);
@@ -133,34 +90,20 @@ export class PageService {
     }
   }
 
-  /**
-   * Soft-delete a page and all its blocks (cascading delete).
-   *
-   * This operation:
-   * 1. Soft-deletes all blocks belonging to the page
-   * 2. Soft-deletes the page itself
-   *
-   * @param pageId - The page identifier
-   * @throws DoubleBindError with PAGE_NOT_FOUND if page doesn't exist
-   * @throws DoubleBindError with context on repository failure
-   */
+  /** Soft-delete a page and all its blocks. */
   async deletePage(pageId: PageId): Promise<void> {
     try {
-      // Verify page exists first
       const page = await this.pageRepo.getById(pageId);
       if (!page) {
         throw new DoubleBindError(`Page not found: ${pageId}`, ErrorCode.PAGE_NOT_FOUND);
       }
 
-      // Get all blocks for this page
       const blocks = await this.blockRepo.getByPage(pageId);
 
-      // Soft-delete all blocks first (cascading)
       for (const block of blocks) {
         await this.blockRepo.softDelete(block.blockId);
       }
 
-      // Soft-delete the page
       await this.pageRepo.softDelete(pageId);
     } catch (error) {
       if (error instanceof DoubleBindError) {
@@ -174,21 +117,11 @@ export class PageService {
     }
   }
 
-  /**
-   * Get or create a daily note for a specific date.
-   *
-   * Creates the daily note page if it doesn't exist, and ensures it has
-   * at least one block so users can start typing immediately.
-   *
-   * @param date - ISO date string (YYYY-MM-DD format)
-   * @returns The daily note page for the given date
-   * @throws DoubleBindError with context on repository failure
-   */
+  /** @param date - YYYY-MM-DD format */
   async getOrCreateDailyNote(date: string): Promise<Page> {
     try {
       const page = await this.pageRepo.getOrCreateDailyNote(date);
 
-      // Ensure daily note has at least one block for immediate typing
       const blocks = await this.blockRepo.getByPage(page.pageId);
       if (blocks.length === 0) {
         await this.blockRepo.create({
@@ -210,29 +143,11 @@ export class PageService {
     }
   }
 
-  /**
-   * Get or create today's daily note.
-   *
-   * Uses the current local date (YYYY-MM-DD format) to find or create
-   * the daily note page.
-   *
-   * @returns Today's daily note page
-   * @throws DoubleBindError with context on repository failure
-   */
   async getTodaysDailyNote(): Promise<Page> {
     const today = new Date().toISOString().split('T')[0]!;
     return this.getOrCreateDailyNote(today);
   }
 
-  /**
-   * Search pages by title.
-   *
-   * Delegates to the page repository's full-text search.
-   *
-   * @param query - The search query string
-   * @returns Array of pages matching the search
-   * @throws DoubleBindError with context on repository failure
-   */
   async searchPages(query: string): Promise<Page[]> {
     try {
       return await this.pageRepo.search(query);
@@ -248,13 +163,6 @@ export class PageService {
     }
   }
 
-  /**
-   * Get all non-deleted pages sorted by updated_at descending.
-   *
-   * @param options - Optional filtering and pagination options
-   * @returns Array of pages sorted by updated_at descending
-   * @throws DoubleBindError with context on repository failure
-   */
   async getAllPages(options?: { limit?: number; offset?: number }): Promise<Page[]> {
     try {
       return await this.pageRepo.getAll({
@@ -274,14 +182,6 @@ export class PageService {
     }
   }
 
-  /**
-   * Update a page's title.
-   *
-   * @param pageId - The page identifier
-   * @param title - The new title
-   * @throws DoubleBindError with PAGE_NOT_FOUND if page doesn't exist
-   * @throws DoubleBindError with context on repository failure
-   */
   async updateTitle(pageId: PageId, title: string): Promise<void> {
     try {
       await this.pageRepo.update(pageId, { title });
@@ -297,41 +197,19 @@ export class PageService {
     }
   }
 
-  /**
-   * Get all backlinks (incoming links) to a page.
-   *
-   * Returns blocks from other pages that link to this page,
-   * along with their page context for grouping in the UI.
-   *
-   * @param pageId - The target page identifier
-   * @returns Array of backlinks with block and page information
-   * @throws DoubleBindError with context on repository failure
-   */
   async getPageBacklinks(pageId: PageId): Promise<PageBacklink[]> {
     try {
       const inLinks = await this.linkRepo.getInLinks(pageId);
 
-      // For each incoming link, get the source page info
       const results: PageBacklink[] = [];
       for (const link of inLinks) {
-        // Get the source page
         const sourcePage = await this.pageRepo.getById(link.sourceId);
-        if (!sourcePage) {
-          // Skip if source page was deleted
-          continue;
-        }
+        if (!sourcePage) continue;
 
-        // Get the context block
-        if (!link.contextBlockId) {
-          // Skip links without context block
-          continue;
-        }
+        if (!link.contextBlockId) continue;
 
         const block = await this.blockRepo.getById(link.contextBlockId);
-        if (!block) {
-          // Skip if block was deleted
-          continue;
-        }
+        if (!block) continue;
 
         results.push({
           block,
@@ -352,13 +230,6 @@ export class PageService {
     }
   }
 
-  /**
-   * Get a page by its title.
-   *
-   * @param title - The page title to look up
-   * @returns The page if found, null otherwise
-   * @throws DoubleBindError with context on repository failure
-   */
   async getByTitle(title: string): Promise<Page | null> {
     try {
       return await this.pageRepo.getByTitle(title);
@@ -374,13 +245,6 @@ export class PageService {
     }
   }
 
-  /**
-   * Get a page by title, creating it if it doesn't exist.
-   *
-   * @param title - The page title
-   * @returns The existing or newly created page
-   * @throws DoubleBindError with context on repository failure
-   */
   async getOrCreateByTitle(title: string): Promise<Page> {
     try {
       return await this.pageRepo.getOrCreateByTitle(title);
