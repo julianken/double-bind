@@ -11,6 +11,7 @@ target/
 test-results/
 playwright-report/
 coverage/
+.playwright-mcp/
 
 # IDE
 .idea/
